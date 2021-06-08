@@ -1,0 +1,13 @@
+﻿"Symbol";"Value";"Unit";
+"TraceParts.PartNumber";"90-08022019-032954";"";
+"REFERENCE";"pf0002-63";"";
+"TraceParts.PartTitle";"IEC Connectors, pf0002-63";"";
+"TraceParts.InstanceId";"90-08022019-0329542N3XX9WWY2MK673V115V3T3RA";"";
+"DESIGN";"IEC Connectors, pf0002-63";"";
+"TraceParts.PartStatus";"Published";"";
+"TraceParts.PartStatusId";"";"";
+"SUPPLIER";"Bulgin";"";
+"TraceParts.PartVersion";"1.0.0";"";
+"TRACEPARTS";"TRACEPARTS";"";
+"TraceParts.PartLanguage";"en";"";
+"TraceParts.ClassPath";"BULGIN:/F_BULGIN/BULGIN.010/BULGIN.010.020/90-08022019-032954";"";

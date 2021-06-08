@@ -1,0 +1,24 @@
+Long press on Ch1 or Ch2:
+   Toggles channel on/off.
+   An off channel is completly ignored in the following.
+
+Short press on Ch1 or Ch2:
+   If not selected -
+      Selects the channel.
+   If selected - 
+      Changes the current temperature b/w presents 1,2,3
+   In either case - 
+      Selection is indicated by the red LED.
+      Back-off and stand-by counters are restarted for the selected channel.
+   
+Rotation of encoder:
+   Changes temperature on selected channel.
+   Each channel has a current temperature setting.
+   This value is preserved if the selected channel is changed but it is separate from the channel presets.
+   Back-off and stand-by counters are restarted for the selected channel.
+   
+Press of encoder:
+   Causes the current temperature setting to be saved overwriting whichever is the current preset on the selected channel.
+
+Menu button accesses the settings menu.
+
