@@ -16,8 +16,7 @@
  * @tparam inputFn      Input function  - used to obtain value of system state
  * @tparam outputFn     Output function - used to control the output variable
  */
-template<Pid::InFunction inputFn, Pid::OutFunction outputFn>
-class Pid_T : private Pid {
+class Pid_T  {
 
 private:
    const double interval;     //!< Interval for sampling
