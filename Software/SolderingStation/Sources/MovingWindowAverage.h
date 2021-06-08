@@ -8,8 +8,11 @@
 #ifndef SOURCES_MOVINGWINDOWAVERAGE_H_
 #define SOURCES_MOVINGWINDOWAVERAGE_H_
 
+#include "adc.h"
+#include "Peripherals.h"
+
 /**
- * Class representing a moving average window.
+ * Class representing a moving average window for ADC values.
  *
  * @tparam WindowSize Number of samples to average over
  */
@@ -18,13 +21,13 @@ class MovingWindowAverage {
 
 private:
    /// Samples over entire window (circular buffer)
-   float    samples[WindowSize] = {0};
+   unsigned samples[WindowSize] = {0};
 
    /// Index into samples
    unsigned index = 0;
 
    /// Summation of samples
-   float    sum = 0.0;
+   unsigned sum = 0;
 
    MovingWindowAverage(const MovingWindowAverage &other) = delete;
    MovingWindowAverage(MovingWindowAverage &&other) = delete;
@@ -43,11 +46,11 @@ public:
    virtual ~MovingWindowAverage() {}
 
    /**
-    * Add value to window
+    * Add ADC value to window
     *
     * @param value to add - replaces oldest value
     */
-   void accumulate(float value) {
+   void accumulate(unsigned value) {
 
       sum += value;
       sum -= samples[index];
@@ -58,12 +61,21 @@ public:
    }
 
    /**
-    * Return average over window
+    * Return ADC voltage averaged over window
     *
     * @return value calculated over window
     */
    float getAverage() {
-      return sum/WindowSize;
+
+      float voltage;
+
+      // Calculate average over window
+      voltage = (sum/WindowSize);
+
+      // Convert ADC value to voltage
+      voltage  *= (ADC_REF_VOLTAGE/USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION));
+
+      return voltage;
    }
 };
 
@@ -84,7 +96,7 @@ private:
     *
     * @return Corresponding temperature in Celsius
     */
-   float voltageToCelsius(double resistance){
+   float resistanceToCelsius(double resistance){
 
       // Value from curve fitting see spreadsheet
       constexpr double A_constant = 1.62770581419817E-03;
@@ -124,7 +136,11 @@ public:
     * @return Thermistor resistance in ohms
     */
    float getResistance() {
-      return NTC_MEASUREMENT_RATIO * getAverage();
+
+      // Get ADC value as voltage
+      float voltage = getAverage();
+
+      return NTC_MEASUREMENT_RATIO * voltage;
    }
 
    /**
@@ -134,7 +150,7 @@ public:
     */
    float getTemperature() {
 
-      return voltageToCelsius(getResistance());
+      return resistanceToCelsius(getResistance());
    }
 };
 
@@ -185,7 +201,10 @@ public:
     */
    float getVoltage() {
 
-      return getAverage() * TC_MEASUREMENT_RATIO;
+      // Get ADC value as voltage
+      float voltage = getAverage();
+
+      return voltage * TC_MEASUREMENT_RATIO;
    }
 
    /**
@@ -197,7 +216,6 @@ public:
 
       return voltageToCelsius(getVoltage());
    }
-
 };
 
 /**

@@ -1,22 +1,19 @@
 /**
- * @file    pid.h
- * @brief   PID Controller using CMSIS TimerClass
+ * @file    Pid.h
+ * @brief   PID Controller class
  *
- *  Created on: 10 Jul 2016
+ *  Created on: 10 Jul 2021
  *      Author: podonoghue
  */
 #ifndef PROJECT_HEADERS_PID_H_
 #define PROJECT_HEADERS_PID_H_
 
+#include "error.h"
+
 /**
  * PID Controller
- * Makes use of CMSIS TimerClass
- *
- * These template parameters connect the PID controller to the input and output functions
- * @tparam inputFn      Input function  - used to obtain value of system state
- * @tparam outputFn     Output function - used to control the output variable
  */
-class Pid_T  {
+class Pid {
 
 private:
    const double interval;     //!< Interval for sampling
@@ -34,7 +31,7 @@ private:
    double lastInput;          //!< Last input sample
    double currentInput;       //!< Current input sample
    double currentOutput;      //!< Current output
-   double setpoint;           //!< Set-point for controller
+//   double setpoint;           //!< Set-point for controller
    double currentError;       //!< Current error calculation
 
    unsigned tickCount = 0;    //!< Time in ticks since last enabled
@@ -50,7 +47,7 @@ public:
     * @param[in] outMin      Minimum value of output variable
     * @param[in] outMax      Maximum value of output variable
     */
-   Pid_T(double Kp, double Ki, double Kd, double interval, double outMin, double outMax) :
+   Pid(double Kp, double Ki, double Kd, double interval, double outMin, double outMax) :
       interval(interval), outMin(outMin), outMax(outMax), enabled(false) {
       setTunings(Kp, Ki, Kd);
    }
@@ -58,7 +55,7 @@ public:
    /**
    * Destructor
    */
-   virtual ~Pid_T() {
+   virtual ~Pid() {
    }
 
    /**
@@ -71,14 +68,10 @@ public:
       if (enable) {
          if (!enabled) {
             // Just enabled
-            currentInput = inputFn();
+//            currentInput = inputFn();
             integral     = 0; //currentOutput;
             tickCount    = 0;
-            start(interval);
          }
-      }
-      else {
-         stop();
       }
       enabled = enable;
    }
@@ -126,24 +119,24 @@ public:
       kd = Kd / interval;
    }
 
-   /**
-    * Change set-point of controller
-    *
-    * @param[in] value Value to set
-    */
-   void setSetpoint(double value) {
-      setpoint = value;
-   }
-
-   /**
-    * Get setpoint of controller
-    *
-    * @return Current setpoint
-    */
-   double getSetpoint() {
-      return setpoint;
-   }
-
+//   /**
+//    * Change set-point of controller
+//    *
+//    * @param[in] value Value to set
+//    */
+//   void setSetpoint(double value) {
+//      setpoint = value;
+//   }
+//
+//   /**
+//    * Get setpoint of controller
+//    *
+//    * @return Current setpoint
+//    */
+//   double getSetpoint() {
+//      return setpoint;
+//   }
+//
    /**
     * Get input of controller
     *
@@ -196,25 +189,23 @@ public:
       return  kd*interval;
    }
 
-private:
    /**
     * Main PID calculation
     *
-    * Executed at \ref interval by Timer callback
+    * Executed at interval
     */
-   void callback() override {
+   double callback(double setpoint, double sample) {
 //      PulseTp tp;
 
       if(!enabled) {
-         return;
+         return 0;
       }
 
       tickCount++;
-//      USBDM::console.writeln(tickCount);
 
       // Update input samples & error
       lastInput    = currentInput;
-      currentInput = inputFn();
+      currentInput = sample;
       currentError = setpoint - currentInput;
 
       integral += (ki * currentError);
@@ -234,7 +225,7 @@ private:
          currentOutput = outMin;
       }
       // Update output
-      outputFn(currentOutput);
+      return currentOutput;
    }
 };
 

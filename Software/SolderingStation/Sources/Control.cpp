@@ -358,6 +358,15 @@ void Control::zeroCrossingHandler() {
       setNeedsRefresh();
    }
 
+   channels[0].currentTemperature = ch1TipTemperature.getTemperature()+ch1ColdJunctionTemperature.getTemperature();
+   channels[1].currentTemperature = ch2TipTemperature.getTemperature()+ch2ColdJunctionTemperature.getTemperature();
+
+//   float ch1DutyCy = ch1Pid.callback(channels[0].targetTemperature, channels[0].currentTemperature);
+//   float ch2DutyCy = ch2Pid.callback(channels[1].targetTemperature, channels[1].currentTemperature);
+
+//   ch1DutyCycleCounter.setDutyCycle(ch1DutyCy);
+//   ch2DutyCycleCounter.setDutyCycle(ch2DutyCy);
+
    static auto cb = [](){
       This->switchOnHandler();
    };

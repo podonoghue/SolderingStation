@@ -8,6 +8,7 @@
 #ifndef SOURCES_CONTROL_H_
 #define SOURCES_CONTROL_H_
 
+#include "Pid.h"
 #include "Peripherals.h"
 #include "Display.h"
 #include "Channel.h"
@@ -80,6 +81,9 @@ private:
 
    /// PWM duty-cyle counter for Channel 2
    DutyCycleCounter ch2DutyCycleCounter{100};
+
+   Pid ch1Pid{1.0, 2.0, 3.0, 10*USBDM::ms, 0.0, 100.0};
+   Pid ch2Pid{1.0, 2.0, 3.0, 10*USBDM::ms, 0.0, 100.0};
 
 public:
    /**
