@@ -26,7 +26,7 @@ class Control {
 
 private:
    /// Maximum iron temperature for operation
-   static constexpr int      MAX_TEMP     = 400;
+   static constexpr int      MAX_TEMP     = 425;
 
    /// Minimum iron temperature for operation
    static constexpr int      MIN_TEMP     = 100;
@@ -35,7 +35,7 @@ private:
    static constexpr unsigned NUM_CHANNELS = 2;
 
    /// Delay between zero crossing and switching heaters on (us)
-   static constexpr unsigned POWER_ON_DELAY  = 800;
+   static constexpr unsigned POWER_ON_DELAY  = 900;
 
    /// Delay between switching heater off and ADC conversions start (us)
    static constexpr unsigned SAMPLE_DELAY    = 4000;
@@ -50,7 +50,7 @@ private:
    unsigned selectedChannel = 0;
 
    /// Indicates the display need updating
-   bool     needRefresh = false;
+   bool     needRefresh = true;
 
    /// Mask indicating the ADC channels to be refreshed this cycle
    uint32_t adcChannelMask = 0;
@@ -58,14 +58,11 @@ private:
    /// this pointer for static members (call-backs)
    static Control *This;
 
-   /// PIT Channel to use for sample and control timing
-   using PitChannel = USBDM::Pit::Channel<0>;
-
    /// Moving window average for Channel 1 tip temperature (thermocouple)
-   ThermocoupleAverage<10> ch1TipTemperature;
+   ThermocoupleAverage<5> ch1TipTemperature;
 
    /// Moving window average for Channel 2 tip temperature (thermocouple)
-   ThermocoupleAverage<10> ch2TipTemperature;
+   ThermocoupleAverage<5> ch2TipTemperature;
 
    /// Moving window average for Channel 1 cold junction temperature (NTC resistor)
    ThermistorAverage<5> ch1ColdJunctionTemperature;
@@ -82,8 +79,10 @@ private:
    /// PWM duty-cyle counter for Channel 2
    DutyCycleCounter ch2DutyCycleCounter{100};
 
-   Pid ch1Pid{1.0, 2.0, 3.0, 10*USBDM::ms, 0.0, 100.0};
-   Pid ch2Pid{1.0, 2.0, 3.0, 10*USBDM::ms, 0.0, 100.0};
+   Pid ch1Pid{4.0, 0.0, 0.0, 10*USBDM::ms, 0.0, 100.0};
+   Pid ch2Pid{4.0, 0.0, 0.0, 10*USBDM::ms, 0.0, 100.0};
+
+   bool sequenceBusy = false;
 
 public:
    /**

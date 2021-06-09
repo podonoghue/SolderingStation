@@ -17,8 +17,8 @@ class Pid {
 
 private:
    const double interval;     //!< Interval for sampling
-   const double outMin;       //!< Minimum limit for output
-   const double outMax;       //!< Maximum limit for output
+   const float outMin;        //!< Minimum limit for output
+   const float outMax;        //!< Maximum limit for output
 
    double kp;                 //!< Proportional Tuning Parameter
    double ki;                 //!< Integral Tuning Parameter
@@ -47,7 +47,7 @@ public:
     * @param[in] outMin      Minimum value of output variable
     * @param[in] outMax      Maximum value of output variable
     */
-   Pid(double Kp, double Ki, double Kd, double interval, double outMin, double outMax) :
+   Pid(double Kp, double Ki, double Kd, double interval, float outMin, float outMax) :
       interval(interval), outMin(outMin), outMax(outMax), enabled(false) {
       setTunings(Kp, Ki, Kd);
    }
@@ -192,9 +192,9 @@ public:
    /**
     * Main PID calculation
     *
-    * Executed at interval
+    * Should be executed at interval period
     */
-   double callback(double setpoint, double sample) {
+   double newSample(double setpoint, double sample) {
 //      PulseTp tp;
 
       if(!enabled) {

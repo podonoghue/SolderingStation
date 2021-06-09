@@ -777,6 +777,16 @@ public:
       }
 
       /**
+       *  Enables and configures the PIT if not already done.
+       *  This also disables all channel interrupts and channel reservations if newly configured.
+       *
+       *  @param[in]  pitDebugMode  Determined whether the PIT halts when suspended during debug
+       */
+      static void  __attribute__((always_inline)) configureIfNeeded(PitDebugMode pitDebugMode=PitDebugMode_Stop) {
+         PitBase_T<Info>::configureIfNeeded(pitDebugMode);
+      }
+
+      /**
        *   Enable the PIT channel
        */
       static void __attribute__((always_inline)) enable() {

@@ -63,16 +63,18 @@ const char *getEventName(const Event event) {
 }
 
 /**
- * Call-back handling switch polling
+ * Button polling
  */
-void SwitchPolling::callBack() {
-   //=============================
-   // Button polling
-   //=============================
+EventType SwitchPolling::pollSwitches() {
+
+   // How long the buttons have been unchanged
    static unsigned stableButtonCount = 0;
+
+   // Result from when the buttons were last polled
    static unsigned lastButtonPoll    = 0;
 
-   unsigned currentButtonValue   = Buttons::read();
+   // Poll buttons
+   unsigned  currentButtonValue   = Buttons::read();
 
    // Stop counter rolling over
    if (stableButtonCount < HOLD_COUNT+1) {
@@ -80,107 +82,126 @@ void SwitchPolling::callBack() {
    }
 
    if (currentButtonValue != lastButtonPoll) {
+      // Button change - start over
       stableButtonCount = 0;
       lastButtonPoll    = currentButtonValue;
-   }
-   else {
-      // Check at debounce time if active button
-      if ((stableButtonCount == DEBOUNCE_COUNT) && currentButtonValue) {
-         switch(currentButtonValue & (Buttons::MASK>>Buttons::RIGHT)) {
-            case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : currentButton = ev_Ch1Press;    break;
-            case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : currentButton = ev_Ch2Press;    break;
-            case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : currentButton = ev_SelPress;    break;
-            case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : currentButton = ev_QuadPress;   break;
-            case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
-                 (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : currentButton = ev_Ch1Ch2Press; break;
-            default:
-               break;
-         }
-         return;
-      }
-      // Check at hold time if active button
-      if ((stableButtonCount == HOLD_COUNT) && currentButtonValue) {
-         switch(currentButtonValue & (Buttons::MASK>>Buttons::RIGHT)) {
-            case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : currentButton = ev_Ch1Hold;    break;
-            case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : currentButton = ev_Ch2Hold;    break;
-            case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : currentButton = ev_SelHold;    break;
-            case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : currentButton = ev_QuadHold;   break;
-            case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
-                 (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : currentButton = ev_Ch1Ch2Hold; break;
-            default:
-               break;
-         }
-         return;
-      }
+      return ev_None;
    }
 
-   //=============================
-   // Set-back Polling
-   //=============================
-   static unsigned toolStableCount = 0;
-   static unsigned lastToolPoll    = 0;
+   // Check at debounce time if active button
+   if ((stableButtonCount == DEBOUNCE_COUNT) && currentButtonValue) {
+      // We have a button pressed for the debounce time - regular button press
+      switch(currentButtonValue & (Buttons::MASK>>Buttons::RIGHT)) {
+         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : return ev_Ch1Press;    break;
+         case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : return ev_Ch2Press;    break;
+         case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : return ev_SelPress;    break;
+         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : return ev_QuadPress;   break;
+         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
+              (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : return ev_Ch1Ch2Press; break;
+         default:
+            break;
+      }
+      return ev_None;
+   }
+   // Check at hold time if active button
+   if ((stableButtonCount == HOLD_COUNT) && currentButtonValue) {
+      // We have a button pressed for the hold time - long held button
+      switch(currentButtonValue & (Buttons::MASK>>Buttons::RIGHT)) {
+         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : return ev_Ch1Hold;    break;
+         case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : return ev_Ch2Hold;    break;
+         case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : return ev_SelHold;    break;
+         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : return ev_QuadHold;   break;
+         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
+              (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : return ev_Ch1Ch2Hold; break;
+         default:
+            break;
+      }
+      return ev_None;
+   }
+   return ev_None;
+}
+
+/**
+ * Set-back Polling
+ */
+EventType SwitchPolling::pollSetbacks() {
+
+   // How long tool1 has been idle
    static unsigned tool1IdleCount  = 0;
-   static unsigned tool2IdleCount  = 0;
-   static bool     tool1Busy       = false;
-   static bool     tool2Busy       = false;
 
+   // How long tool2 has been idle
+   static unsigned tool2IdleCount  = 0;
+
+   // Indicates tool1 was in use
+   static bool     lastTool1Busy       = false;
+
+   // Indicates tool2 was in use
+   static bool     lastTool2Busy       = false;
+
+   // Indicates tool1 is in use
+   bool     tool1Busy       = false;
+
+   // Indicates tool2 is in use
+   bool     tool2Busy       = false;
+
+   // Get current tool rest state
    unsigned toolPoll = Setbacks::read();
 
-   if (toolPoll != lastToolPoll) {
-      toolStableCount = 0;
-      lastToolPoll    = toolPoll;
-      return;
+   tool1Busy = toolPoll & Ch1Stand::MASK;
+   tool2Busy = toolPoll & Ch2Stand::MASK;
+
+   if (lastTool1Busy != tool1Busy) {
+      // Tool 1 changed - start over
+      tool1IdleCount = 0;
+      lastTool1Busy    = tool1Busy;
    }
-   else {
-      // Check at debounce time
-      if ((toolStableCount == DEBOUNCE_COUNT)) {
-         tool1Busy = toolPoll & Ch1Stand::MASK;
-         tool2Busy = toolPoll & Ch2Stand::MASK;
-         if (tool1Busy) {
-            // Tool out of holder - 1st removal
-            currentButton  = ev_Tool1Active;
-            return;
-         }
-         if (tool2Busy) {
-            // Tool out of holder - 1st removal
-            currentButton  = ev_Tool2Active;
-            return;
-         }
-      }
-      // Stop counter rolling over
-      if (toolStableCount < DEBOUNCE_COUNT+1) {
-         toolStableCount++;
-      }
-   }
-   if (!tool1Busy) {
-      // Tool in holder - increment idle time
+   else if (!tool1Busy) {
+
+      // Tool 1 in holder - increment idle time
       if (tool1IdleCount<LONGIDLE_MAX_COUNT+1) {
          tool1IdleCount++;
       }
       if (tool1IdleCount == IDLE_MAX_COUNT) {
-         currentButton = ev_Tool1Idle;
-         return;
+         // Idle for a short while
+         return ev_Tool1Idle;
       }
-      else if (tool1IdleCount == LONGIDLE_MAX_COUNT) {
-         currentButton = ev_Tool1LongIdle;
-         return;
+      if (tool1IdleCount == LONGIDLE_MAX_COUNT) {
+         // Idle for a long time
+         return ev_Tool1LongIdle;
       }
    }
-   if (!tool2Busy) {
-      // Tool in holder - increment idle time
+
+   if (lastTool2Busy != tool2Busy) {
+      // Changed - start over
+      tool2IdleCount = 0;
+      lastTool2Busy    = tool2Busy;
+   }
+   else if (!tool2Busy) {
+
+      // Tool 2 in holder - increment idle time
       if (tool2IdleCount<LONGIDLE_MAX_COUNT+1) {
          tool2IdleCount++;
       }
       if (tool2IdleCount == IDLE_MAX_COUNT) {
-         currentButton = ev_Tool2Idle;
-         return;
+         // Idle for a short while
+         return ev_Tool2Idle;
       }
-      else if (tool2IdleCount == LONGIDLE_MAX_COUNT) {
-         currentButton = ev_Tool2LongIdle;
-         return;
+      if (tool2IdleCount == LONGIDLE_MAX_COUNT) {
+         // Idle for a long time
+         return ev_Tool2LongIdle;
       }
    }
+   return ev_None;
+}
 
+/**
+ * Call-back handling switch polling
+ */
+void SwitchPolling::callBack() {
+   currentButton = pollSwitches();
+   if (currentButton == ev_None) {
+      currentButton = pollSetbacks();
+   }
 };
 
 /**
@@ -214,14 +235,13 @@ void SwitchPolling::initialise() {
    QuadDecoder::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
    QuadDecoder::enableFilter(7);
 
-   Buttons::setInput(PinPull_Up, PinAction_None, PinFilter_None);
-   Setbacks::setInput(PinPull_Up, PinAction_None, PinFilter_None);
+   Buttons::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
+   Setbacks::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
-   PollTimer::configureIfNeeded(PitDebugMode_Stop);
-   auto channel = PollTimer::allocateChannel();
-   PollTimer::configureChannel(channel, POLL_INTERVAL_IN_MS*ms, PitChannelIrq_Enabled);
-   PollTimer::setCallback(channel, callBack);
-   PollTimer::enableNvicInterrupts(channel, NvicPriority_Normal);
+   PollingTimerChannel::configureIfNeeded(PitDebugMode_Stop);
+   PollingTimerChannel::configure(POLL_INTERVAL_IN_MS*ms, PitChannelIrq_Enabled);
+   PollingTimerChannel::setCallback(callBack);
+   PollingTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
 
    currentButton = ev_None;
 }

@@ -99,6 +99,7 @@ void initialise() {
 }
 
 int main() {
+
    console.writeln("Starting\n");
    console.write("SystemCoreClock = ").writeln(SystemCoreClock);
    console.write("SystemBusClock  = ").writeln(SystemBusClock);

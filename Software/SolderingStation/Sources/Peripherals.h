@@ -84,8 +84,11 @@ using Ch1Drive        = USBDM::GpioC<3, USBDM::ActiveLow>;
 /// Channel 2 Drive
 using Ch2Drive        = USBDM::GpioC<4, USBDM::ActiveLow>;
 
-/// Timer used to drive polling
-using PollTimer   = USBDM::Pit;
+/// PIT Channel to use for switch polling
+using PollingTimerChannel = USBDM::Pit::Channel<0>;
+
+/// PIT Channel to use for sample and control timing
+using ControlTimerChannel = USBDM::Pit::Channel<1>;
 
 /// Quadrature Decoder
 using QuadDecoder = USBDM::FtmQuadDecoder1;

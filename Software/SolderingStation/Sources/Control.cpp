@@ -19,7 +19,7 @@ __attribute__ ((section(".flexRAM")))
 NonvolatileArray<int, 3> ch2Settings;
 
 /// Default temperature presets
-static const int defaultTemperaturePresets[3] = {300, 350, 360};
+static const int defaultTemperaturePresets[3] = {250, 350, 370};
 
 /**
  * A derived class similar to this should be created to do the following:
@@ -71,8 +71,8 @@ void Control::initialise() {
    GpioSpare2::setOutput();
    GpioSpare3::setOutput();
 
-   ch1DutyCycleCounter.setUpperLimit(40);
-   ch2DutyCycleCounter.setUpperLimit(40);
+   ch1DutyCycleCounter.setUpperLimit(80);
+   ch2DutyCycleCounter.setUpperLimit(80);
 
    Ch1Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
    Ch2Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
@@ -120,8 +120,8 @@ void Control::initialise() {
    static constexpr uint8_t DAC_THRESHOLD = (3.3/2)*(Cmp0::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
 
    Pit::configureIfNeeded();
-//   timerChannel = Pit::allocateChannel();
-   PitChannel::enableNvicInterrupts(NvicPriority_Normal);
+
+   ControlTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
 
    ZeroCrossingComparator::configure(CmpPower_HighSpeed, CmpHysteresis_1, CmpPolarity_Noninverted);
    ZeroCrossingComparator::setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 255);
@@ -139,9 +139,6 @@ void Control::initialise() {
    Overcurrent::setInput(PinPull_None, PinAction_IrqFalling, PinFilter_Passive);
    Overcurrent::setCallback(overcurrent_cb);
    Overcurrent::enableNvicInterrupts(NvicPriority_High);
-
-   ch1DutyCycleCounter.enable();
-   ch2DutyCycleCounter.enable();
 }
 
 /**
@@ -152,7 +149,7 @@ void Control::initialise() {
 bool Control::isEnabled(unsigned ch) {
    usbdm_assert((ch == 1)||(ch == 2), "Illegal channel");
    Channel &channel = channels[ch-1];
-   return (channel.state != ch_off);
+   return (channel.getState() != ch_off);
 }
 
 /**
@@ -165,7 +162,7 @@ bool Control::isEnabled(unsigned ch) {
 void Control::toggleEnable(unsigned ch) {
    usbdm_assert((ch == 1)||(ch == 2), "Illegal channel");
    Channel &channel = channels[ch-1];
-   if (channel.state == ch_off) {
+   if (channel.getState() == ch_off) {
       enable(ch);
    }
    else {
@@ -182,14 +179,17 @@ void Control::toggleEnable(unsigned ch) {
 void Control::enable(unsigned ch) {
    usbdm_assert((ch == 1)||(ch == 2), "Illegal channel");
    Channel &channel = channels[ch-1];
-   channel.state = ch_active;
+   channel.setState(ch_active);
+
+   ch1Pid.enable(channels[0].isRunning());
+   ch2Pid.enable(channels[1].isRunning());
+
    // Make this channel selected
    selectedChannel = ch;
 }
 
 /**
  * Disable channel.
- * The other channel may become selected if enabled.
  *
  * @param ch Channel to disable
  */
@@ -197,13 +197,17 @@ void Control::disable(unsigned ch) {
    usbdm_assert((ch == 1)||(ch == 2), "Illegal channel");
    Channel &channel = channels[ch-1];
 
-   channel.state = ch_off;
-   unsigned otherChannel = 3-ch;
-   selectedChannel = 0;
-   if (channels[otherChannel-1].state != ch_off) {
-      // Make other channel selected
-      selectedChannel = otherChannel;
-   }
+   channel.setState(ch_off);
+
+   ch1Pid.enable(channels[0].isRunning());
+   ch2Pid.enable(channels[1].isRunning());
+
+//   unsigned otherChannel = 3-ch;
+//   selectedChannel = 0;
+//   if (channels[otherChannel-1].isRunning()) {
+//      // Make other channel selected
+//      selectedChannel = otherChannel;
+//   }
 }
 
 /**
@@ -214,11 +218,9 @@ void Control::disable(unsigned ch) {
 void Control::backOff(unsigned ch) {
    usbdm_assert((ch == 1)||(ch == 2), "Illegal channel");
    Channel &channel = channels[ch-1];
-   if (channel.state == ch_off) {
-      // Ignore
-      return;
+   if (channel.isRunning()) {
+      channel.setState(ch_backoff);
    }
-   channel.state = ch_backoff;
 }
 
 /**
@@ -230,7 +232,7 @@ void Control::backOff(unsigned ch) {
 void Control::wakeUp(unsigned ch) {
    usbdm_assert((ch == 1)||(ch == 2), "Illegal channel");
    Channel &channel = channels[ch-1];
-   if (channel.state == ch_backoff) {
+   if (channel.getState() == ch_backoff) {
       enable(ch);
    }
 }
@@ -242,11 +244,11 @@ void Control::wakeUp(unsigned ch) {
  */
 void Control::setSelectedChannel(unsigned ch) {
    usbdm_assert((ch == 1)||(ch == 2), "Illegal channel");
-   Channel &channel = channels[ch-1];
-   if (channel.state == ch_off) {
-      // Can't make off channel selected
-      return;
-   }
+//   Channel &channel = channels[ch-1];
+//   if (!channel.isRunning()) {
+//      // Can't make off channel selected
+//      return;
+//   }
    selectedChannel = ch;
 }
 
@@ -275,42 +277,45 @@ void Control::nextPreset() {
  */
 void Control::changeTemp(int16_t delta) {
 
-   Channel &channel                     = channels[0];
-
-   int &currentTemp = channel.targetTemperature;
-
-   {
-      // Dummy code
-      currentTemp += delta;
-      if (currentTemp>100) {
-         currentTemp = 100;
-      }
-      if (currentTemp<0) {
-         currentTemp = 0;
-      }
-      ch1DutyCycleCounter.setDutyCycle(currentTemp);
+   if (selectedChannel == 0) {
+      return;
    }
 
+   Channel &channel = channels[selectedChannel-1];
 
-   //   if (selectedChannel == 0) {
-   //      return;
-   //   }
-   //   Channel &channel                     = channels[selectedChannel-1];
-   //   NonvolatileArray<int, 3> &chSettings = (selectedChannel==1)?ch1Settings:ch2Settings;
-   //
-   //   if (channel.state == ch_off) {
-   //      return;
-   //   }
-   //   int &currentTemp = channel.targetTemperature;
-   //
-   //   currentTemp += delta;
-   //   if (currentTemp>MAX_TEMP) {
-   //      currentTemp = MAX_TEMP;
-   //   }
-   //   if (currentTemp<MIN_TEMP) {
-   //      currentTemp = MIN_TEMP;
-   //   }
-   //   channel.modified = (currentTemp != chSettings[channel.preset]);
+//   {
+//      unsigned currentDutyCycle = channel.dutyCycle;
+//
+//      // Dummy code
+//      currentDutyCycle += delta;
+//      if ((int)currentDutyCycle < 0) {
+//         currentDutyCycle = 0;
+//      }
+//      if (currentDutyCycle>100) {
+//         currentDutyCycle = 100;
+//      }
+//      channel.dutyCycle = currentDutyCycle;
+//      if (selectedChannel == 1) {
+//         ch1DutyCycleCounter.setDutyCycle(currentDutyCycle);
+//      }
+//   }
+
+
+   NonvolatileArray<int, 3> &chSettings = (selectedChannel==1)?ch1Settings:ch2Settings;
+//
+//   if (channel.getState() == ch_off) {
+//      return;
+//   }
+   int &targetTemperature = channel.targetTemperature;
+
+   targetTemperature += delta;
+   if (targetTemperature>MAX_TEMP) {
+      targetTemperature = MAX_TEMP;
+   }
+   if (targetTemperature<MIN_TEMP) {
+      targetTemperature = MIN_TEMP;
+   }
+   channel.modified = (targetTemperature != chSettings[channel.preset]);
 }
 
 /**
@@ -337,8 +342,8 @@ void Control::overCurrentHandler() {
    ch2DutyCycleCounter.disable();
 
    // Mark channels as overloaded
-   channels[0].state = ch_overload;
-   channels[1].state = ch_overload;
+   channels[0].setOverload(true);
+   channels[1].setOverload(true);
 
    setNeedsRefresh();
 }
@@ -350,27 +355,38 @@ void Control::overCurrentHandler() {
  */
 void Control::zeroCrossingHandler() {
 
+   // Schedule switchOnHandler()
+   static auto cb = [](){
+      This->switchOnHandler();
+   };
+   if (!sequenceBusy) {
+      // For debug!
+      ControlTimerChannel::oneShotInMicroseconds(cb, POWER_ON_DELAY);
+   }
+
+   GpioSpare2::set();
+
    // Counter to initiate screen refresh
    static unsigned count = 0;
 
-   if (count++>=100) {
+   if (count++>=50) {
       count = 0;
       setNeedsRefresh();
    }
 
-   channels[0].currentTemperature = ch1TipTemperature.getTemperature()+ch1ColdJunctionTemperature.getTemperature();
-   channels[1].currentTemperature = ch2TipTemperature.getTemperature()+ch2ColdJunctionTemperature.getTemperature();
+   channels[0].currentTemperature = round(ch1TipTemperature.getTemperature()+ch1ColdJunctionTemperature.getTemperature());
+   channels[1].currentTemperature = round(ch2TipTemperature.getTemperature()+ch2ColdJunctionTemperature.getTemperature());
 
-//   float ch1DutyCy = ch1Pid.callback(channels[0].targetTemperature, channels[0].currentTemperature);
-//   float ch2DutyCy = ch2Pid.callback(channels[1].targetTemperature, channels[1].currentTemperature);
+   float ch1DutyCy = ch1Pid.newSample(channels[0].targetTemperature, channels[0].currentTemperature);
+   float ch2DutyCy = ch2Pid.newSample(channels[1].targetTemperature, channels[1].currentTemperature);
 
-//   ch1DutyCycleCounter.setDutyCycle(ch1DutyCy);
-//   ch2DutyCycleCounter.setDutyCycle(ch2DutyCy);
+   ch1DutyCycleCounter.setDutyCycle(ch1DutyCy);
+   ch2DutyCycleCounter.setDutyCycle(ch2DutyCy);
 
-   static auto cb = [](){
-      This->switchOnHandler();
-   };
-   PitChannel::oneShotInMicroseconds(cb, POWER_ON_DELAY);
+   channels[0].dutyCycle = ch1DutyCycleCounter.getDutyCycle();
+   channels[1].dutyCycle = ch2DutyCycleCounter.getDutyCycle();
+
+   GpioSpare2::clear();
 }
 
 /**
@@ -378,6 +394,14 @@ void Control::zeroCrossingHandler() {
  * It also uses the timer to schedule the sampleHandler().
  */
 void Control::switchOnHandler() {
+
+   // Schedule sampleHandler()
+   static auto cb = [](){
+      This->sampleHandler();
+   };
+   ControlTimerChannel::oneShotInMicroseconds(cb, SAMPLE_DELAY);
+
+   sequenceBusy = true;
 
    // Enable drive to heaters as needed
    if (ch1DutyCycleCounter.isOn()) {
@@ -390,10 +414,6 @@ void Control::switchOnHandler() {
    Ch1ActiveLed::write(ch1DutyCycleCounter.isOn());
    Ch2ActiveLed::write(ch2DutyCycleCounter.isOn());
 
-   static auto cb = [](){
-      This->sampleHandler();
-   };
-   PitChannel::oneShotInMicroseconds(cb, SAMPLE_DELAY);
 }
 
 /**
@@ -401,6 +421,12 @@ void Control::switchOnHandler() {
  * It also uses the timer to schedule the switchOffHandler().
  */
 void Control::sampleHandler() {
+
+   // Schedule switchOffHandler()
+   static auto cb = [](){
+      This->switchOffHandler();
+   };
+   ControlTimerChannel::oneShotInMicroseconds(cb, POWER_OFF_DELAY);
 
    // Measure channel 1 if idle this cycle
    if (!ch1DutyCycleCounter.isOn()) {
@@ -419,17 +445,15 @@ void Control::sampleHandler() {
 
    ch1DutyCycleCounter.advance();
    ch2DutyCycleCounter.advance();
-
-   static auto cb = [](){
-      This->switchOffHandler();
-   };
-   PitChannel::oneShotInMicroseconds(cb, POWER_OFF_DELAY);
 }
 
 /**
  * Timer interrupt handler for turning off the heaters.
  */
 void Control::switchOffHandler() {
+
+   sequenceBusy = false;
+
    // Disable drive to heaters as needed
    if (!ch1DutyCycleCounter.isOn()) {
       Ch1Drive::write(false);
@@ -450,25 +474,25 @@ void Control::switchOffHandler() {
  */
 void Control::adcHandler(uint32_t result, int channel) {
 
-   float voltage = result*(ADC_REF_VOLTAGE/Adc0::getSingleEndedMaximum(ADC_RESOLUTION));
-
-   GpioSpare2::set();
+   GpioSpare2::toggle();
 
    switch (channel) {
       case Ch1ColdJunctionNtc::CHANNEL :
-         ch1ColdJunctionTemperature.accumulate(voltage);
+         ch1ColdJunctionTemperature.accumulate(result);
          break;
       case Ch1TipThermocouple::CHANNEL :
-         ch1TipTemperature.accumulate(voltage);
+         ch1TipTemperature.accumulate(result);
+         channels[0].setTipPresent(ch1TipTemperature.getAverage() < (Adc0::getSingleEndedMaximum(ADC_RESOLUTION)-200));
          break;
       case Ch2ColdJunctionNtc::CHANNEL :
-         ch2ColdJunctionTemperature.accumulate(voltage);
+         ch2ColdJunctionTemperature.accumulate(result);
          break;
       case Ch2TipThermocouple::CHANNEL :
-         ch2TipTemperature.accumulate(voltage);
+         ch2TipTemperature.accumulate(result);
+         channels[1].setTipPresent(ch2TipTemperature.getAverage() < (Adc0::getSingleEndedMaximum(ADC_RESOLUTION)-200));
          break;
       case ChipTemperature::CHANNEL :
-         chipTemperature.accumulate(voltage);
+         chipTemperature.accumulate(result);
          break;
       default:
          // Should be impossible
@@ -480,11 +504,11 @@ void Control::adcHandler(uint32_t result, int channel) {
    if (channelNum >= 0) {
       TemperatureAdc::startConversion(AdcInterrupt_Enabled|channelNum);
    }
-   // Indicate done current conversion
-   // Note - this means each conversion is done twice except for chip temp.
+   // Mark done current conversion
+   // Note - this means each conversion is done twice except for chip temperature
    adcChannelMask &= ~(1<<channel);
 
-   GpioSpare2::clear();
+   GpioSpare2::toggle();
 }
 
 /**
@@ -494,20 +518,23 @@ void Control::refresh() {
    needRefresh = false;
 
    // Update LEDs
-   switch (selectedChannel) {
-      case 0:
-         Ch1SelectedLed::off();
-         Ch2SelectedLed::off();
-         break;
-      case 1:
-         Ch1SelectedLed::on();
-         Ch2SelectedLed::off();
-         break;
-      case 2:
-         Ch1SelectedLed::off();
-         Ch2SelectedLed::on();
-         break;
-   }
+   Ch1SelectedLed::write(channels[0].isRunning());
+   Ch2SelectedLed::write(channels[1].isRunning());
+
+//   switch (selectedChannel) {
+//      case 0:
+//         Ch1SelectedLed::off();
+//         Ch2SelectedLed::off();
+//         break;
+//      case 1:
+//         Ch1SelectedLed::on();
+//         Ch2SelectedLed::off();
+//         break;
+//      case 2:
+//         Ch1SelectedLed::off();
+//         Ch2SelectedLed::on();
+//         break;
+//   }
 
    // Update display
    display.displayTools(channels[0], channels[1], selectedChannel);

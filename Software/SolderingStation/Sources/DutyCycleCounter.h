@@ -90,7 +90,16 @@ public:
          dutyCycle = upperLimit;
       }
       this->dutyCycle = dutyCycle;
-      check();
+   }
+
+   /***
+    * Get currently set duty cycle
+    *
+    * @return Duty-cycle as a fraction of resolution
+    *
+    */
+   unsigned getDutyCycle() const {
+      return dutyCycle;
    }
 
    /**

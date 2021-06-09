@@ -21,13 +21,13 @@ class MovingWindowAverage {
 
 private:
    /// Samples over entire window (circular buffer)
-   unsigned samples[WindowSize] = {0};
+   int samples[WindowSize] = {0};
 
    /// Index into samples
    unsigned index = 0;
 
    /// Summation of samples
-   unsigned sum = 0;
+   int sum = 0;
 
    MovingWindowAverage(const MovingWindowAverage &other) = delete;
    MovingWindowAverage(MovingWindowAverage &&other) = delete;
@@ -50,7 +50,7 @@ public:
     *
     * @param value to add - replaces oldest value
     */
-   void accumulate(unsigned value) {
+   void accumulate(int value) {
 
       sum += value;
       sum -= samples[index];
@@ -61,16 +61,26 @@ public:
    }
 
    /**
+    * Return raw ADC value averaged over window
+    *
+    * @return value calculated over window
+    */
+   int getAverage() {
+
+      // Calculate average over window
+      return round((float)sum/WindowSize);
+   }
+   /**
     * Return ADC voltage averaged over window
     *
     * @return value calculated over window
     */
-   float getAverage() {
+   float getVoltageAverage() {
 
       float voltage;
 
       // Calculate average over window
-      voltage = (sum/WindowSize);
+      voltage = (float)sum/WindowSize;
 
       // Convert ADC value to voltage
       voltage  *= (ADC_REF_VOLTAGE/USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION));
@@ -96,23 +106,23 @@ private:
     *
     * @return Corresponding temperature in Celsius
     */
-   float resistanceToCelsius(double resistance){
+   float resistanceToCelsius(float resistance){
 
       // Value from curve fitting see spreadsheet
-      constexpr double A_constant = 1.62770581419817E-03;
-      constexpr double B_constant = 6.39056547750702E-05;
-      constexpr double C_constant = 1.91419439391882E-05;
-      constexpr double D_constant = -6.36504328625315E-07;
+      constexpr float A_constant =  1.62770581419817E-03;
+      constexpr float B_constant =  6.39056547750702E-05;
+      constexpr float C_constant =  1.91419439391882E-05;
+      constexpr float D_constant = -6.36504328625315E-07;
 
-      constexpr double KelvinToCelsius = -274.15;
+      constexpr float KelvinToCelsius = -274.15;
 
       // Used to calculate R^N
-      double log_R_Nth = log(resistance);
+      float log_R_Nth = log(resistance);
 
-      double power;
+      float power;
 
       // Used to calculate 1/T in Kelvin
-      double reciprocalTemperature;
+      float reciprocalTemperature;
 
       reciprocalTemperature  = A_constant;
       power  = log_R_Nth;
@@ -122,13 +132,13 @@ private:
       power *= log_R_Nth;
       reciprocalTemperature += D_constant * power;
 
-      double temperatureInKelvin = 1/reciprocalTemperature;
+      float temperatureInKelvin = 1/reciprocalTemperature;
 
       return temperatureInKelvin + KelvinToCelsius;
    }
 
 public:
-   using MovingWindowAverage<WindowSize>::getAverage;
+   using MovingWindowAverage<WindowSize>::getVoltageAverage;
 
    /**
     * Returns the moving window average of the thermistor resistance
@@ -138,7 +148,7 @@ public:
    float getResistance() {
 
       // Get ADC value as voltage
-      float voltage = getAverage();
+      float voltage = getVoltageAverage();
 
       return NTC_MEASUREMENT_RATIO * voltage;
    }
@@ -164,7 +174,7 @@ class ThermocoupleAverage : public MovingWindowAverage<WindowSize> {
 
 private:
 
-   using MovingWindowAverage<WindowSize>::getAverage;
+   using MovingWindowAverage<WindowSize>::getVoltageAverage;
 
    /**
     * Converts a thermocouple voltage to temperature
@@ -179,11 +189,11 @@ private:
       voltage *= 1000;
 
       // Value from curve fitting see spreadsheet
-      constexpr double A_constant = -20.3057343295616; // -12.9509284993216;
-      constexpr double B_constant =  46.191866056261;  //45.4204980163692;
+      constexpr float A_constant = -20.3057343295616; // -12.9509284993216;
+      constexpr float B_constant =  46.191866056261;  //45.4204980163692;
 
       // Used to calculate V^N
-      double power;
+      float power;
       float temperature;
 
       temperature = A_constant;
@@ -202,7 +212,7 @@ public:
    float getVoltage() {
 
       // Get ADC value as voltage
-      float voltage = getAverage();
+      float voltage = getVoltageAverage();
 
       return voltage * TC_MEASUREMENT_RATIO;
    }
@@ -240,7 +250,7 @@ private:
    }
 
 public:
-   using MovingWindowAverage<WindowSize>::getAverage;
+   using MovingWindowAverage<WindowSize>::getVoltageAverage;
 
    /**
     * Returns the moving window average of the internal chip temperature
@@ -249,7 +259,7 @@ public:
     */
    virtual float getTemperature() {
 
-      return voltageToCelsius(getAverage());
+      return voltageToCelsius(getVoltageAverage());
    }
 };
 

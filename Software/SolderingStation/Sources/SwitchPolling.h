@@ -56,6 +56,9 @@ class SwitchPolling {
 
    static void callBack();
 
+   static EventType pollSwitches();
+   static EventType pollSetbacks();
+
 public:
    Event getEvent();
 
