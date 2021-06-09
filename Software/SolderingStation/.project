@@ -26,11 +26,4 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>Documentation.html</name>
-			<type>1</type>
-			<locationURI>copy_PROJECT_LOC/Documentation/html/index.html</locationURI>
-		</link>
-	</linkedResources>
 </projectDescription>

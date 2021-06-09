@@ -68,9 +68,9 @@ void Display::displayTools(Channel &ch1, Channel &ch2, unsigned selectedChannel)
 
    oled.setFont(fontLarge);
    oled.moveXY(LEFT_OFFSET,  40).write("P").setWidth(1).write(ch1.preset+1).
-         write(ch1.modified?"*:":" :").setWidth(3).write(ch1.targetTemperature);
+         write(ch1.modified?"*:":" :").setWidth(3).write(ch1.getTargetTemperature());
    oled.moveXY(RIGHT_OFFSET, 40).write("P").setWidth(1).write(ch2.preset+1).
-         write(ch2.modified?"*:":" :").setWidth(3).write(ch2.targetTemperature);
+         write(ch2.modified?"*:":" :").setWidth(3).write(ch2.getTargetTemperature());
 
    oled.setFont(fontMedium).setWidth(2);
    oled.moveXY(LEFT_OFFSET+18,  56).write(ch1.dutyCycle).write('%');

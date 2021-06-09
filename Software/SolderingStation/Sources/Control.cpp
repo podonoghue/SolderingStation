@@ -108,9 +108,9 @@ void Control::initialise() {
    Adc0::setCallback(adc_cb);
    Adc0::enableNvicInterrupts(NvicPriority_Normal);
 
-   channels[0].targetTemperature = ch1Settings[1];
+   channels[0].setTargetTemperature(ch1Settings[1]);
    channels[0].preset            = 1;
-   channels[1].targetTemperature = ch2Settings[1];
+   channels[1].setTargetTemperature(ch2Settings[1]);
    channels[1].preset            = 1;
 
    static auto zx_cb = [](CmpStatus){
@@ -266,7 +266,7 @@ void Control::nextPreset() {
    if (channel.preset>=NUM_PRESETS) {
       channel.preset = 0;
    }
-   channel.targetTemperature = chSettings[channel.preset];
+   channel.setTargetTemperature(chSettings[channel.preset]);
    channel.modified          = false;
 }
 
@@ -306,7 +306,7 @@ void Control::changeTemp(int16_t delta) {
 //   if (channel.getState() == ch_off) {
 //      return;
 //   }
-   int &targetTemperature = channel.targetTemperature;
+   int targetTemperature = channel.getTargetTemperature();
 
    targetTemperature += delta;
    if (targetTemperature>MAX_TEMP) {
@@ -315,6 +315,7 @@ void Control::changeTemp(int16_t delta) {
    if (targetTemperature<MIN_TEMP) {
       targetTemperature = MIN_TEMP;
    }
+   channel.setTargetTemperature(targetTemperature);
    channel.modified = (targetTemperature != chSettings[channel.preset]);
 }
 
@@ -328,7 +329,7 @@ void Control::updatePreset() {
    Channel &channel = channels[selectedChannel-1];
    NonvolatileArray<int, 3> &chSettings = (selectedChannel==1)?ch1Settings:ch2Settings;
 
-   chSettings.set(channel.preset, channel.targetTemperature);
+   chSettings.set(channel.preset, channel.getTargetTemperature());
    channel.modified          = false;
 }
 
@@ -377,8 +378,8 @@ void Control::zeroCrossingHandler() {
    channels[0].currentTemperature = round(ch1TipTemperature.getTemperature()+ch1ColdJunctionTemperature.getTemperature());
    channels[1].currentTemperature = round(ch2TipTemperature.getTemperature()+ch2ColdJunctionTemperature.getTemperature());
 
-   float ch1DutyCy = ch1Pid.newSample(channels[0].targetTemperature, channels[0].currentTemperature);
-   float ch2DutyCy = ch2Pid.newSample(channels[1].targetTemperature, channels[1].currentTemperature);
+   float ch1DutyCy = ch1Pid.newSample(channels[0].getTargetTemperature(), channels[0].currentTemperature);
+   float ch2DutyCy = ch2Pid.newSample(channels[1].getTargetTemperature(), channels[1].currentTemperature);
 
    ch1DutyCycleCounter.setDutyCycle(ch1DutyCy);
    ch2DutyCycleCounter.setDutyCycle(ch2DutyCy);
