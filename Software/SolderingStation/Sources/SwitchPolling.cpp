@@ -138,17 +138,14 @@ EventType SwitchPolling::pollSetbacks() {
    // Indicates tool2 was in use
    static bool     lastTool2Busy       = false;
 
-   // Indicates tool1 is in use
-   bool     tool1Busy       = false;
-
-   // Indicates tool2 is in use
-   bool     tool2Busy       = false;
-
    // Get current tool rest state
    unsigned toolPoll = Setbacks::read();
 
-   tool1Busy = toolPoll & Ch1Stand::MASK;
-   tool2Busy = toolPoll & Ch2Stand::MASK;
+   // Indicates tool1 is in use
+   bool tool1Busy = toolPoll & Ch1Stand::MASK;
+
+   // Indicates tool2 is in use
+   bool tool2Busy = toolPoll & Ch2Stand::MASK;
 
    if (lastTool1Busy != tool1Busy) {
       // Tool 1 changed - start over
