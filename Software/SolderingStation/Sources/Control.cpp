@@ -614,6 +614,7 @@ static const SettingsData settingsData[] = {
       SettingsData("CH 2\nIdle time",     ch2Settings.backOffTime,        SettingsData::Time       ),
       SettingsData("CH 1\nSafety time",   ch1Settings.safetyOffTime,      SettingsData::Time       ),
       SettingsData("CH 2\nSafety time",   ch2Settings.safetyOffTime,      SettingsData::Time       ),
+      SettingsData("Dummy",               SettingsData::dummyFloat,       SettingsData::Time       ),
 };
 
 EventType editItem(const SettingsData &data) {
