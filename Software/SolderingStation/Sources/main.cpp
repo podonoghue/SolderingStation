@@ -11,9 +11,17 @@
 
 using namespace USBDM;
 
+/// Handles the OLED display
 Display        display;
+
+/// Polls the switches and the set-back switches
 SwitchPolling  switchPolling;
+
+/// Main control class
 Control        control;
+
+/// The channel information
+Channels       channels;
 
 void reportChipTemperature() {
    using ChipTemperature = Adc0::Channel<26>;
@@ -105,6 +113,8 @@ int main() {
    console.write("SystemBusClock  = ").writeln(SystemBusClock);
 
    initialise();
+
+   control.testMenu();
 
 //   reportBandgapVoltage();
 //      reportChipTemperature();

@@ -31,9 +31,6 @@ private:
    /// Minimum iron temperature for operation
    static constexpr int      MIN_TEMP     = 100;
 
-   /// Number of channels
-   static constexpr unsigned NUM_CHANNELS = 2;
-
    /// Delay between zero crossing and switching heaters on (us)
    static constexpr unsigned POWER_ON_DELAY  = 900;
 
@@ -42,12 +39,6 @@ private:
 
    /// Delay between ADC conversions end and switching heaters off (us)
    static constexpr unsigned POWER_OFF_DELAY = 10000-SAMPLE_DELAY-1100;
-
-   /// Channel state information
-   Channel  channels[NUM_CHANNELS];
-
-   /// Currently selected channel for front panel controls
-   unsigned selectedChannel = 0;
 
    /// Indicates the display need updating
    bool     needRefresh = true;
@@ -95,6 +86,8 @@ public:
     * Initialise the control
     */
    void initialise();
+
+   void testMenu();
 
    /**
     * Check if channel is enabled

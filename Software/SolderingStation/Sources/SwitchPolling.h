@@ -24,11 +24,11 @@ enum EventType : uint16_t {
    ev_Ch1Ch2Press  ,
    ev_Ch1Ch2Hold   ,
    ev_Tool1Active  ,
+   ev_Tool2Active  = ev_Tool1Active+1,
    ev_Tool1Idle    ,
+   ev_Tool2Idle    = ev_Tool1Idle+1,
    ev_Tool1LongIdle,
-   ev_Tool2Active  ,
-   ev_Tool2Idle    ,
-   ev_Tool2LongIdle,
+   ev_Tool2LongIdle = ev_Tool1LongIdle+1,
 };
 
 /**
@@ -48,26 +48,32 @@ const char *getEventName(const Event b);
  */
 class SwitchPolling {
 
-   static EventType currentButton;
+private:
+   // Current button press or event (ev_None when none available)
+   EventType currentButton;
 
-   static int16_t getEncoder() {
+   int16_t getEncoder() {
       return QuadDecoder::getPosition();
    }
 
-   static void callBack();
+   EventType pollSwitches();
+   EventType pollSetbacks();
 
-   static EventType pollSwitches();
-   static EventType pollSetbacks();
+   // Static handle on class for timer call-back
+   static SwitchPolling *This;
 
 public:
    Event getEvent();
 
-   SwitchPolling() {}
+   SwitchPolling() : currentButton(ev_None) {
+      This = this;
+   }
 
    /**
     * Initialise the switch polling
     */
    void initialise();
+
 };
 
 extern SwitchPolling switchPolling;

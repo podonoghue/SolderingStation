@@ -4,7 +4,8 @@
  *  Created on: 5 Apr 2020
  *      Author: podonoghue
  */
-#include <SwitchPolling.h>
+#include "SwitchPolling.h"
+#include "Channel.h"
 
 using namespace USBDM;
 
@@ -13,9 +14,7 @@ using namespace USBDM;
  */
 constexpr unsigned POLL_INTERVAL_IN_MS = 10;                               // Polled every 10 ms
 constexpr unsigned DEBOUNCE_COUNT      = 50/POLL_INTERVAL_IN_MS;           // 50 ms
-constexpr unsigned HOLD_COUNT          = 2*1000/POLL_INTERVAL_IN_MS;       // 2 s
-constexpr unsigned IDLE_MAX_COUNT      = 5*60*1000/POLL_INTERVAL_IN_MS;    // 5 minutes
-constexpr unsigned LONGIDLE_MAX_COUNT  = 10*60*1000/POLL_INTERVAL_IN_MS;   // 10 minutes
+constexpr unsigned HOLD_COUNT          = 1*1000/POLL_INTERVAL_IN_MS;       // 2 s
 
 /**
  * Get name of event from EventTYpe
@@ -74,7 +73,7 @@ EventType SwitchPolling::pollSwitches() {
    static unsigned lastButtonPoll    = 0;
 
    // Poll buttons
-   unsigned  currentButtonValue   = Buttons::read();
+   unsigned  currentButtonValue = Buttons::read();
 
    // Stop counter rolling over
    if (stableButtonCount < HOLD_COUNT+1) {
@@ -126,80 +125,49 @@ EventType SwitchPolling::pollSwitches() {
  */
 EventType SwitchPolling::pollSetbacks() {
 
-   // How long tool1 has been idle
-   static unsigned tool1IdleCount  = 0;
-
-   // How long tool2 has been idle
-   static unsigned tool2IdleCount  = 0;
-
    // Indicates tool1 was in use
-   static bool     lastTool1Busy       = false;
+   static bool lastToolBusy[channels.NUM_CHANNELS] = {false};
 
-   // Indicates tool2 was in use
-   static bool     lastTool2Busy       = false;
+   // Indicates tool is in use
+   bool toolBusy[channels.NUM_CHANNELS];
 
    // Get current tool rest state
    unsigned toolPoll = Setbacks::read();
 
-   // Indicates tool1 is in use
-   bool tool1Busy = toolPoll & Ch1Stand::MASK;
+   // Poll tools
+   toolBusy[0] = toolPoll & (1<<(Ch1Stand::BITNUM-Setbacks::RIGHT));
+   toolBusy[1] = toolPoll & (1<<(Ch2Stand::BITNUM-Setbacks::RIGHT));
 
-   // Indicates tool2 is in use
-   bool tool2Busy = toolPoll & Ch2Stand::MASK;
+   for (unsigned tool=0; tool<channels.NUM_CHANNELS; tool++) {
 
-   if (lastTool1Busy != tool1Busy) {
-      // Tool 1 changed - start over
-      tool1IdleCount = 0;
-      lastTool1Busy    = tool1Busy;
-   }
-   else if (!tool1Busy) {
+      Channel &channel = channels[tool+1];
 
-      // Tool 1 in holder - increment idle time
-      if (tool1IdleCount<LONGIDLE_MAX_COUNT+1) {
-         tool1IdleCount++;
+      if (lastToolBusy[tool] != toolBusy[tool]) {
+         // Tool changed - start over
+         channel.restartIdleTimer();
+         lastToolBusy[tool]  = toolBusy[tool];
+         if (toolBusy[tool]) {
+            // Just started use of iron
+            return static_cast<EventType>(ev_Tool1Active+tool);
+         }
       }
-      if (tool1IdleCount == IDLE_MAX_COUNT) {
-         // Idle for a short while
-         return ev_Tool1Idle;
-      }
-      if (tool1IdleCount == LONGIDLE_MAX_COUNT) {
-         // Idle for a long time
-         return ev_Tool1LongIdle;
-      }
-   }
+      else if (!toolBusy[tool]) {
 
-   if (lastTool2Busy != tool2Busy) {
-      // Changed - start over
-      tool2IdleCount = 0;
-      lastTool2Busy    = tool2Busy;
-   }
-   else if (!tool2Busy) {
+         // Tool in holder - increment idle time
+         int idleTime = channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
 
-      // Tool 2 in holder - increment idle time
-      if (tool2IdleCount<LONGIDLE_MAX_COUNT+1) {
-         tool2IdleCount++;
-      }
-      if (tool2IdleCount == IDLE_MAX_COUNT) {
-         // Idle for a short while
-         return ev_Tool2Idle;
-      }
-      if (tool2IdleCount == LONGIDLE_MAX_COUNT) {
-         // Idle for a long time
-         return ev_Tool2LongIdle;
+         if (idleTime == channel.nvSettings.backOffTime) {
+            // Idle for a short while
+            return static_cast<EventType>(ev_Tool1Idle+tool);
+         }
+         if (idleTime == channel.nvSettings.safetyOffTime) {
+            // Idle for a long time
+            return static_cast<EventType>(ev_Tool1LongIdle+tool);
+         }
       }
    }
    return ev_None;
 }
-
-/**
- * Call-back handling switch polling
- */
-void SwitchPolling::callBack() {
-   currentButton = pollSwitches();
-   if (currentButton == ev_None) {
-      currentButton = pollSetbacks();
-   }
-};
 
 /**
  * Get last input event
@@ -235,6 +203,16 @@ void SwitchPolling::initialise() {
    Buttons::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
    Setbacks::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
+   /**
+    * Call-back handling switch polling
+    */
+   static const auto callBack = []() {
+      This->currentButton = This->pollSwitches();
+      if (This->currentButton == ev_None) {
+         This->currentButton = This->pollSetbacks();
+      }
+   };
+
    PollingTimerChannel::configureIfNeeded(PitDebugMode_Stop);
    PollingTimerChannel::configure(POLL_INTERVAL_IN_MS*ms, PitChannelIrq_Enabled);
    PollingTimerChannel::setCallback(callBack);
@@ -243,6 +221,5 @@ void SwitchPolling::initialise() {
    currentButton = ev_None;
 }
 
-
-EventType   SwitchPolling::currentButton = ev_None;
+SwitchPolling *SwitchPolling::This = nullptr;
 

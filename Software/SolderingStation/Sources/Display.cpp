@@ -15,11 +15,14 @@ using namespace USBDM;
  * @param ch2              Channel 2 properties
  * @param selectedChannel  The currently selected channel
  */
-void Display::displayTools(Channel &ch1, Channel &ch2, unsigned selectedChannel) {
+void Display::displayTools() {
    using namespace USBDM;
 
    static constexpr unsigned LEFT_OFFSET  = 1;
    static constexpr unsigned RIGHT_OFFSET = 1+(oled.WIDTH+1)/2;
+
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
 
    oled.clearDisplay();
 
@@ -30,7 +33,7 @@ void Display::displayTools(Channel &ch1, Channel &ch2, unsigned selectedChannel)
       oled.moveXY(LEFT_OFFSET+4, 10).write("---");
    }
    else {
-      int currentTemp = ch1.currentTemperature;
+      int currentTemp = ch1.getCurrentTemperature();
       if (currentTemp>999) {
          currentTemp = 999;
       }
@@ -44,7 +47,7 @@ void Display::displayTools(Channel &ch1, Channel &ch2, unsigned selectedChannel)
       oled.moveXY(RIGHT_OFFSET+4, 10).write("---");
    }
    else {
-      int currentTemp = ch2.currentTemperature;
+      int currentTemp = ch2.getCurrentTemperature();
       if (currentTemp>999) {
          currentTemp = 999;
       }
@@ -53,7 +56,7 @@ void Display::displayTools(Channel &ch1, Channel &ch2, unsigned selectedChannel)
       oled.moveXY(RIGHT_OFFSET+47, 15).write("C");
    }
 
-   switch (selectedChannel) {
+   switch (channels.getSelectedChannelNumber()) {
       case 1:
          oled.drawRect(LEFT_OFFSET-1,  12, LEFT_OFFSET+56,  12+23, WriteMode_Xor);
          break;
@@ -67,10 +70,10 @@ void Display::displayTools(Channel &ch1, Channel &ch2, unsigned selectedChannel)
    oled.moveXY(RIGHT_OFFSET, 0).write(getChannelStateName(ch2.getState()));
 
    oled.setFont(fontLarge);
-   oled.moveXY(LEFT_OFFSET,  40).write("P").setWidth(1).write(ch1.preset+1).
-         write(ch1.modified?"*:":" :").setWidth(3).write(ch1.getTargetTemperature());
-   oled.moveXY(RIGHT_OFFSET, 40).write("P").setWidth(1).write(ch2.preset+1).
-         write(ch2.modified?"*:":" :").setWidth(3).write(ch2.getTargetTemperature());
+   oled.moveXY(LEFT_OFFSET,  40).write("P").setWidth(1).write(ch1.getPreset()).
+         write(ch1.isTempModified()?"*:":" :").setWidth(3).write(ch1.getUserTemperature());
+   oled.moveXY(RIGHT_OFFSET, 40).write("P").setWidth(1).write(ch2.getPreset()).
+         write(ch2.isTempModified()?"*:":" :").setWidth(3).write(ch2.getUserTemperature());
 
    oled.setFont(fontMedium).setWidth(2);
    oled.moveXY(LEFT_OFFSET+18,  56).write(ch1.dutyCycle).write('%');
@@ -88,11 +91,11 @@ void Display::displayTools(Channel &ch1, Channel &ch2, unsigned selectedChannel)
    oled.resetFormat();
 }
 
-void Display::displayTimeMenuItem(unsigned channel, const char *name, unsigned seconds) {
+void Display::displayTimeMenuItem(const char *name, unsigned seconds) {
    oled.clearDisplay();
 
    oled.setFont(fontLarge);
-   oled.moveXY(0, 0).writeln(name).write("CH ").write(channel);
+   oled.moveXY(0, 0).writeln(name);
 
    oled.setFont(fontVeryLarge);
    oled.setPadding(Padding_LeadingSpaces).setWidth(4);
@@ -103,15 +106,16 @@ void Display::displayTimeMenuItem(unsigned channel, const char *name, unsigned s
    oled.resetFormat();
 }
 
-void Display::displayTemperatureMenuItem(unsigned channel, const char *name, unsigned temperature) {
+void Display::displayTemperatureMenuItem(const char *name, unsigned temperature) {
    oled.clearDisplay();
 
    oled.setFont(fontLarge);
-   oled.moveXY(0, 0).writeln(name).write("CH ").write(channel);
+   oled.moveXY(0, 0).writeln(name);
 
    oled.setFont(fontVeryLarge);
    oled.setPadding(Padding_LeadingSpaces).setWidth(4);
-   oled.moveXY(15, 30).write(temperature).write("C");
+   oled.moveXY(15, 30).write(temperature);
+   oled.setFont(fontMedium).write("C");
 
    oled.refreshImage();
 

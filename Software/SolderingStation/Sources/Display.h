@@ -38,11 +38,11 @@ public:
     * @param ch2              Channel 2 properties
     * @param selectedChannel  The currently selected channel
     */
-   void displayTools(Channel &ch1, Channel &ch2, unsigned selectedChannel);
+   void displayTools();
 
-   void displayTimeMenuItem(unsigned channel, const char *name, unsigned seconds);
+   void displayTimeMenuItem(const char *name, unsigned seconds);
 
-   void displayTemperatureMenuItem(unsigned channel, const char *name, unsigned temperature);
+   void displayTemperatureMenuItem(const char *name, unsigned temperature);
 };
 
 extern Display display;
