@@ -5,7 +5,7 @@
 #include "Peripherals.h"
 #include "Display.h"
 #include "SwitchPolling.h"
-#include "Channel.h"
+#include "Channels.h"
 #include "Control.h"
 #include "pmc.h"
 
@@ -114,7 +114,7 @@ int main() {
 
    initialise();
 
-   control.testMenu();
+//   control.testMenu();
 
 //   reportBandgapVoltage();
 //      reportChipTemperature();

@@ -8,7 +8,7 @@
 #ifndef SOURCES_MOVINGWINDOWAVERAGE_H_
 #define SOURCES_MOVINGWINDOWAVERAGE_H_
 
-#include "adc.h"
+#include "hardware.h"
 #include "Peripherals.h"
 
 /**
@@ -218,7 +218,7 @@ public:
    }
 
    /**
-    * Returns the moving window average of the thermocouple temperature
+    * Returns the moving window average of the thermocouple temperature relative to the cold reference
     *
     * @return Thermocouple temperature in Celsius
     */

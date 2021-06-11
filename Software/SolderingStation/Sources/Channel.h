@@ -9,33 +9,15 @@
 #define SOURCES_CHANNEL_H_
 
 #include <algorithm>
-#include <error.h>
-#include "flash.h"
+#include "hardware.h"
+#include "MovingWindowAverage.h"
+#include "ChannelSettings.h"
 
 enum ChannelState {ch_off, ch_noTip, ch_overload, ch_backoff, ch_active};
 
 const char *getChannelStateName(ChannelState state);
 
 static constexpr unsigned NUM_PRESETS  = 3;
-
-constexpr unsigned IDLE_MAX_TIME      =  5*60*1000; // 5 minutes in ms
-constexpr unsigned LONGIDLE_MAX_TIME  = 20*60*1000; // 20 minutes in ms
-
-class ChannelSettings {
-
-public:
-   /// Preset temperatures
-   USBDM::Nonvolatile<int>    presets[3];
-
-   // Back off temperature for idle iron
-   USBDM::Nonvolatile<int>    backOffTemperature;
-
-   // Idle time delay until backing off tip temperature ms
-   USBDM::Nonvolatile<int>    backOffTime;
-
-   // Idle time delay until turning off idle iron ms
-   USBDM::Nonvolatile<int>    safetyOffTime;
-};
 
 class Channel {
 
@@ -50,6 +32,11 @@ public:
 
    ChannelSettings  &nvSettings;                  // Non-volatile settings stored in Flash
 
+   /// Moving window average for tip temperature (thermocouple)
+   ThermocoupleAverage<5> tipTemperature;
+
+   /// Moving window average for cold junction temperature (NTC resistor)
+   ThermistorAverage<5> coldJunctionTemperature;
 
 private:
    int               currentTemperature  = 0;        // Measured temperature of tool
@@ -156,12 +143,11 @@ public:
    }
 
    /**
-    * Set current temperature
-    *
-    * @param temperature Current temperature to set
+    * Update current temperature from internal averages
     */
-   void setCurrentTemperature(int temperature) {
-      currentTemperature = temperature;
+   void upDateCurrentTemperature() {
+      currentTemperature = round(tipTemperature.getTemperature()+coldJunctionTemperature.getTemperature());
+      tipPresent = tipTemperature.getAverage() < (USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION)-200);
    }
 
    /**
@@ -239,72 +225,5 @@ public:
       return toolIdleTime;
    }
 };
-
-extern ChannelSettings ch1Settings;
-extern ChannelSettings ch2Settings;
-
-/**
- * Class representing a channel
- * This includes settings and channel state
- */
-class Channels {
-
-public:
-
-   /// Number of channels
-   static constexpr unsigned NUM_CHANNELS = 2;
-
-   /// Channel1 state information
-   Channel  channel1 = Channel(ch1Settings);
-
-   /// Channel2 state information
-   Channel  channel2 = Channel(ch2Settings);
-
-   /// Currently selected channel for front panel controls
-   unsigned selectedChannel = 0;
-
-   /**
-    * Get channel by channel number
-    *
-    * @param channelNumber
-    *
-    * @return Reference to indicate channel
-    */
-   Channel &operator[](int channelNumber) {
-      usbdm_assert((channelNumber == 1)||(channelNumber == 2), "Illegal channel");
-
-      return (channelNumber==1)?channel1:channel2;
-   }
-
-   /**
-    * Get the number of the selected channel
-    *
-    * @return Channel number (zero indicates no currently selected channel)
-    */
-   unsigned getSelectedChannelNumber() {
-      return selectedChannel;
-   }
-
-   /**
-    * Get currently selected channel for front panel controls
-    *
-    * @return Reference to currently selected channel
-    */
-   Channel &getSelectedChannel() {
-      return this->operator[](selectedChannel);
-   }
-
-   /**
-    * Set currently selected channel for front panel controls
-    *
-    * @param channel Channel to make selected
-    */
-   void setSelectedChannel(unsigned channel) {
-      selectedChannel = channel;
-   }
-};
-
-/// The channel information
-extern Channels channels;
 
 #endif /* SOURCES_CHANNEL_H_ */

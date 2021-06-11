@@ -5,6 +5,7 @@
  *      Author: podonoghue
  */
 #include "Display.h"
+#include "Channels.h"
 
 using namespace USBDM;
 
@@ -98,8 +99,9 @@ void Display::displayTimeMenuItem(const char *name, unsigned seconds) {
    oled.moveXY(0, 0).writeln(name);
 
    oled.setFont(fontVeryLarge);
-   oled.setPadding(Padding_LeadingSpaces).setWidth(4);
-   oled.moveXY(15, 30).write(seconds).write("s");
+   oled.moveXY(15, 30);
+   oled.setPadding(Padding_LeadingSpaces).setWidth(2).write(seconds/60).write("m");
+   oled.setPadding(Padding_LeadingZeroes).setWidth(2).write(seconds%60).write("s");
 
    oled.refreshImage();
 

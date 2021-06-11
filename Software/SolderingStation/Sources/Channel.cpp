@@ -19,9 +19,3 @@ const char *getChannelStateName(ChannelState state) {
    }
    return names[state];
 }
-
-__attribute__ ((section(".flexRAM")))
-ChannelSettings ch1Settings;
-
-__attribute__ ((section(".flexRAM")))
-ChannelSettings ch2Settings;
