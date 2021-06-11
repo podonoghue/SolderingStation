@@ -24,13 +24,14 @@
  */
 class Control {
 
-private:
+public:
    /// Maximum iron temperature for operation
    static constexpr int      MAX_TEMP     = 425;
 
    /// Minimum iron temperature for operation
    static constexpr int      MIN_TEMP     = 100;
 
+private:
    /// Delay between zero crossing and switching heaters on (us)
    static constexpr unsigned POWER_ON_DELAY  = 900;
 
@@ -48,18 +49,6 @@ private:
 
    /// this pointer for static members (call-backs)
    static Control *This;
-
-   /// Moving window average for Channel 1 tip temperature (thermocouple)
-   ThermocoupleAverage<5> ch1TipTemperature;
-
-   /// Moving window average for Channel 2 tip temperature (thermocouple)
-   ThermocoupleAverage<5> ch2TipTemperature;
-
-   /// Moving window average for Channel 1 cold junction temperature (NTC resistor)
-   ThermistorAverage<5> ch1ColdJunctionTemperature;
-
-   /// Moving window average for Channel 1 cold junction temperature (NTC resistor)
-   ThermistorAverage<5> ch2ColdJunctionTemperature;
 
    /// Moving window average for Chip temperature (internal MCU sensor)
    ChipTemperatureAverage<5> chipTemperature;
@@ -217,7 +206,7 @@ public:
    /**
     * Debugging code
     */
-   void reportChannel();
+   void reportChannel(Channel &ch);
 
    /**
     * Event loop for front panel events.

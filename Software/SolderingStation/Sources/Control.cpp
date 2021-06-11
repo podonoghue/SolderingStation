@@ -5,65 +5,19 @@
  *      Author: podonoghue
  */
 
-#include "Control.h"
-#include "flash.h"
-#include "SwitchPolling.h"
 #include "smc.h"
+#include "SwitchPolling.h"
+#include "Control.h"
+#include "Channels.h"
 
 using namespace USBDM;
-
-/**
- * A derived class similar to this should be created to do the following:
- * - Wait for initialisation of the FlexRAM from the Flash backing store - Flash();
- * - Configure and partition the flash on the first reset after programming the device - initialiseEeprom().
- * - Do once-only initialisation of non-volatile variables when the above occurs.
- */
-class NvInit : public Flash {
-private:
-
-   void initialiseChannelSettings(ChannelSettings &settings);
-
-public:
-   NvInit() : Flash() {
-
-      // Initialise the non-volatile system and configure if necessary
-      volatile FlashDriverError_t rc = initialiseEeprom<EepromSel_1KBytes, PartitionSel_flash0K_eeprom32K, SplitSel_disabled>();
-
-      if (rc == FLASH_ERR_NEW_EEPROM) {
-         // This is the first reset after programming the device
-         // Initialise the non-volatile variables as necessary
-         // If not initialised they will have an initial value of 0xFF
-
-         initialiseChannelSettings(ch1Settings);
-         initialiseChannelSettings(ch2Settings);
-      }
-      else {
-         usbdm_assert(rc != FLASH_ERR_OK, "FlexNVM initialisation error");
-         console.writeln("Not initialising NV variables");
-      }
-   }
-};
-
-void NvInit::initialiseChannelSettings(ChannelSettings &settings) {
-
-   settings.presets[0]           = 250;
-   settings.presets[1]           = 350;
-   settings.presets[2]           = 370;
-   settings.backOffTemperature   = 200;
-   settings.backOffTime          = IDLE_MAX_TIME;
-   settings.safetyOffTime        = LONGIDLE_MAX_TIME;
-}
 
 /**
  * Constructor
  * Does minimal work - see initialise for main initialisation.
  */
 Control::Control() {
-
    This = this;
-
-   // Initialise non-volatile storage
-   NvInit nvinit;
 }
 
 /**
@@ -276,6 +230,7 @@ void Control::changeTemp(int16_t delta) {
       targetTemperature = MIN_TEMP;
    }
    channel.setUserTemperature(targetTemperature);
+   channel.restartIdleTimer();
 
    //   {
    //      unsigned currentDutyCycle = channel.dutyCycle;
@@ -350,17 +305,20 @@ void Control::zeroCrossingHandler() {
       setNeedsRefresh();
    }
 
-   channels[1].setCurrentTemperature(round(ch1TipTemperature.getTemperature()+ch1ColdJunctionTemperature.getTemperature()));
-   channels[2].setCurrentTemperature(round(ch2TipTemperature.getTemperature()+ch2ColdJunctionTemperature.getTemperature()));
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
 
-   float ch1DutyCy = ch1Pid.newSample(channels[1].getTargetTemperature(), channels[1].getCurrentTemperature());
-   float ch2DutyCy = ch2Pid.newSample(channels[2].getTargetTemperature(), channels[2].getCurrentTemperature());
+   ch1.upDateCurrentTemperature();
+   ch2.upDateCurrentTemperature();
+
+   float ch1DutyCy = ch1Pid.newSample(ch1.getTargetTemperature(), ch1.getCurrentTemperature());
+   float ch2DutyCy = ch2Pid.newSample(ch2.getTargetTemperature(), ch2.getCurrentTemperature());
 
    ch1DutyCycleCounter.setDutyCycle(ch1DutyCy);
    ch2DutyCycleCounter.setDutyCycle(ch2DutyCy);
 
-   channels[1].dutyCycle = ch1DutyCycleCounter.getDutyCycle();
-   channels[2].dutyCycle = ch2DutyCycleCounter.getDutyCycle();
+   ch1.dutyCycle = ch1DutyCycleCounter.getDutyCycle();
+   ch2.dutyCycle = ch2DutyCycleCounter.getDutyCycle();
 
    GpioSpare2::clear();
 }
@@ -406,17 +364,15 @@ void Control::sampleHandler() {
 
    // Measure channel 1 if idle this cycle
    if (!ch1DutyCycleCounter.isOn()) {
-      adcChannelMask |= (1<<Ch1ColdJunctionNtc::CHANNEL);
-      adcChannelMask |= (1<<Ch1TipThermocouple::CHANNEL);
+      adcChannelMask |= (1<<Ch1ColdJunctionNtc::CHANNEL) | (1<<Ch1TipThermocouple::CHANNEL);
    }
    // Measure channel 2 if idle this cycle
    if (!ch2DutyCycleCounter.isOn()) {
-      adcChannelMask |= (1<<Ch2ColdJunctionNtc::CHANNEL);
-      adcChannelMask |= (1<<Ch2TipThermocouple::CHANNEL);
+      adcChannelMask |= (1<<Ch2ColdJunctionNtc::CHANNEL) | (1<<Ch2TipThermocouple::CHANNEL);
    }
 
    // Always do chip temperature
-   // This also start the whole sequence of chained conversions
+   // This also starts the entire sequence of chained conversions
    ChipTemperature::startConversion(AdcInterrupt_Enabled);
 
    ch1DutyCycleCounter.advance();
@@ -448,24 +404,22 @@ void Control::switchOffHandler() {
  *   Initial conversion is started from a timer call-back when a channel has an idle cycle.
  *   Several consecutive conversions are then chained in sequence.
  */
-void Control::adcHandler(uint32_t result, int channel) {
+void Control::adcHandler(uint32_t result, int adcChannel) {
 
    GpioSpare2::toggle();
 
-   switch (channel) {
+   switch (adcChannel) {
       case Ch1ColdJunctionNtc::CHANNEL :
-         ch1ColdJunctionTemperature.accumulate(result);
+         channels[1].coldJunctionTemperature.accumulate(result);
          break;
       case Ch1TipThermocouple::CHANNEL :
-         ch1TipTemperature.accumulate(result);
-         channels[1].setTipPresent(ch1TipTemperature.getAverage() < (Adc0::getSingleEndedMaximum(ADC_RESOLUTION)-200));
+         channels[1].tipTemperature.accumulate(result);
          break;
       case Ch2ColdJunctionNtc::CHANNEL :
-         ch2ColdJunctionTemperature.accumulate(result);
+         channels[2].coldJunctionTemperature.accumulate(result);
          break;
       case Ch2TipThermocouple::CHANNEL :
-         ch2TipTemperature.accumulate(result);
-         channels[2].setTipPresent(ch2TipTemperature.getAverage() < (Adc0::getSingleEndedMaximum(ADC_RESOLUTION)-200));
+         channels[2].tipTemperature.accumulate(result);
          break;
       case ChipTemperature::CHANNEL :
          chipTemperature.accumulate(result);
@@ -476,13 +430,14 @@ void Control::adcHandler(uint32_t result, int channel) {
    }
 
    // Set up next conversion
-   int channelNum = __builtin_ffs(adcChannelMask)-1;
-   if (channelNum >= 0) {
-      TemperatureAdc::startConversion(AdcInterrupt_Enabled|channelNum);
+   int nextAdcChannel = __builtin_ffs(adcChannelMask)-1;
+   if (nextAdcChannel >= 0) {
+      TemperatureAdc::startConversion(AdcInterrupt_Enabled|nextAdcChannel);
    }
+
    // Mark done current conversion
    // Note - this means each conversion is done twice except for chip temperature
-   adcChannelMask &= ~(1<<channel);
+   adcChannelMask &= ~(1<<adcChannel);
 
    GpioSpare2::toggle();
 }
@@ -504,20 +459,21 @@ void Control::refresh() {
 /**
  * Debugging code
  */
-void Control::reportChannel() {
+void Control::reportChannel(Channel &ch) {
    static int count=0;
+
    if (count++ == 2000) {
       count = 0;
       console.setFloatFormat(2, Padding_LeadingSpaces, 2);
-      float tipV   = 1000*ch1TipTemperature.getVoltage();
-      float tipT   = ch1TipTemperature.getTemperature();
-      float coldT  = ch1ColdJunctionTemperature.getTemperature();
+      float tipV   = 1000*ch.tipTemperature.getVoltage();
+      float tipT   = ch.tipTemperature.getTemperature();
+      float coldT  = ch.coldJunctionTemperature.getTemperature();
 
       console.
-      write("Ch1 Tip = ").write(tipT+coldT).
-      write("(").write(tipT).write("+").write(+coldT).
+      write("Tip = ").write(tipT+coldT).
+      write(" (").write(tipT).write("+").write(+coldT).
       write("),(").write(tipV).write(" mV").
-      write(",").write(ch1ColdJunctionTemperature.getResistance()).write(" ohms)").
+      write(",").write(ch.coldJunctionTemperature.getResistance()).write(" ohms)").
       write(" ").write(tipV).write(" ").write(coldT).write(" ").
       //         write(" C, Ch1 Cold = ").write(ch1ColdJunctionTemperature.getConvertedValue()).
       //         write(" C, Ch2 Tip  = ").write(ch2TipTemperature.getConvertedValue()+ch2ColdJunctionTemperature.getConvertedValue()).
@@ -535,7 +491,7 @@ void Control::eventLoop()  {
    refresh();
 
    for(;;) {
-      reportChannel();
+//      reportChannel(channels[1]);
 
       Event event = switchPolling.getEvent();
 
@@ -544,6 +500,7 @@ void Control::eventLoop()  {
          setNeedsRefresh();
 
 //         console.write("Position = ").write(event.change).write(", Event = ").writeln(getEventName(event));
+         console.write("Event = ").writeln(getEventName(event));
          switch(event.type) {
             case ev_Ch1Hold      : toggleEnable(1);             break;
             case ev_Ch2Hold      : toggleEnable(2);             break;
@@ -565,10 +522,24 @@ void Control::eventLoop()  {
             case ev_Tool2Idle     : backOff(2);                break;
             case ev_Tool1LongIdle : disable(1);                break;
             case ev_Tool2LongIdle : disable(2);                break;
-            case ev_Ch1Press      : setSelectedChannel(1);     break;
-            case ev_Ch2Press      : setSelectedChannel(2);     break;
-            case ev_SelPress      : nextPreset();              break;
-            case ev_QuadPress     : updatePreset();            break;
+            case ev_Ch1Release      :
+               if (channels.getSelectedChannelNumber() != 1) {
+                  setSelectedChannel(1);
+               }
+               else {
+                  nextPreset();
+               }
+               break;
+            case ev_Ch2Release      :
+               if (channels.getSelectedChannelNumber() != 2) {
+                  setSelectedChannel(2);
+               }
+               else {
+                  nextPreset();
+               }
+               break;
+            case ev_SelRelease    : nextPreset();              break;
+            case ev_QuadRelease   : updatePreset();            break;
             case ev_QuadRotate    : changeTemp(event.change);  break;
             default: break;
          }
@@ -589,32 +560,57 @@ public:
    enum Type {Temperature, Time};
 
    const char      * const name;
-   Nonvolatile<int>       &setting;
-   Nonvolatile<float>     &settingFloat;
    const Type              type;
-
-   static Nonvolatile<float>     dummyFloat;
-   static Nonvolatile<int>       dummyInt;
+   union {
+      Nonvolatile<int>       *settingInt;
+      Nonvolatile<float>     *settingFloat;
+   };
 
    constexpr SettingsData(const char *name, Nonvolatile<int> &setting, Type type)
-      : name(name), setting(setting), settingFloat(dummyFloat), type(type) {
+      : name(name), type(type), settingInt(&setting) {
    }
    constexpr SettingsData(const char *name, Nonvolatile<float> &setting, Type type)
-      : name(name), setting(dummyInt), settingFloat(setting), type(type) {
+      : name(name), type(type), settingFloat(&setting) {
+   }
+
+   void increment(int delta, int &scratch) const {
+      constexpr int MAX_TIME = (99*60+50); // in seconds
+
+      switch (type) {
+         case Temperature:
+            scratch += delta;
+            if (scratch>Control::MAX_TEMP) {
+               scratch = Control::MAX_TEMP;
+            }
+            if (scratch<Control::MIN_TEMP) {
+               scratch = Control::MIN_TEMP;
+            }
+            break;
+         case Time:
+            // Increment by multiple of 10s with forced rounding
+            scratch += delta*10;
+            scratch  = scratch - scratch%10;
+
+            if (scratch>MAX_TIME) {
+               scratch = MAX_TIME;
+            }
+            if (scratch<0) {
+               scratch = 0;
+            }
+            break;
+      }
+
    }
 };
 
-Nonvolatile<float> SettingsData::dummyFloat;
-Nonvolatile<int>   SettingsData::dummyInt;
-
 static const SettingsData settingsData[] = {
-      SettingsData("CH 1\nIdle temp.",    ch1Settings.backOffTemperature, SettingsData::Temperature),
-      SettingsData("CH 2\nIdle temp.",    ch2Settings.backOffTemperature, SettingsData::Temperature),
-      SettingsData("CH 1\nIdle time",     ch1Settings.backOffTime,        SettingsData::Time       ),
-      SettingsData("CH 2\nIdle time",     ch2Settings.backOffTime,        SettingsData::Time       ),
-      SettingsData("CH 1\nSafety time",   ch1Settings.safetyOffTime,      SettingsData::Time       ),
-      SettingsData("CH 2\nSafety time",   ch2Settings.safetyOffTime,      SettingsData::Time       ),
-      SettingsData("Dummy",               SettingsData::dummyFloat,       SettingsData::Time       ),
+      SettingsData("CH 1\nIdle temp.",    nvinit.ch1Settings.backOffTemperature, SettingsData::Temperature),
+      SettingsData("CH 2\nIdle temp.",    nvinit.ch2Settings.backOffTemperature, SettingsData::Temperature),
+      SettingsData("CH 1\nIdle time",     nvinit.ch1Settings.backOffTime,        SettingsData::Time       ),
+      SettingsData("CH 2\nIdle time",     nvinit.ch2Settings.backOffTime,        SettingsData::Time       ),
+      SettingsData("CH 1\nSafety time",   nvinit.ch1Settings.safetyOffTime,      SettingsData::Time       ),
+      SettingsData("CH 2\nSafety time",   nvinit.ch2Settings.safetyOffTime,      SettingsData::Time       ),
+//      SettingsData("Dummy",               SettingsData::dummyFloat,       SettingsData::Time       ),
 };
 
 EventType editItem(const SettingsData &data) {
@@ -626,7 +622,7 @@ EventType editItem(const SettingsData &data) {
 
    int scaleFactor = 1;
 
-   int scratch = data.setting;
+   int scratch = *data.settingInt;
    if (data.type == SettingsData::Time) {
       // Convert time to seconds
       scaleFactor = 1000;
@@ -637,10 +633,10 @@ EventType editItem(const SettingsData &data) {
       event = switchPolling.getEvent();
       switch (event.type) {
          case ev_QuadPress:
-            data.setting = scratch * scaleFactor;
+            *data.settingInt = scratch * scaleFactor;
             break;
          case ev_QuadRotate:
-            scratch += event.change;
+            data.increment(event.change, scratch);
             doRefresh = true;
             break;
          case ev_SelPress:
