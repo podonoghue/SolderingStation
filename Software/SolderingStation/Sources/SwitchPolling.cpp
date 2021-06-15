@@ -5,6 +5,7 @@
  *      Author: podonoghue
  */
 #include "SwitchPolling.h"
+#include "QuadDecoder.h"
 #include "Channels.h"
 #include "queue"
 
@@ -168,7 +169,8 @@ EventType SwitchPolling::pollSetbacks() {
       Channel &channel = channels[tool+1];
 
       if (lastToolBusy[tool] != toolBusy[tool]) {
-         // Tool changed - start over
+
+         // Tool moved - start over
          channel.restartIdleTimer();
          lastToolBusy[tool]  = toolBusy[tool];
          if (toolBusy[tool]) {
@@ -181,11 +183,11 @@ EventType SwitchPolling::pollSetbacks() {
          // Tool in holder - increment idle time
          int idleTime = channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
 
-         if (idleTime == channel.nvSettings.backOffTime) {
+         if ((channel.nvSettings.setbackTime > 0) && (idleTime == channel.nvSettings.setbackTime)) {
             // Idle for a short while
             return static_cast<EventType>(ev_Tool1Idle+tool);
          }
-         if (idleTime == channel.nvSettings.safetyOffTime) {
+         if ((channel.nvSettings.safetyOffTime > 0) && (idleTime == channel.nvSettings.safetyOffTime)) {
             // Idle for a long time
             return static_cast<EventType>(ev_Tool1LongIdle+tool);
          }
@@ -206,10 +208,11 @@ Event SwitchPolling::getEvent() {
 
    if (t.type == ev_None) {
       static int16_t lastQuadPosition = 0;
-      int16_t currentQuadPosition = getEncoder()/2;
-      if (currentQuadPosition != lastQuadPosition) {
+      int16_t currentQuadPosition = encoder.getPosition();
+      int16_t delta = currentQuadPosition - lastQuadPosition;
+      if (delta != 0) {
          t.type   = ev_QuadRotate;
-         t.change = (currentQuadPosition - lastQuadPosition);
+         t.change = delta;
          lastQuadPosition = currentQuadPosition;
       }
    }
@@ -220,11 +223,11 @@ Event SwitchPolling::getEvent() {
  * Initialise the switch polling
  */
 void SwitchPolling::initialise() {
-   QuadDecoder::configure(FtmPrescale_1, FtmQuadratureMode_Phase_AB_Mode);
-   QuadDecoder::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
-   QuadDecoder::enableFilter(7);
+
+   encoder.initialise();
 
    Buttons::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
+
    Setbacks::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
    /**

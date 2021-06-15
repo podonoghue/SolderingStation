@@ -9,7 +9,8 @@
 #define SOURCES_SWITCHPOLLING_H_
 
 #include "Peripherals.h"
-#include "Queue.h"
+#include "EventQueue.h"
+#include "QuadDecoder.h"
 
 enum EventType : uint8_t {
    ev_None         ,
@@ -64,18 +65,18 @@ const char *getEventName(const Event b);
 class SwitchPolling {
 
 private:
-   int16_t getEncoder() {
-      return QuadDecoder::getPosition();
-   }
 
    EventType pollSwitches();
    EventType pollSetbacks();
 
-   // Static handle on class for timer call-back
-   static SwitchPolling *This;
+   /// Quadrature decode for rotary encoder
+   Quadecoder encoder;
 
-   // Queue of pending events
-   Queue<EventType, ev_None, 10> eventQueue;
+   /// Queue of pending events
+   EventQueue<EventType, ev_None, 10> eventQueue;
+
+   /// Static handle on class for timer call-back
+   static SwitchPolling *This;
 
 public:
    Event getEvent();
