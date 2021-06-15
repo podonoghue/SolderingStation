@@ -1,5 +1,5 @@
 /*
- * NonvolatileSettingsX.h
+ * NonvolatileSettings.h
  *
  *  Created on: 11 Jun. 2021
  *      Author: peter
@@ -10,6 +10,7 @@
 
 #include "flash.h"
 #include "ChannelSettings.h"
+#include "PidSettings.h"
 
 /**
  * A derived class similar to this should be created to do the following:
@@ -20,14 +21,19 @@
  */
 class NonvolatileSettings : public USBDM::Flash {
 
+   friend class Control;
    friend class Channels;
 
-public:
+private:
+
    ///  Channel 1 non-volatile settings
    ChannelSettings ch1Settings;
 
    ///  Channel 2 non-volatile settings
    ChannelSettings ch2Settings;
+
+   /// Settings for control loop
+   PidSettings     pidSettings;
 
 private:
 
@@ -39,12 +45,14 @@ private:
    NonvolatileSettings& operator=(NonvolatileSettings &&other) = delete;
 
 public:
+
    NonvolatileSettings();
 
    /**
     * Initialise non-volatile storage to default values
     */
    void initialiseNonvolatileStorage();
+   void initialisePidSettings();
 
 };
 

@@ -9,26 +9,48 @@
 #define SOURCES_QUEUE_H_
 #include "system.h"
 
+/**
+ * Specialised queue
+ * Takes advantage of a know empty value token
+ *
+ * These are discarded on add and automatically returned on empty queue.
+ *
+ * @tparam T            Type for queue elements
+ * @tparam emptyValue   Special token indicating empty
+ * @tparam size         Size of queue
+ */
 template<typename T, T emptyValue, int size>
-class Queue {
+class EventQueue {
    T queue[size];
    unsigned head  = 0;
    unsigned tail  = 0;
    unsigned count = 0;
 
-   Queue(const Queue &other) = delete;
-   Queue(Queue &&other) = delete;
-   Queue& operator=(const Queue &other) = delete;
-   Queue& operator=(Queue &&other) = delete;
+   EventQueue(const EventQueue &other) = delete;
+   EventQueue(EventQueue &&other) = delete;
+   EventQueue& operator=(const EventQueue &other) = delete;
+   EventQueue& operator=(EventQueue &&other) = delete;
 
 public:
-   Queue() {}
-   ~Queue() {}
+   EventQueue() {}
+   ~EventQueue() {}
 
+   /**
+    * Indicates if queue is empty
+    *
+    * @return true  => empty
+    * @return false => not empty
+    */
    bool isEmpty() {
       return count == 0;
    }
 
+   /**
+    * Indicates if queue is full
+    *
+    * @return true  => full
+    * @return false => not full
+    */
    bool isFull() {
       return count == size;
    }

@@ -588,7 +588,6 @@ public:
          set(index, value);
       }
    }
-   
 };
 /**
  * @}

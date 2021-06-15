@@ -204,7 +204,6 @@ void TSI0_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void MCG_IRQHandler(void)                     WEAK_DEFAULT_HANDLER;
 void LPTMR0_IRQHandler(void)                  WEAK_DEFAULT_HANDLER;
 void PORTA_IRQHandler(void)                   WEAK_DEFAULT_HANDLER;
-void PORTB_IRQHandler(void)                   WEAK_DEFAULT_HANDLER;
 void PORTC_IRQHandler(void)                   WEAK_DEFAULT_HANDLER;
 void PORTE_IRQHandler(void)                   WEAK_DEFAULT_HANDLER;
 void SWI_IRQHandler(void)                     WEAK_DEFAULT_HANDLER;
@@ -279,7 +278,7 @@ VectorTable const __vector_table = {
       MCG_IRQHandler,                          /*   54,   38  Multipurpose Clock Generator                                                     */
       LPTMR0_IRQHandler,                       /*   55,   39  Low Power Timer                                                                  */
       PORTA_IRQHandler,                        /*   56,   40  General Purpose Input/Output                                                     */
-      PORTB_IRQHandler,                        /*   57,   41  General Purpose Input/Output                                                     */
+      USBDM::PortB::irqHandler,                /*   57,   41  General Purpose Input/Output                                                     */
       PORTC_IRQHandler,                        /*   58,   42  General Purpose Input/Output                                                     */
       USBDM::PortD::irqHandler,                /*   59,   43  General Purpose Input/Output                                                     */
       PORTE_IRQHandler,                        /*   60,   44  General Purpose Input/Output                                                     */

@@ -16,13 +16,13 @@ public:
    /// Preset temperatures
    USBDM::Nonvolatile<int>    presets[3];
 
-   // Back off temperature for idle iron
-   USBDM::Nonvolatile<int>    backOffTemperature;
+   // Setback temperature for idle iron
+   USBDM::Nonvolatile<int>    setbackTemperature;
 
-   // Idle time delay until backing off tip temperature ms
-   USBDM::Nonvolatile<int>    backOffTime;
+   // Idle time delay until reducing tip temperature ms
+   USBDM::Nonvolatile<int>    setbackTime;
 
-   // Idle time delay until turning off idle iron ms
+   // Idle time delay until turning off iron ms
    USBDM::Nonvolatile<int>    safetyOffTime;
 };
 

@@ -20,7 +20,7 @@ SwitchPolling  switchPolling;
 /// Main control class
 Control        control;
 
-/// The channel information
+/// Channel interface and state
 Channels       channels;
 
 void reportChipTemperature() {
@@ -108,9 +108,7 @@ void initialise() {
 
 int main() {
 
-   console.writeln("Starting\n");
-   console.write("SystemCoreClock = ").writeln(SystemCoreClock);
-   console.write("SystemBusClock  = ").writeln(SystemBusClock);
+   console.WRITELN("Starting\n");
 
    initialise();
 

@@ -21,6 +21,8 @@ private:
    unsigned     activeChannel = 0;
 
 public:
+   static constexpr int MIN_MENU_ENTRIES = 8;
+
    Display() {}
 
    /**
@@ -32,7 +34,7 @@ public:
    }
 
    /**
-    * Update OLED display
+    * Display channel information
     *
     * @param ch1              Channel 1 properties
     * @param ch2              Channel 2 properties
@@ -40,9 +42,34 @@ public:
     */
    void displayTools();
 
-   void displayTimeMenuItem(const char *name, unsigned seconds);
+   void displayFloatMenuItem(const char *description, int value, bool modified);
 
-   void displayTemperatureMenuItem(const char *name, unsigned temperature);
+   /**
+    * Display time menu item
+    *
+    * @param description      Description to display at top of screen.  May include a single newline to split into 2 lines.
+    * @param seconds          Time in seconds to display
+    * @param modified         Indicates item has been modified since saving - adds indicator to display
+    */
+   void displayTimeMenuItem(const char *description, unsigned seconds, bool modified);
+
+   /**
+    * Display temperature menu item
+    *
+    * @param description   Description to display at top of screen.  May include a single newline to split into 2 lines.
+    * @param temperature   Temperature to display
+    * @param modified      Indicates item has been modified since saving - adds indicator to display
+    */
+   void displayTemperatureMenuItem(const char *description, unsigned temperature, bool modified);
+
+   /**
+    * Display a menu list with selected item
+    *
+    * @param items      Array of string describing each item.  Must have at least MIN_MENU_ENTRIES items.
+    * @param offset     Offset into list for display i.e. first item on menu
+    * @param selection  Current selected it.
+    */
+   void displayMenuList(const char *items[], int offset, int selection);
 };
 
 extern Display display;

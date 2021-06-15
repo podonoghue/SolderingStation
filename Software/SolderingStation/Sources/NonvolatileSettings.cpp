@@ -1,5 +1,5 @@
 /*
- * NonvolatileSettingsX.cpp
+ * NonvolatileSettings.cpp
  *
  *  Created on: 11 Jun. 2021
  *      Author: peter
@@ -24,8 +24,8 @@ NonvolatileSettings::NonvolatileSettings() : Flash() {
       initialiseNonvolatileStorage();
    }
    else {
-      usbdm_assert(rc != USBDM::FLASH_ERR_OK, "FlexNVM initialisation error");
-      USBDM::console.writeln("Not initialising NV variables");
+      usbdm_assert(rc == USBDM::FLASH_ERR_OK, "FlexNVM initialisation error");
+      USBDM::console.WRITELN("Not initialising NV variables");
    }
 }
 
@@ -37,14 +37,21 @@ void NonvolatileSettings::initialiseChannelSettings(ChannelSettings &settings) {
    settings.presets[0]           = 250;
    settings.presets[1]           = 350;
    settings.presets[2]           = 370;
-   settings.backOffTemperature   = 200;
-   settings.backOffTime          = IDLE_MAX_TIME;
+   settings.setbackTemperature   = 200;
+   settings.setbackTime          = IDLE_MAX_TIME;
    settings.safetyOffTime        = LONGIDLE_MAX_TIME;
+}
+
+void NonvolatileSettings::initialisePidSettings() {
+   pidSettings.kp = 5;
+   pidSettings.ki = 0;
+   pidSettings.kd = 0;
 }
 
 void NonvolatileSettings::initialiseNonvolatileStorage() {
    initialiseChannelSettings(ch1Settings);
    initialiseChannelSettings(ch2Settings);
+   initialisePidSettings();
 }
 
 

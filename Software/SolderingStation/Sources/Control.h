@@ -13,12 +13,15 @@
 #include "Display.h"
 #include "Channel.h"
 #include "DutyCycleCounter.h"
-#include "MovingWindowAverage.h"
+#include "Averaging.h"
+#include "NonvolatileSettings.h"
+
+class SettingsData;
 
 /**
  * This class implements most of the functionality including:
  *
- * - Main event loop with front panel update
+ * - Event loops with front panel update
  * - Interrupt driven monitoring of iron temperature and overload
  * - PWM drive of iron heaters
  */
@@ -31,6 +34,15 @@ public:
    /// Minimum iron temperature for operation
    static constexpr int      MIN_TEMP     = 100;
 
+   /// Maximum duty cycle for tip drive 80% ~ 60W for 8 ohms element
+   static constexpr int      MAX_DUTY     = 90;
+
+   /// Minimum duty cycle for tip drive 5% ~ 4W for 8 ohms element
+   static constexpr int      MIN_DUTY     = 5;
+
+   /// PID interval in 10ms increments
+   static constexpr int      PID_INTERVAL = 10;
+
 private:
    /// Delay between zero crossing and switching heaters on (us)
    static constexpr unsigned POWER_ON_DELAY  = 900;
@@ -38,29 +50,24 @@ private:
    /// Delay between switching heater off and ADC conversions start (us)
    static constexpr unsigned SAMPLE_DELAY    = 4000;
 
-   /// Delay between ADC conversions end and switching heaters off (us)
+   /// Delay between ADC conversions start and switching heaters off (us)
+   /// TODO - needs to change with main period
    static constexpr unsigned POWER_OFF_DELAY = 10000-SAMPLE_DELAY-1100;
 
-   /// Indicates the display need updating
+   /// Indicates the display needs updating
    bool     needRefresh = true;
 
-   /// Mask indicating the ADC channels to be refreshed this cycle
+   bool doReport       = false;
+   bool doReportTitle  = false;
+
+   /// Mask indicating which ADC channels to be refreshed this cycle
    uint32_t adcChannelMask = 0;
 
-   /// this pointer for static members (call-backs)
+   /// Static this pointer for static members (call-backs)
    static Control *This;
 
    /// Moving window average for Chip temperature (internal MCU sensor)
-   ChipTemperatureAverage<5> chipTemperature;
-
-   /// PWM duty-cyle counter for Channel 1
-   DutyCycleCounter ch1DutyCycleCounter{100};
-
-   /// PWM duty-cyle counter for Channel 2
-   DutyCycleCounter ch2DutyCycleCounter{100};
-
-   Pid ch1Pid{4.0, 0.0, 0.0, 10*USBDM::ms, 0.0, 100.0};
-   Pid ch2Pid{4.0, 0.0, 0.0, 10*USBDM::ms, 0.0, 100.0};
+   ChipTemperatureAverage chipTemperature;
 
    bool sequenceBusy = false;
 
@@ -76,7 +83,7 @@ public:
     */
    void initialise();
 
-   void testMenu();
+   void settingsMenu();
 
    /**
     * Check if channel is enabled
@@ -209,9 +216,16 @@ public:
    void reportChannel(Channel &ch);
 
    /**
+    * Debugging code
+    */
+   void reportPid(Channel &ch);
+
+   /**
     * Event loop for front panel events.
     */
    void eventLoop();
+
+   EventType editItem(const SettingsData &data);
 
 };
 

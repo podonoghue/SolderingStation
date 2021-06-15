@@ -3005,7 +3005,7 @@ public:
    static constexpr PinInfo pinInfo { PortBInfo, GPIOB_BasePtr, 0, GPIO_DEFAULT_PCR  };
 
    //! Class based callback handler has been installed in vector table
-   static constexpr bool irqHandlerInstalled = 0;
+   static constexpr bool irqHandlerInstalled = 1;
 
    //! Default IRQ level
    static constexpr uint32_t irqLevel =  8;

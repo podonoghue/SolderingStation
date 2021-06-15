@@ -9,6 +9,7 @@
 #include "SwitchPolling.h"
 #include "Control.h"
 #include "Channels.h"
+#include "SettingsData.h"
 
 using namespace USBDM;
 
@@ -17,6 +18,7 @@ using namespace USBDM;
  * Does minimal work - see initialise for main initialisation.
  */
 Control::Control() {
+
    This = this;
 }
 
@@ -30,17 +32,23 @@ void Control::initialise() {
    GpioSpare2::setOutput();
    GpioSpare3::setOutput();
 
-   ch1DutyCycleCounter.setUpperLimit(80);
-   ch2DutyCycleCounter.setUpperLimit(80);
-
    Ch1Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
    Ch2Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
 
-   ch1DutyCycleCounter.setDutyCycle(0);
-   ch2DutyCycleCounter.setDutyCycle(0);
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
 
-   ch1DutyCycleCounter.enable();
-   ch2DutyCycleCounter.enable();
+   ch1.controller.setParameters(PID_INTERVAL*10*USBDM::ms, MIN_DUTY , MAX_DUTY);
+   ch2.controller.setParameters(PID_INTERVAL*10*USBDM::ms, MIN_DUTY , MAX_DUTY);
+
+   ch1.setUpperLimit(MAX_DUTY);
+   ch2.setUpperLimit(MAX_DUTY);
+
+   ch1.setDutyCycle(0);
+   ch2.setDutyCycle(0);
+
+   ch1.enable();
+   ch2.enable();
 
    Ch1SelectedLed::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
    Ch2SelectedLed::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
@@ -61,7 +69,7 @@ void Control::initialise() {
          AdcAsyncClock_Disabled);
    unsigned retry = 10;
    while ((Adc0::calibrate() != E_NO_ERROR) && (retry-->0)) {
-      console.write("ADC calibration failed, retry #").writeln(retry);
+      console.WRITE("ADC calibration failed, retry #").writeln(retry);
    }
    Adc0::setAveraging(AdcAveraging_32);
    Adc0::setCallback(adc_cb);
@@ -134,9 +142,7 @@ void Control::enable(unsigned ch) {
 
    channel.setState(ch_active);
    channel.restartIdleTimer();
-
-   ch1Pid.enable(channels[1].isRunning());
-   ch2Pid.enable(channels[2].isRunning());
+   doReportTitle = true;
 }
 
 /**
@@ -149,9 +155,6 @@ void Control::disable(unsigned ch) {
    Channel &channel = channels[ch];
 
    channel.setState(ch_off);
-
-   ch1Pid.enable(channels[1].isRunning());
-   ch2Pid.enable(channels[2].isRunning());
 }
 
 /**
@@ -162,8 +165,9 @@ void Control::disable(unsigned ch) {
 void Control::backOff(unsigned ch) {
 
    Channel &channel = channels[ch];
+
    if (channel.isRunning()) {
-      channel.setState(ch_backoff);
+      channel.setState(ch_setback);
    }
 }
 
@@ -176,7 +180,7 @@ void Control::backOff(unsigned ch) {
 void Control::wakeUp(unsigned ch) {
 
    Channel &channel = channels[ch];
-   if (channel.getState() == ch_backoff) {
+   if (channel.getState() == ch_setback) {
       enable(ch);
    }
 }
@@ -197,14 +201,11 @@ void Control::setSelectedChannel(unsigned ch) {
  */
 void Control::nextPreset() {
 
-   unsigned selectedChannel = channels.getSelectedChannelNumber();
-   if (selectedChannel == 0) {
-      return;
-   }
    Channel &channel = channels.getSelectedChannel();
 
    channel.incrementPreset();
    channel.setUserTemperature(channel.getPresetTemperature());
+   channel.restartIdleTimer();
 }
 
 /**
@@ -213,10 +214,6 @@ void Control::nextPreset() {
  * @param delta Amount to change by
  */
 void Control::changeTemp(int16_t delta) {
-
-   if (channels.getSelectedChannelNumber() == 0) {
-      return;
-   }
 
    Channel &channel = channels.getSelectedChannel();
 
@@ -255,9 +252,6 @@ void Control::changeTemp(int16_t delta) {
  * Update the current preset from the current temperature of the currently selected channel
  */
 void Control::updatePreset() {
-   if (channels.getSelectedChannelNumber() == 0) {
-      return;
-   }
    Channel &channel = channels.getSelectedChannel();
 
    channel.updatePresetTemperature();
@@ -268,13 +262,9 @@ void Control::updatePreset() {
  */
 void Control::overCurrentHandler() {
 
-   // Disable drive
-   ch1DutyCycleCounter.disable();
-   ch2DutyCycleCounter.disable();
-
    // Mark channels as overloaded
-   channels[0].setOverload(true);
-   channels[1].setOverload(true);
+   channels[1].setOverload();
+   channels[2].setOverload();
 
    setNeedsRefresh();
 }
@@ -291,34 +281,36 @@ void Control::zeroCrossingHandler() {
       This->switchOnHandler();
    };
    if (!sequenceBusy) {
-      // For debug!
+
+      // For debug when single stepping only do if previous sequence completed!
+      sequenceBusy = true;
+
       ControlTimerChannel::oneShotInMicroseconds(cb, POWER_ON_DELAY);
    }
 
    GpioSpare2::set();
 
    // Counter to initiate screen refresh
-   static unsigned count = 0;
+   static unsigned refreshCount = 0;
 
-   if (count++>=50) {
-      count = 0;
+   if (refreshCount++>=50) {
+      refreshCount = 0;
+      // Update the display regularly
       setNeedsRefresh();
    }
 
-   Channel &ch1 = channels[1];
-   Channel &ch2 = channels[2];
+   // Counter to initiate screen refresh
+   static unsigned pidCount = 0;
 
-   ch1.upDateCurrentTemperature();
-   ch2.upDateCurrentTemperature();
+   if (pidCount++ >= PID_INTERVAL) {
+      pidCount = 0;
 
-   float ch1DutyCy = ch1Pid.newSample(ch1.getTargetTemperature(), ch1.getCurrentTemperature());
-   float ch2DutyCy = ch2Pid.newSample(ch2.getTargetTemperature(), ch2.getCurrentTemperature());
+      // Update averages and run PID
+      channels[1].upDateCurrentTemperature();
+      channels[2].upDateCurrentTemperature();
 
-   ch1DutyCycleCounter.setDutyCycle(ch1DutyCy);
-   ch2DutyCycleCounter.setDutyCycle(ch2DutyCy);
-
-   ch1.dutyCycle = ch1DutyCycleCounter.getDutyCycle();
-   ch2.dutyCycle = ch2DutyCycleCounter.getDutyCycle();
+      doReport = true;
+   }
 
    GpioSpare2::clear();
 }
@@ -335,19 +327,19 @@ void Control::switchOnHandler() {
    };
    ControlTimerChannel::oneShotInMicroseconds(cb, SAMPLE_DELAY);
 
-   sequenceBusy = true;
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
 
    // Enable drive to heaters as needed
-   if (ch1DutyCycleCounter.isOn()) {
+   if (ch1.isOn()) {
       Ch1Drive::write(true);
    }
-   if (ch2DutyCycleCounter.isOn()) {
+   if (ch2.isOn()) {
       Ch2Drive::write(true);
    }
 
-   Ch1ActiveLed::write(ch1DutyCycleCounter.isOn());
-   Ch2ActiveLed::write(ch2DutyCycleCounter.isOn());
-
+   Ch1ActiveLed::write(ch1.isOn());
+   Ch2ActiveLed::write(ch2.isOn());
 }
 
 /**
@@ -362,12 +354,15 @@ void Control::sampleHandler() {
    };
    ControlTimerChannel::oneShotInMicroseconds(cb, POWER_OFF_DELAY);
 
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
+
    // Measure channel 1 if idle this cycle
-   if (!ch1DutyCycleCounter.isOn()) {
+   if (!ch1.isOn()) {
       adcChannelMask |= (1<<Ch1ColdJunctionNtc::CHANNEL) | (1<<Ch1TipThermocouple::CHANNEL);
    }
    // Measure channel 2 if idle this cycle
-   if (!ch2DutyCycleCounter.isOn()) {
+   if (!ch2.isOn()) {
       adcChannelMask |= (1<<Ch2ColdJunctionNtc::CHANNEL) | (1<<Ch2TipThermocouple::CHANNEL);
    }
 
@@ -375,8 +370,8 @@ void Control::sampleHandler() {
    // This also starts the entire sequence of chained conversions
    ChipTemperature::startConversion(AdcInterrupt_Enabled);
 
-   ch1DutyCycleCounter.advance();
-   ch2DutyCycleCounter.advance();
+   ch1.advance();
+   ch2.advance();
 }
 
 /**
@@ -384,15 +379,18 @@ void Control::sampleHandler() {
  */
 void Control::switchOffHandler() {
 
-   sequenceBusy = false;
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
 
    // Disable drive to heaters as needed
-   if (!ch1DutyCycleCounter.isOn()) {
+   if (!ch1.isOn()) {
       Ch1Drive::write(false);
    }
-   if (!ch2DutyCycleCounter.isOn()) {
+   if (!ch2.isOn()) {
       Ch2Drive::write(false);
    }
+
+   sequenceBusy = false;
 }
 
 /**
@@ -408,28 +406,31 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 
    GpioSpare2::toggle();
 
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
+
    switch (adcChannel) {
       case Ch1ColdJunctionNtc::CHANNEL :
-         channels[1].coldJunctionTemperature.accumulate(result);
+         ch1.coldJunctionTemperature.accumulate(result);
          break;
       case Ch1TipThermocouple::CHANNEL :
-         channels[1].tipTemperature.accumulate(result);
+         ch1.tipTemperature.accumulate(result);
          break;
       case Ch2ColdJunctionNtc::CHANNEL :
-         channels[2].coldJunctionTemperature.accumulate(result);
+         ch2.coldJunctionTemperature.accumulate(result);
          break;
       case Ch2TipThermocouple::CHANNEL :
-         channels[2].tipTemperature.accumulate(result);
+         ch2.tipTemperature.accumulate(result);
          break;
       case ChipTemperature::CHANNEL :
          chipTemperature.accumulate(result);
          break;
       default:
-         // Should be impossible
-         __BKPT(0);
+         usbdm_assert(false,"Impossible ADC channel");
+         break;
    }
 
-   // Set up next conversion
+   // Set up next conversion as needed
    int nextAdcChannel = __builtin_ffs(adcChannelMask)-1;
    if (nextAdcChannel >= 0) {
       TemperatureAdc::startConversion(AdcInterrupt_Enabled|nextAdcChannel);
@@ -448,9 +449,12 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 void Control::refresh() {
    needRefresh = false;
 
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
+
    // Update LEDs
-   Ch1SelectedLed::write(channels[1].isRunning());
-   Ch2SelectedLed::write(channels[2].isRunning());
+   Ch1SelectedLed::write(ch1.isRunning());
+   Ch2SelectedLed::write(ch2.isRunning());
 
    // Update display
    display.displayTools();
@@ -462,7 +466,7 @@ void Control::refresh() {
 void Control::reportChannel(Channel &ch) {
    static int count=0;
 
-   if (count++ == 2000) {
+   if (count++ == 500) {
       count = 0;
       console.setFloatFormat(2, Padding_LeadingSpaces, 2);
       float tipV   = 1000*ch.tipTemperature.getVoltage();
@@ -485,225 +489,333 @@ void Control::reportChannel(Channel &ch) {
 }
 
 /**
+ * Debugging code
+ */
+void Control::reportPid(Channel &ch) {
+
+   doReport = false;
+
+   console.setFloatFormat(2, Padding_LeadingSpaces, 2);
+   if (doReportTitle) {
+      doReportTitle = false;
+//      console.
+//         write("kp = ").write(ch.controller.nvSettings.kp).
+//         write(", ki = ").write(ch.controller.nvSettings.ki).
+//         write(", kd = ").write(ch.controller.nvSettings.kd).
+//         writeln();
+   }
+   if (ch.controller.isEnabled()) {
+      double time  = ch.controller.getElapsedTime();
+      float input  = ch.controller.getInput();
+      float output = ch.controller.getOutput();
+
+      console.write(time).write(", ").write(output).write(", ").writeln(input);
+      console.resetFormat();
+   }
+   console.resetFormat();
+}
+
+/**
  * Event loop for front panel events
  */
 void Control::eventLoop()  {
-   refresh();
+
+   // Make sure to draw screen initially
+   setNeedsRefresh();
 
    for(;;) {
 //      reportChannel(channels[1]);
+      if (doReport) {
+         reportPid(channels[1]);
+      }
+      if (needRefresh) {
+         // Redraw screen
+         refresh();
+      }
 
       Event event = switchPolling.getEvent();
 
-      if (event.type != ev_None) {
-         // Assume visible change
-         setNeedsRefresh();
+      if (event.type == ev_None) {
+         // Wait for something to happen
+         Smc::enterWaitMode();
+         continue;
+      }
 
-//         console.write("Position = ").write(event.change).write(", Event = ").writeln(getEventName(event));
-         console.write("Event = ").writeln(getEventName(event));
-         switch(event.type) {
-            case ev_Ch1Hold      : toggleEnable(1);             break;
-            case ev_Ch2Hold      : toggleEnable(2);             break;
-            case ev_Ch1Ch2Hold   :
-               if (!isEnabled(1) && !isEnabled(2)) {
-                  // Both currently off - turn on both channels
-                  enable(2);
-                  enable(1); // Active channel
-               }
-               else {
-                  // >= 1 channel on - turn off both
-                  disable(1);
-                  disable(2);
-               }
-               break;
-            case ev_Tool1Active   : wakeUp(1);                 break;
-            case ev_Tool2Active   : wakeUp(2);                 break;
-            case ev_Tool1Idle     : backOff(1);                break;
-            case ev_Tool2Idle     : backOff(2);                break;
-            case ev_Tool1LongIdle : disable(1);                break;
-            case ev_Tool2LongIdle : disable(2);                break;
-            case ev_Ch1Release      :
-               if (channels.getSelectedChannelNumber() != 1) {
-                  setSelectedChannel(1);
-               }
-               else {
-                  nextPreset();
-               }
-               break;
-            case ev_Ch2Release      :
-               if (channels.getSelectedChannelNumber() != 2) {
-                  setSelectedChannel(2);
-               }
-               else {
-                  nextPreset();
-               }
-               break;
-            case ev_SelRelease    : nextPreset();              break;
-            case ev_QuadRelease   : updatePreset();            break;
-            case ev_QuadRotate    : changeTemp(event.change);  break;
-            default: break;
-         }
+      // Assume visible change due to event
+      setNeedsRefresh();
+
+      //         console.write("Position = ").write(event.change).write(", Event = ").writeln(getEventName(event));
+      //         console.write("Event = ").writeln(getEventName(event));
+      switch(event.type) {
+         case ev_Ch1Hold      : toggleEnable(1);             break;
+         case ev_Ch2Hold      : toggleEnable(2);             break;
+         case ev_Ch1Ch2Hold   :
+            if (!isEnabled(1) && !isEnabled(2)) {
+               // Both currently off - turn on both channels
+               enable(2);
+               enable(1); // Active channel
+            }
+            else {
+               // >= 1 channel on - turn off both
+               disable(1);
+               disable(2);
+            }
+            break;
+         case ev_Tool1Active   : wakeUp(1);                 break;
+         case ev_Tool2Active   : wakeUp(2);                 break;
+         case ev_Tool1Idle     : backOff(1);                break;
+         case ev_Tool2Idle     : backOff(2);                break;
+         case ev_Tool1LongIdle : disable(1);                break;
+         case ev_Tool2LongIdle : disable(2);                break;
+         case ev_Ch1Release      :
+            if (channels.getSelectedChannelNumber() != 1) {
+               setSelectedChannel(1);
+            }
+            else {
+               nextPreset();
+            }
+            break;
+         case ev_Ch2Release      :
+            if (channels.getSelectedChannelNumber() != 2) {
+               setSelectedChannel(2);
+            }
+            else {
+               nextPreset();
+            }
+            break;
+         case ev_QuadRelease   : updatePreset();            break;
+         case ev_QuadRotate    : changeTemp(event.change);  break;
+
+         case ev_QuadHold :
+         case ev_SelRelease :
+            disable(1);
+            disable(2);
+
+            // Needed to immediately update the LEDs
+            refresh();
+
+            // Change to settings sub-menu
+            settingsMenu();
+            break;
+
+         default: break;
       }
-      if (needRefresh) {
-         refresh();
-      }
-      Smc::enterWaitMode();
    }
 }
 
 /// this pointer for static members (call-backs)
 Control *Control::This = nullptr;
 
-class SettingsData {
-
-public:
-   enum Type {Temperature, Time};
-
-   const char      * const name;
-   const Type              type;
-   union {
-      Nonvolatile<int>       *settingInt;
-      Nonvolatile<float>     *settingFloat;
-   };
-
-   constexpr SettingsData(const char *name, Nonvolatile<int> &setting, Type type)
-      : name(name), type(type), settingInt(&setting) {
-   }
-   constexpr SettingsData(const char *name, Nonvolatile<float> &setting, Type type)
-      : name(name), type(type), settingFloat(&setting) {
-   }
-
-   void increment(int delta, int &scratch) const {
-      constexpr int MAX_TIME = (99*60+50); // in seconds
-
-      switch (type) {
-         case Temperature:
-            scratch += delta;
-            if (scratch>Control::MAX_TEMP) {
-               scratch = Control::MAX_TEMP;
-            }
-            if (scratch<Control::MIN_TEMP) {
-               scratch = Control::MIN_TEMP;
-            }
-            break;
-         case Time:
-            // Increment by multiple of 10s with forced rounding
-            scratch += delta*10;
-            scratch  = scratch - scratch%10;
-
-            if (scratch>MAX_TIME) {
-               scratch = MAX_TIME;
-            }
-            if (scratch<0) {
-               scratch = 0;
-            }
-            break;
-      }
-
-   }
-};
-
-static const SettingsData settingsData[] = {
-      SettingsData("CH 1\nIdle temp.",    nvinit.ch1Settings.backOffTemperature, SettingsData::Temperature),
-      SettingsData("CH 2\nIdle temp.",    nvinit.ch2Settings.backOffTemperature, SettingsData::Temperature),
-      SettingsData("CH 1\nIdle time",     nvinit.ch1Settings.backOffTime,        SettingsData::Time       ),
-      SettingsData("CH 2\nIdle time",     nvinit.ch2Settings.backOffTime,        SettingsData::Time       ),
-      SettingsData("CH 1\nSafety time",   nvinit.ch1Settings.safetyOffTime,      SettingsData::Time       ),
-      SettingsData("CH 2\nSafety time",   nvinit.ch2Settings.safetyOffTime,      SettingsData::Time       ),
-//      SettingsData("Dummy",               SettingsData::dummyFloat,       SettingsData::Time       ),
-};
-
-EventType editItem(const SettingsData &data) {
-
-   bool menuContinue = true;
-   bool doRefresh    = true;
+EventType Control::editItem(const SettingsData &data) {
 
    Event event;;
 
-   int scaleFactor = 1;
-
-   int scratch = *data.settingInt;
-   if (data.type == SettingsData::Time) {
-      // Convert time to seconds
-      scaleFactor = 1000;
-      scratch /= scaleFactor;
+   int scratch;
+   if (data.type == SettingsData::Pid) {
+      scratch = data.convertFromFloat(*data.settingFloat);
+   }
+   else {
+      scratch = data.convertFromInt(*data.settingInt);
    }
 
+   int unchanged = scratch;
+
+   bool menuContinue = true;
+   bool doRefresh    = true;
    do {
-      event = switchPolling.getEvent();
-      switch (event.type) {
-         case ev_QuadPress:
-            *data.settingInt = scratch * scaleFactor;
-            break;
-         case ev_QuadRotate:
-            data.increment(event.change, scratch);
-            doRefresh = true;
-            break;
-         case ev_SelPress:
-         case ev_Ch1Press:
-         case ev_Ch2Press:
-            menuContinue = false;
-            break;
-         default:
-            break;
-      }
       if (doRefresh) {
          doRefresh = false;
          switch (data.type) {
             case SettingsData::Temperature:
-               display.displayTemperatureMenuItem(data.name, scratch);
+               display.displayTemperatureMenuItem(data.name, scratch, scratch != unchanged);
                break;
             case SettingsData::Time:
-               display.displayTimeMenuItem(data.name, scratch);
+               display.displayTimeMenuItem(data.name, scratch, scratch != unchanged);
+               break;
+            case SettingsData::Pid:
+               display.displayFloatMenuItem(data.name, scratch, scratch != unchanged);
                break;
          }
+      }
+      event = switchPolling.getEvent();
+      if (event.type == ev_None) {
+         continue;
+      }
+      switch (event.type) {
+         case ev_QuadRelease:
+            switch (data.type) {
+               case SettingsData::Temperature:
+                  *data.settingInt = data.convertToInt(scratch);
+                  break;
+               case SettingsData::Time:
+                  *data.settingInt = data.convertToInt(scratch);
+                  break;
+               case SettingsData::Pid:
+                  *data.settingFloat = data.convertToFloat(scratch);
+                  break;
+            }
+            unchanged = scratch;
+            doRefresh = true;
+            break;
+
+               case ev_QuadRotate:
+                  data.doIncrement(event.change, scratch);
+                  doRefresh = true;
+                  break;
+
+               case ev_QuadHold:
+               case ev_SelRelease:
+               case ev_SelHold:
+               case ev_Ch1Release:
+               case ev_Ch2Release:
+                  menuContinue = false;
+                  break;
+
+               default:
+                  break;
       }
    } while (menuContinue);
 
    return event.type;
 }
 
-//void displayMenuList(unsigned channel, const char *name, unsigned temperature) {
-//   oled.clearDisplay();
-//
-//   oled.setFont(fontLarge);
-//   oled.moveXY(0, 0).writeln(name).write("CH ").write(channel);
-//
-//   oled.setFont(fontVeryLarge);
-//   oled.setPadding(Padding_LeadingSpaces).setWidth(4);
-//   oled.moveXY(15, 30).write(temperature);
-//   oled.setFont(fontMedium).write("C");
-//
-//   oled.refreshImage();
-//
-//   oled.resetFormat();
-//}
+template<int min, int max>
+class BoundedInteger {
 
-void Control::testMenu() {
+private:
+   int value = 0;
 
-   console.write("Size    = ").writeln(sizeof(settingsData));
-   console.write("Address = ").writeln(&settingsData);
+public:
+   BoundedInteger(int initialValue) : value(initialValue) {
+   }
 
-   unsigned index = 0;
-   for(;;) {
-      EventType event = editItem(settingsData[index]);
-      switch (event) {
+   void limit() {
+      if (value>max) {
+         value = max;
+      }
+      if (value<min) {
+         value = min;
+      }
+   }
 
-         case ev_Ch1Press:
-            if (index>0) {
-               index--;
-            }
-            break;
-         case ev_SelPress:
-         case ev_Ch2Press:
-            if (index < (sizeof(settingsData)/sizeof(settingsData[0]))-1) {
-               index++;
-            }
-            break;
-         default:
-            break;
+   BoundedInteger &operator+=(int delta) {
+      value += delta;
+      limit();
+      return *this;
+   }
+
+   BoundedInteger &operator++(int) {
+      value++;
+      limit();
+      return *this;
+   }
+
+   BoundedInteger &operator--(int) {
+      value--;
+      limit();
+      return *this;
+   }
+
+   operator int() {
+      return value;
+   }
+};
+
+void Control::settingsMenu() {
+
+   static const SettingsData settingsData[] = {
+         SettingsData("Channel 1\nSetback temp.", nvinit.ch1Settings.setbackTemperature, 1,     SettingsData::Temperature ),
+         SettingsData("Channel 2\nSetback temp.", nvinit.ch2Settings.setbackTemperature, 1,     SettingsData::Temperature ),
+         SettingsData("Channel 1\nIdle time",     nvinit.ch1Settings.setbackTime,        10000, SettingsData::Time        ),
+         SettingsData("Channel 2\nIdle time",     nvinit.ch2Settings.setbackTime,        10000, SettingsData::Time        ),
+         SettingsData("Channel 1\nSafety time",   nvinit.ch1Settings.safetyOffTime,      10000, SettingsData::Time        ),
+         SettingsData("Channel 2\nSafety time",   nvinit.ch2Settings.safetyOffTime,      10000, SettingsData::Time        ),
+         SettingsData("PID Kp",                   nvinit.pidSettings.kp,                 50,    SettingsData::Pid         ),
+         SettingsData("PID Ki",                   nvinit.pidSettings.ki,                 50,    SettingsData::Pid         ),
+         SettingsData("PID Kd",                   nvinit.pidSettings.kd,                 5,     SettingsData::Pid         ),
+   };
+
+//   console.write("Size    = ").writeln(sizeof(settingsData));
+//   console.write("Address = ").writeln(&settingsData);
+
+   const char *items[] = {
+         "Ch1 Setback temp.",
+         "Ch2 Setback temp.",
+         "Ch1 Idle time",
+         "Ch2 Idle time",
+         "Ch1 Safety time",
+         "Ch1 Safety time",
+         "PID Kp",
+         "PID Ki",
+         "PID Kd",
+   };
+
+   int  offset    = 0;
+   BoundedInteger<0,sizeof(settingsData)/sizeof(settingsData[0])-1>  selection{0};
+
+   bool refresh = true;
+   EventType key;
+
+   for (;;) {
+      if (refresh) {
+         display.displayMenuList(items, offset, selection);
+         refresh = false;
+      }
+      Event event = switchPolling.getEvent();
+      if (event.type == ev_None) {
+         continue;
       }
 
+      // Assume refresh required
+      refresh = true;
+
+      //      console.write(getEventName(event)).write(" : ").writeln(event.change);
+
+      switch (event.type) {
+
+         case ev_SelRelease:
+         case ev_QuadRelease:
+            do {
+               key = editItem(settingsData[selection]);
+               switch(key) {
+                  case ev_Ch1Release:
+                     selection--;
+                     break;
+                  case ev_Ch2Release:
+                     selection++;
+                     break;
+                  default:
+                     break;
+               }
+            } while((key == ev_Ch1Release)||(key == ev_Ch2Release));
+            break;
+
+         case ev_Ch1Release:
+            selection--;
+            break;
+
+         case ev_Ch2Release:
+            selection++;
+            break;
+
+         case ev_QuadRotate:
+            selection += event.change;
+            break;
+
+         case ev_QuadHold:
+         case ev_SelHold:
+            return;
+
+         default:
+            refresh = false;
+            break;
+      }
+      if (selection < offset) {
+         offset = selection;
+      }
+      else if ((selection-offset) >= Display::MIN_MENU_ENTRIES) {
+         offset = selection-(Display::MIN_MENU_ENTRIES-1);
+      }
    }
 }
 

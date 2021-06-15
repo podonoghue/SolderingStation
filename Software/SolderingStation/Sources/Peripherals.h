@@ -90,11 +90,14 @@ using PollingTimerChannel = USBDM::Pit::Channel<0>;
 /// PIT Channel to use for sample and control timing
 using ControlTimerChannel = USBDM::Pit::Channel<1>;
 
-/// Quadrature Decoder
-using QuadDecoder = USBDM::FtmQuadDecoder1;
+/// Quadrature Encoder - not used
+//using QuadDecoder = USBDM::FtmQuadDecoder1;
 
-/// Quadrature Decoder shaft button
+/// Quadrature Encoder shaft button
 using QuadButton  = USBDM::GpioD<2, USBDM::ActiveLow>;
+
+/** Quadrature Encoder pins as a GPIO field */
+using QuadPhases = USBDM::GpioBField<1, 0, USBDM::ActiveLow>;
 
 /// Channel 1 Button
 using Ch1Button   = USBDM::GpioD<4, USBDM::ActiveLow>;

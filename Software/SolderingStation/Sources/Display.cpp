@@ -10,7 +10,7 @@
 using namespace USBDM;
 
 /**
- * Update OLED display
+ * Display channel information
  *
  * @param ch1              Channel 1 properties
  * @param ch2              Channel 2 properties
@@ -76,14 +76,17 @@ void Display::displayTools() {
    oled.moveXY(RIGHT_OFFSET, 40).write("P").setWidth(1).write(ch2.getPreset()).
          write(ch2.isTempModified()?"*:":" :").setWidth(3).write(ch2.getUserTemperature());
 
-   oled.setFont(fontMedium).setWidth(2);
-   oled.moveXY(LEFT_OFFSET+18,  56).write(ch1.dutyCycle).write('%');
-   oled.moveXY(RIGHT_OFFSET+18, 56).write(ch2.dutyCycle).write('%');
-   if (ch1.dutyCycle>0) {
-      oled.drawRect(LEFT_OFFSET,   55, LEFT_OFFSET-1+ch1.dutyCycle/2,  63, WriteMode_Xor);
+   unsigned ch1Power = ch1.getPower();
+   unsigned ch2Power = ch2.getPower();
+
+   oled.setFont(fontSmall).setWidth(2);
+   oled.moveXY(LEFT_OFFSET+38,  56).write(ch1Power).write('W');
+   oled.moveXY(RIGHT_OFFSET+38, 56).write(ch2Power).write('W');
+   if (ch1Power>0) {
+      oled.drawRect(LEFT_OFFSET,   55, LEFT_OFFSET-1+ch1Power/2,  63, WriteMode_Xor);
    }
-   if (ch2.dutyCycle>0) {
-      oled.drawRect(RIGHT_OFFSET,  55, RIGHT_OFFSET-1+ch2.dutyCycle/2, 63, WriteMode_Xor);
+   if (ch2Power>0) {
+      oled.drawRect(RIGHT_OFFSET,  55, RIGHT_OFFSET-1+ch2Power/2, 63, WriteMode_Xor);
    }
    oled.drawVerticalLine(RIGHT_OFFSET-4, 0, oled.HEIGHT-1, WriteMode_Write);
 
@@ -92,32 +95,114 @@ void Display::displayTools() {
    oled.resetFormat();
 }
 
-void Display::displayTimeMenuItem(const char *name, unsigned seconds) {
+/**
+ * Display time menu item
+ *
+ * @param description      Description to display at top of screen.  May include a single newline to split into 2 lines.
+ * @param seconds          Time in seconds to display
+ * @param modified         Indicates item has been modified since saving - adds indicator to display
+ */
+void Display::displayTimeMenuItem(const char *description, unsigned ms, bool modified) {
    oled.clearDisplay();
 
    oled.setFont(fontLarge);
-   oled.moveXY(0, 0).writeln(name);
+   oled.moveXY(0, 0).writeln(description);
 
    oled.setFont(fontVeryLarge);
-   oled.moveXY(15, 30);
-   oled.setPadding(Padding_LeadingSpaces).setWidth(2).write(seconds/60).write("m");
-   oled.setPadding(Padding_LeadingZeroes).setWidth(2).write(seconds%60).write("s");
+   oled.moveXY(0, 30).write(modified?'*':' ');
+
+   int seconds = ms/1000;
+
+   if (ms>0) {
+      oled.setPadding(Padding_LeadingSpaces).setWidth(2).write(seconds/60).write("m");
+      oled.setPadding(Padding_LeadingZeroes).setWidth(2).write(seconds%60).write("s");
+   }
+   else {
+      oled.write(" Off");
+   }
+
+//   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
 
    oled.refreshImage();
 
    oled.resetFormat();
 }
 
-void Display::displayTemperatureMenuItem(const char *name, unsigned temperature) {
+/**
+ * Display temperature menu item
+ *
+ * @param description   Description to display at top of screen.  May include a single newline to split into 2 lines.
+ * @param temperature   Temperature to display
+ * @param modified      Indicates item has been modified since saving - adds indicator to display
+ */
+void Display::displayFloatMenuItem(const char *description, int value, bool modified) {
    oled.clearDisplay();
 
    oled.setFont(fontLarge);
-   oled.moveXY(0, 0).writeln(name);
+   oled.moveXY(0, 0).writeln(description);
+
+   oled.setFont(fontVeryLarge);
+   oled.moveXY(10, 30).write(modified?'*':' ');
+   oled.write(value/1000).write('.');
+   oled.setPadding(Padding_LeadingZeroes).setWidth(3).write(value%1000);
+
+//   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
+
+   oled.refreshImage();
+
+   oled.resetFormat();
+}
+
+/**
+ * Display temperature menu item
+ *
+ * @param description   Description to display at top of screen.  May include a single newline to split into 2 lines.
+ * @param temperature   Temperature to display
+ * @param modified      Indicates item has been modified since saving - adds indicator to display
+ */
+void Display::displayTemperatureMenuItem(const char *description, unsigned temperature, bool modified) {
+   oled.clearDisplay();
+
+   oled.setFont(fontLarge);
+   oled.moveXY(0, 0).writeln(description);
 
    oled.setFont(fontVeryLarge);
    oled.setPadding(Padding_LeadingSpaces).setWidth(4);
-   oled.moveXY(15, 30).write(temperature);
-   oled.setFont(fontMedium).write("C");
+   oled.moveXY(0, 30).write(modified?'*':' ').write(temperature);
+   oled.moveXY(80, 35).setFont(fontMedium).write("C");
+
+//   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
+
+   oled.refreshImage();
+
+   oled.resetFormat();
+}
+
+/**
+ * Display a menu list with selected item
+ *
+ * @param items      Array of string describing each item.  Must have at least MIN_MENU_ENTRIES items.
+ * @param offset     Offset into list for display i.e. first item on menu
+ * @param selection  Current selected it.
+ */
+void Display::displayMenuList(const char *items[], int offset, int selection) {
+   Font &font = fontSmall;
+
+   oled.clearDisplay();
+
+   oled.setFont(font);
+   oled.moveXY(0, 0);
+
+   for(int line=0; line<MIN_MENU_ENTRIES; line++) {
+      const char *itemDescription = items[line+offset];
+      if (itemDescription == nullptr) {
+         itemDescription = "";
+      }
+      oled.writeln(itemDescription);
+      if ((line+offset) == selection) {
+         oled.drawRect(0,  line*font.height-1, oled.WIDTH, (line+1)*font.height-1, WriteMode_Xor);
+      }
+   }
 
    oled.refreshImage();
 

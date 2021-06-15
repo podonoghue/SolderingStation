@@ -16,19 +16,21 @@
  */
 class Channels {
 
+private:
+
+   /// Currently selected channel for front panel controls
+   unsigned selectedChannel = 1;
+
+   /// Channel1 state information
+   Channel  channel1 = Channel(nvinit.ch1Settings, nvinit.pidSettings);
+
+   /// Channel2 state information
+   Channel  channel2 = Channel(nvinit.ch2Settings, nvinit.pidSettings);
+
 public:
 
    /// Number of channels
    static constexpr unsigned NUM_CHANNELS = 2;
-
-   /// Channel1 state information
-   Channel  channel1 = Channel(nvinit.ch1Settings);
-
-   /// Channel2 state information
-   Channel  channel2 = Channel(nvinit.ch2Settings);
-
-   /// Currently selected channel for front panel controls
-   unsigned selectedChannel = 0;
 
    /**
     * Get channel by channel number
