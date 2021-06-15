@@ -1,12 +1,12 @@
 /**
- * @file    Pid.h
- * @brief   PID Controller class
+ * @file    StepResponse.h
+ * @brief   Bang-Bang Controller class
  *
  *  Created on: 10 Jul 2021
  *      Author: podonoghue
  */
-#ifndef PROJECT_HEADERS_PID_H_
-#define PROJECT_HEADERS_PID_H_
+#ifndef PROJECT_HEADERS_STEPRESPONSE_H_
+#define PROJECT_HEADERS_STEPRESPONSE_H_
 
 #include "error.h"
 #include "NonvolatileSettings.h"
@@ -14,19 +14,14 @@
 /**
  * PID Controller
  */
-class Pid {
-
-public:
-   const PidSettings &nvSettings;      //!< Proportional, Integral and Derivative tuning parameters
+class StepResponse {
 
 private:
-   double   interval       = 10*USBDM::ms;     //!< Interval for sampling
-   float    outMin         = 0.0;              //!< Minimum limit for output
-   float    outMax         = 100.0;            //!< Maximum limit for output
+   double interval = 10*USBDM::ms;     //!< Interval for sampling
+   float  outMin   = 0.0;              //!< Minimum limit for output
+   float  outMax   = 100.0;            //!< Maximum limit for output
 
    bool     enabled        = false;    //!< Enable for controller
-
-   double   integral       = 0.0;      //!< Integral accumulation term
 
    double   lastInput      = 0.0;      //!< Last input sample
    double   currentInput   = 0.0;      //!< Current input sample
@@ -35,53 +30,16 @@ private:
 
    unsigned tickCount      = 0;        //!< Time in ticks since last enabled
 
-private:
-
-   /**
-    * Get proportional control factor
-    *
-    * @return factor as double
-    */
-   double getKp() {
-      return  nvSettings.kp;
-   }
-   /**
-    * Get integral control factor
-    * This is scaled for internal use
-    *
-    * @return factor as double
-    */
-   double getKi() {
-      return  nvSettings.ki*interval;
-   }
-   /**
-    * Get differential control factor
-    * This is scaled for internal use
-    *
-    * @return factor as double
-    */
-   double getKd() {
-      return  nvSettings.kd/interval;
-   }
-
 public:
    /**
     * Constructor
-    *
-    * @param[in] Kp          Initial proportional constant
-    * @param[in] Ki          Initial integral constant
-    * @param[in] Kd          Initial differential constant
-    * @param[in] outMin      Minimum value of output variable
-    * @param[in] outMax      Maximum value of output variable
     */
-   Pid(PidSettings &pidSettings) :
-      nvSettings(pidSettings), enabled(false) {
-   }
+   StepResponse(PidSettings &){ }
 
    /**
    * Destructor
    */
-   virtual ~Pid() {
+   virtual ~StepResponse() {
    }
 
    /**
@@ -94,8 +52,6 @@ public:
       if (enable) {
          if (!enabled) {
             // Just enabled
-//            currentInput = inputFn();
-            integral     = 0; //currentOutput;
             tickCount    = 0;
          }
       }
@@ -192,31 +148,33 @@ public:
       currentInput = sample;
       currentError = setpoint - currentInput;
 
-      integral += (getKi() * currentError);
+      unsigned elapsedTime = round(tickCount*interval);
 
-      // Limit integral term
-      if(integral > 50) {
-         integral = 50;
+      static constexpr unsigned minValue = 4;
+      static constexpr unsigned maxValue = 8;
+
+      if (elapsedTime<50) {
+         currentOutput = minValue;
       }
-      else if(integral < -50) {
-         integral = -50;
+      else if (elapsedTime < (50+200)) {
+         currentOutput = maxValue;
+      }
+      else if (elapsedTime < (50+200+200)) {
+         currentOutput = minValue;
+      }
+      else if (elapsedTime < (50+200+200+200)) {
+         currentOutput = maxValue;
+      }
+      else if (elapsedTime < (50+200+200+200+200)) {
+         currentOutput = minValue;
+      }
+      else {
+         currentOutput = 0;
       }
 
-      double differential = getKd() * (currentInput - lastInput);
-
-      double proportional = getKp() * currentError;
-
-      currentOutput = proportional + integral - differential;
-
-      if(currentOutput > outMax) {
-         currentOutput = outMax;
-      }
-      else if(currentOutput < outMin) {
-         currentOutput = outMin;
-      }
       // Update output
       return currentOutput;
    }
 };
 
-#endif // PROJECT_HEADERS_PID_H_
+#endif // PROJECT_HEADERS_STEPRESPONSE_H_
