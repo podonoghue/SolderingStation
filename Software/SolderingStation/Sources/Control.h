@@ -35,10 +35,11 @@ public:
    static constexpr int      MIN_TEMP     = 100;
 
    /// Maximum duty cycle for tip drive 80% ~ 60W for 8 ohms element
+   /// Maximum duty cycle for tip drive 95% ~ 68W for 8 ohms element
    static constexpr int      MAX_DUTY     = 90;
 
-   /// Minimum duty cycle for tip drive 5% ~ 4W for 8 ohms element
-   static constexpr int      MIN_DUTY     = 5;
+   /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohms element
+   static constexpr int      MIN_DUTY     = 0;
 
    /// PID interval in 10ms increments
    static constexpr int      PID_INTERVAL = 10;
@@ -76,14 +77,15 @@ public:
     * Constructor
     * Does minimal work - see initialise for main initialisation.
     */
-   Control();
+   Control() {
+      usbdm_assert(This == nullptr, "Control instantiated more than once");
+      This = this;
+   }
 
    /**
     * Initialise the control
     */
    void initialise();
-
-   void settingsMenu();
 
    /**
     * Check if channel is enabled
@@ -211,6 +213,15 @@ public:
    }
 
    /**
+    * Indicates the channel temperature or information has changed
+    *
+    * @return
+    */
+   bool needsRefresh() {
+      return needRefresh;
+   }
+
+   /**
     * Debugging code
     */
    void reportChannel(Channel &ch);
@@ -224,9 +235,8 @@ public:
     * Event loop for front panel events.
     */
    void eventLoop();
-
-   EventType editItem(const SettingsData &data);
-
 };
+
+extern Control control;
 
 #endif /* SOURCES_CONTROL_H_ */

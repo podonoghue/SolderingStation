@@ -5,19 +5,19 @@
  *      Author: peter
  */
 
-#ifndef SOURCES_MOVINGWINDOWAVERAGE_H_
-#define SOURCES_MOVINGWINDOWAVERAGE_H_
+#ifndef SOURCES_AVERAGING_H_
+#define SOURCES_AVERAGING_H_
 
 #include "hardware.h"
 #include "Peripherals.h"
 
 /**
- * Class representing a moving average window for ADC values.
+ * Class representing a simple moving average for ADC values.
  *
  * @tparam WindowSize Number of samples to average over
  */
 template<unsigned WindowSize>
-class MovingWindowAverage {
+class SimpleMovingAverage {
 
 private:
    /// Samples over entire window (circular buffer)
@@ -26,24 +26,34 @@ private:
    /// Index into samples
    unsigned index = 0;
 
+   unsigned count = 0;
+
    /// Summation of samples
    int sum = 0;
 
-   MovingWindowAverage(const MovingWindowAverage &other) = delete;
-   MovingWindowAverage(MovingWindowAverage &&other) = delete;
-   MovingWindowAverage& operator=(const MovingWindowAverage &other) = delete;
-   MovingWindowAverage& operator=(MovingWindowAverage &&other) = delete;
+   SimpleMovingAverage(const SimpleMovingAverage &other) = delete;
+   SimpleMovingAverage(SimpleMovingAverage &&other) = delete;
+   SimpleMovingAverage& operator=(const SimpleMovingAverage &other) = delete;
+   SimpleMovingAverage& operator=(SimpleMovingAverage &&other) = delete;
 
 public:
    /**
     * Constructor
     */
-   MovingWindowAverage() {}
+   SimpleMovingAverage() {}
 
    /**
     * Destructor
     */
-   virtual ~MovingWindowAverage() {}
+   virtual ~SimpleMovingAverage() {}
+
+   /**
+    * Reset average
+    */
+   void reset() {
+      count = 0;
+      sum   = 0;
+   }
 
    /**
     * Add ADC value to window
@@ -52,9 +62,21 @@ public:
     */
    void accumulate(int value) {
 
+      // Add new value
       sum += value;
+
+      // Count values in buffer with limit
+      if (count < WindowSize) {
+         count++;
+      }
+
+      // Remove oldest value
       sum -= samples[index];
+
+      // Save new value
       samples[index++] = value;
+
+      // Wrap buffer
       if (index >= WindowSize) {
          index = 0;
       }
@@ -65,22 +87,25 @@ public:
     *
     * @return value calculated over window
     */
-   int getAverage() {
-
+   int getAverage() const {
+      if (count == 0) {
+         return 0;
+      }
       // Calculate average over window
       return round((float)sum/WindowSize);
    }
+
    /**
     * Return ADC voltage averaged over window
     *
     * @return value calculated over window
     */
-   float getVoltageAverage() {
+   float getVoltageAverage() const {
 
       float voltage;
 
       // Calculate average over window
-      voltage = (float)sum/WindowSize;
+      voltage = (float)sum/count;
 
       // Convert ADC value to voltage
       voltage  *= (ADC_REF_VOLTAGE/USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION));
@@ -90,15 +115,19 @@ public:
 };
 
 /**
- * Class representing a moving average for ADC values.
+ * Class representing a modified moving average for ADC values.
  *
- * A(i) = (s(i) + A(i-1))/2 = S(1)/2 + s(i-1)/4 + S(i-2)/8 ...
+ * A(i) = (s(i) + (N-1)A(i-1))/N = S(i)/N + (N-1)s(i-1)/N + (N-1)(N-1)S(i-2)/N*N ...
+ *
+ * @tparam N is the weighting in above equation.
  */
+template<unsigned N=2>
 class MovingAverage {
 
 private:
-   /// Samples over entire window (circular buffer)
+   /// Sample accumulator
    int accumulator = 0;
+   bool initial = true;
 
    MovingAverage(const MovingAverage &other) = delete;
    MovingAverage(MovingAverage &&other) = delete;
@@ -117,12 +146,26 @@ public:
    virtual ~MovingAverage() {}
 
    /**
+    * Reset average
+    */
+   void reset() {
+      accumulator = 0;
+      initial     = true;
+   }
+
+   /**
     * Add ADC value to weighted average
     *
     * @param value to add
     */
    void accumulate(int value) {
-      accumulator = (accumulator + value)/2;
+      if (initial) {
+         accumulator = value;
+         initial     = false;
+      }
+      else {
+         accumulator = ((N-1)*accumulator + value)/N;
+      }
    }
 
    /**
@@ -130,15 +173,16 @@ public:
     *
     * @return value calculated
     */
-   int getAverage() {
+   int getAverage() const {
       return accumulator;
    }
+
    /**
     * Return ADC voltage as weighted averaged
     *
     * @return value calculated
     */
-   float getVoltageAverage() {
+   float getVoltageAverage() const {
 
       float voltage;
 
@@ -153,7 +197,7 @@ public:
 };
 
 /**
- * Class representing a moving average for ADC values.
+ * Class representing dummy average for ADC values.
  *
  * Dummy A(i) = S(i)
  */
@@ -180,6 +224,12 @@ public:
    virtual ~DummyAverage() {}
 
    /**
+    * Reset average
+    */
+   void reset() {
+   }
+
+   /**
     * Add ADC value to weighted average
     *
     * @param value to add
@@ -193,7 +243,7 @@ public:
     *
     * @return value calculated
     */
-   int getAverage() {
+   int getAverage() const {
       return accumulator;
    }
    /**
@@ -201,7 +251,7 @@ public:
     *
     * @return value calculated
     */
-   float getVoltageAverage() {
+   float getVoltageAverage() const {
 
       float voltage;
 
@@ -215,12 +265,13 @@ public:
    }
 };
 
-//using AveragingMethod = MovingWindowAverage<5>;
-using AveragingMethod = MovingAverage;
+// Three methods for averaging
+using AveragingMethod = SimpleMovingAverage<10>;
+//using AveragingMethod = MovingAverage<2>;
 //using AveragingMethod = DummyAverage;
 
 /**
- * Class representing a moving average window customised for a thermistor
+ * Class representing a average customised for a thermistor
  *
  * @tparam WindowSize Number of samples to average over
  */
@@ -268,7 +319,7 @@ private:
 
 public:
    /**
-    * Returns the moving window average of the thermistor resistance
+    * Returns the average of the thermistor resistance
     *
     * @return Thermistor resistance in ohms
     */
@@ -281,7 +332,7 @@ public:
    }
 
    /**
-    * Returns the moving window average of the thermistor temperature in Celsius
+    * Returns the average of the thermistor temperature in Celsius
     *
     * @return  Thermistor temperature in Celsius
     */
@@ -292,9 +343,7 @@ public:
 };
 
 /**
- * Class representing a moving average window customised for a thermocouple
- *
- * @tparam WindowSize Number of samples to average over
+ * Class representing an average customised for a thermocouple
  */
 class ThermocoupleAverage : public AveragingMethod {
 
@@ -313,8 +362,8 @@ private:
       voltage *= 1000;
 
       // Value from linear curve fitting see spreadsheet 250 to 455 range
-      constexpr float Ah_constant = 15.25; //-20.3057343295616; // -12.9509284993216;
-      constexpr float Bh_constant = 38.48; // 46.191866056261;  //45.4204980163692;
+      constexpr float Ah_constant = -17.75 ;//15.25; //-20.3057343295616; // -12.9509284993216;
+      constexpr float Bh_constant = 41.59; //38.48; // 46.191866056261;  //45.4204980163692;
 
       float temperature = Ah_constant + Bh_constant*voltage;
 
@@ -323,7 +372,7 @@ private:
 
 public:
    /**
-    * Returns the moving window average of the thermocouple voltage
+    * Returns the average of the thermocouple voltage
     *
     * @return Thermocouple voltage in V
     */
@@ -336,7 +385,7 @@ public:
    }
 
    /**
-    * Returns the moving window average of the thermocouple temperature relative to the cold reference
+    * Returns the average of the thermocouple temperature relative to the cold reference
     *
     * @return Thermocouple temperature in Celsius
     */
@@ -347,9 +396,7 @@ public:
 };
 
 /**
- * Class representing a moving average window customised for the internal temperature sensor
- *
- * @tparam WindowSize Number of samples to average over
+ * Class representing an average customised for the internal temperature sensor
  */
 class ChipTemperatureAverage : public AveragingMethod {
 
@@ -369,7 +416,7 @@ private:
 public:
 
    /**
-    * Returns the moving window average of the internal chip temperature
+    * Returns the average of the internal chip temperature
     *
     * @return Chip temperature in Celsius
     */
@@ -379,4 +426,4 @@ public:
    }
 };
 
-#endif /* SOURCES_MOVINGWINDOWAVERAGE_H_ */
+#endif /* SOURCES_AVERAGING_H_ */

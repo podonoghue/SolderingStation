@@ -51,9 +51,35 @@ enum EventType : uint8_t {
  * Structure representing a front panel event such as
  * button press or knob rotation.
  */
-struct Event {
+class Event {
+
+public:
    EventType   type;
    int16_t     change;
+
+   Event() : type(ev_None), change(0) {
+   }
+
+   Event(EventType ev_, int16_t change) : type(ev_), change(change) {
+   }
+
+   /**
+    * Indicates if the event is ev_SelHold or ev_QuadHold
+    *
+    * @return
+    */
+   bool isSelHold() {
+      return (type == ev_SelHold) || (type == ev_QuadHold);
+   }
+
+   /**
+    * Indicates if the event is ev_SelRelease or ev_QuadRelease
+    *
+    * @return
+    */
+   bool isSelRelease() {
+      return (type == ev_SelRelease) || (type == ev_QuadRelease);
+   }
 };
 
 const char *getEventName(const EventType b);
@@ -70,7 +96,7 @@ private:
    EventType pollSetbacks();
 
    /// Quadrature decode for rotary encoder
-   Quadecoder encoder;
+   QuadDecoder encoder;
 
    /// Queue of pending events
    EventQueue<EventType, ev_None, 10> eventQueue;
@@ -82,6 +108,7 @@ public:
    Event getEvent();
 
    SwitchPolling() {
+      usbdm_assert(This == nullptr, "SwitchPolling instantiated more than once");
       This = this;
    }
 

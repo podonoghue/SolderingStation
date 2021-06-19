@@ -11,6 +11,7 @@
 #include "flash.h"
 #include "ChannelSettings.h"
 #include "PidSettings.h"
+#include "Tips.h"
 
 /**
  * A derived class similar to this should be created to do the following:
@@ -23,6 +24,8 @@ class NonvolatileSettings : public USBDM::Flash {
 
    friend class Control;
    friend class Channels;
+   friend class Menus;
+   friend class Tips;
 
 private:
 
@@ -35,9 +38,30 @@ private:
    /// Settings for control loop
    PidSettings     pidSettings;
 
+   /// Settings for tips selected as available
+   Tips::TipSettingsArray tipSettings;
+
 private:
 
+   /**
+    * Initialise a non-volatile channel settings object
+    *
+    * @param settings Settings for a channel
+    */
    void initialiseChannelSettings(ChannelSettings &settings);
+   /**
+    * Initialise PID non-volatile settings
+    */
+   void initialisePidSettings();
+   /**
+    * Initialise all Tip non-volatile settings
+    */
+   void initialiseTipSettings();
+
+   /**
+    * Initialise Tip non-volatile settings
+    */
+   void initialiseTipSettings(TipSettings *tipSettings);
 
    NonvolatileSettings(const NonvolatileSettings &other) = delete;
    NonvolatileSettings(NonvolatileSettings &&other) = delete;
@@ -46,13 +70,15 @@ private:
 
 public:
 
+   /**
+    * Constructor
+    */
    NonvolatileSettings();
 
    /**
     * Initialise non-volatile storage to default values
     */
    void initialiseNonvolatileStorage();
-   void initialisePidSettings();
 
 };
 

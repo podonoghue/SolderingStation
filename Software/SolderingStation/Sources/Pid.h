@@ -26,12 +26,14 @@ private:
 
    bool     enabled        = false;    //!< Enable for controller
 
-   double   integral       = 0.0;      //!< Integral accumulation term
-
    double   lastInput      = 0.0;      //!< Last input sample
    double   currentInput   = 0.0;      //!< Current input sample
    double   currentOutput  = 0.0;      //!< Current output
    double   currentError   = 0.0;      //!< Current error calculation
+
+   double   integral       = 0.0;      //!< Integral accumulation term = sum(Ki * error(i)) * interval
+   double   differential   = 0.0;      //!< Differential term          = Kd/interval * (S(i)-S(i-1))
+   double   proportional   = 0.0;      //!< Proportional term          = Kp * error(i)
 
    unsigned tickCount      = 0;        //!< Time in ticks since last enabled
 
@@ -86,7 +88,9 @@ public:
 
    /**
     * Enable controller\n
-    * Note: Controller is re-initialised when enabled
+    *
+    * @note: Controller is re-initialised when enabled.
+    * @note: Output is left unchanged when disabled.
     *
     * @param[in] enable True to enable
     */
@@ -94,8 +98,7 @@ public:
       if (enable) {
          if (!enabled) {
             // Just enabled
-//            currentInput = inputFn();
-            integral     = 0; //currentOutput;
+            integral     = currentOutput;
             tickCount    = 0;
          }
       }
@@ -152,12 +155,22 @@ public:
    }
 
    /**
-    * Get setpoint of controller
+    * Get output of controller
     *
-    * @return Last output sample
+    * @return Last output value
     */
    double getOutput() {
       return currentOutput;
+   }
+
+   /**
+    * Set output of controller
+    * This is used when the controller is disabled
+    *
+    * @param newOutput New output value
+    */
+   void setOutput(double newOutput) {
+      currentOutput = newOutput;
    }
 
    /**
@@ -182,7 +195,7 @@ public:
    double newSample(double setpoint, double sample) {
 
       if(!enabled) {
-         return 0;
+         return currentOutput;
       }
 
       tickCount++;
@@ -195,16 +208,16 @@ public:
       integral += (getKi() * currentError);
 
       // Limit integral term
-      if(integral > 50) {
-         integral = 50;
+      if(integral > nvSettings.iLimit) {
+         integral = nvSettings.iLimit;
       }
-      else if(integral < -50) {
-         integral = -50;
+      else if(integral < -nvSettings.iLimit) {
+         integral = -nvSettings.iLimit;
       }
 
-      double differential = getKd() * (currentInput - lastInput);
+      differential = getKd() * (currentInput - lastInput);
 
-      double proportional = getKp() * currentError;
+      proportional = getKp() * currentError;
 
       currentOutput = proportional + integral - differential;
 
@@ -216,6 +229,12 @@ public:
       }
       // Update output
       return currentOutput;
+   }
+
+   void report() {
+      USBDM::console.setFloatFormat(2, USBDM::Padding_LeadingSpaces, 5);
+      USBDM::console.write(",").write(currentError).write(",").write(proportional).write(",").write(integral).write(",").writeln(differential);
+      USBDM::console.resetFormat();
    }
 };
 

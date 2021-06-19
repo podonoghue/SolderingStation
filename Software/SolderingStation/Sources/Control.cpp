@@ -10,17 +10,10 @@
 #include "Control.h"
 #include "Channels.h"
 #include "SettingsData.h"
+#include "BoundedInteger.h"
+#include "Menus.h"
 
 using namespace USBDM;
-
-/**
- * Constructor
- * Does minimal work - see initialise for main initialisation.
- */
-Control::Control() {
-
-   This = this;
-}
 
 /**
  * Initialise the control
@@ -38,8 +31,8 @@ void Control::initialise() {
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
 
-   ch1.controller.setParameters(PID_INTERVAL*10*USBDM::ms, MIN_DUTY , MAX_DUTY);
-   ch2.controller.setParameters(PID_INTERVAL*10*USBDM::ms, MIN_DUTY , MAX_DUTY);
+   ch1.controller.setParameters(PID_INTERVAL*10*ms, MIN_DUTY , MAX_DUTY);
+   ch2.controller.setParameters(PID_INTERVAL*10*ms, MIN_DUTY , MAX_DUTY);
 
    ch1.setUpperLimit(MAX_DUTY);
    ch2.setUpperLimit(MAX_DUTY);
@@ -340,6 +333,9 @@ void Control::switchOnHandler() {
 
    Ch1ActiveLed::write(ch1.isOn());
    Ch2ActiveLed::write(ch2.isOn());
+
+   Ch1SelectedLed::write(ch1.isRunning());
+   Ch2SelectedLed::write(ch2.isRunning());
 }
 
 /**
@@ -449,13 +445,6 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 void Control::refresh() {
    needRefresh = false;
 
-   Channel &ch1 = channels[1];
-   Channel &ch2 = channels[2];
-
-   // Update LEDs
-   Ch1SelectedLed::write(ch1.isRunning());
-   Ch2SelectedLed::write(ch2.isRunning());
-
    // Update display
    display.displayTools();
 }
@@ -498,25 +487,35 @@ void Control::reportPid(Channel &ch) {
    console.setFloatFormat(2, Padding_LeadingSpaces, 2);
    if (doReportTitle) {
       doReportTitle = false;
-//      console.
-//         write("kp = ").write(ch.controller.nvSettings.kp).
-//         write(", ki = ").write(ch.controller.nvSettings.ki).
-//         write(", kd = ").write(ch.controller.nvSettings.kd).
-//         writeln();
+      console.
+      write("Kp = ").
+      write(ch.controller.nvSettings.kp);
+      console.
+      write(',').
+      write("Drive").write(',').
+      write("Temp").write(',').
+      write("Error").write(',').
+      write("P").write(',').
+      write("I").write('<').write(ch.controller.nvSettings.iLimit).write(',').
+      write("D").writeln();
+      console.
+      write("Ki = ").writeln(ch.controller.nvSettings.ki).
+      write("Kd = ").writeln(ch.controller.nvSettings.kd);
    }
    if (ch.controller.isEnabled()) {
       double time  = ch.controller.getElapsedTime();
       float input  = ch.controller.getInput();
       float output = ch.controller.getOutput();
 
-      console.write(time).write(", ").write(output).write(", ").writeln(input);
+      console.write(time).write(", ").write(output).write(", ").write(input);
+      ch.controller.report();
       console.resetFormat();
    }
    console.resetFormat();
 }
 
 /**
- * Event loop for front panel events
+ * Main event loop for front panel events
  */
 void Control::eventLoop()  {
 
@@ -524,9 +523,9 @@ void Control::eventLoop()  {
    setNeedsRefresh();
 
    for(;;) {
-//      reportChannel(channels[1]);
       if (doReport) {
          reportPid(channels[1]);
+         //         reportChannel(channels[1]);
       }
       if (needRefresh) {
          // Redraw screen
@@ -595,7 +594,7 @@ void Control::eventLoop()  {
             refresh();
 
             // Change to settings sub-menu
-            settingsMenu();
+            Menus::settingsMenu();
             break;
 
          default: break;
@@ -606,217 +605,5 @@ void Control::eventLoop()  {
 /// this pointer for static members (call-backs)
 Control *Control::This = nullptr;
 
-EventType Control::editItem(const SettingsData &data) {
-
-   Event event;;
-
-   int scratch;
-   if (data.type == SettingsData::Pid) {
-      scratch = data.convertFromFloat(*data.settingFloat);
-   }
-   else {
-      scratch = data.convertFromInt(*data.settingInt);
-   }
-
-   int unchanged = scratch;
-
-   bool menuContinue = true;
-   bool doRefresh    = true;
-   do {
-      if (doRefresh) {
-         doRefresh = false;
-         switch (data.type) {
-            case SettingsData::Temperature:
-               display.displayTemperatureMenuItem(data.name, scratch, scratch != unchanged);
-               break;
-            case SettingsData::Time:
-               display.displayTimeMenuItem(data.name, scratch, scratch != unchanged);
-               break;
-            case SettingsData::Pid:
-               display.displayFloatMenuItem(data.name, scratch, scratch != unchanged);
-               break;
-         }
-      }
-      event = switchPolling.getEvent();
-      if (event.type == ev_None) {
-         continue;
-      }
-      switch (event.type) {
-         case ev_QuadRelease:
-            switch (data.type) {
-               case SettingsData::Temperature:
-                  *data.settingInt = data.convertToInt(scratch);
-                  break;
-               case SettingsData::Time:
-                  *data.settingInt = data.convertToInt(scratch);
-                  break;
-               case SettingsData::Pid:
-                  *data.settingFloat = data.convertToFloat(scratch);
-                  break;
-            }
-            unchanged = scratch;
-            doRefresh = true;
-            break;
-
-               case ev_QuadRotate:
-                  data.doIncrement(event.change, scratch);
-                  doRefresh = true;
-                  break;
-
-               case ev_QuadHold:
-               case ev_SelRelease:
-               case ev_SelHold:
-               case ev_Ch1Release:
-               case ev_Ch2Release:
-                  menuContinue = false;
-                  break;
-
-               default:
-                  break;
-      }
-   } while (menuContinue);
-
-   return event.type;
-}
-
-template<int min, int max>
-class BoundedInteger {
-
-private:
-   int value = 0;
-
-public:
-   BoundedInteger(int initialValue) : value(initialValue) {
-   }
-
-   void limit() {
-      if (value>max) {
-         value = max;
-      }
-      if (value<min) {
-         value = min;
-      }
-   }
-
-   BoundedInteger &operator+=(int delta) {
-      value += delta;
-      limit();
-      return *this;
-   }
-
-   BoundedInteger &operator++(int) {
-      value++;
-      limit();
-      return *this;
-   }
-
-   BoundedInteger &operator--(int) {
-      value--;
-      limit();
-      return *this;
-   }
-
-   operator int() {
-      return value;
-   }
-};
-
-void Control::settingsMenu() {
-
-   static const SettingsData settingsData[] = {
-         SettingsData("Channel 1\nSetback temp.", nvinit.ch1Settings.setbackTemperature, 1,     SettingsData::Temperature ),
-         SettingsData("Channel 2\nSetback temp.", nvinit.ch2Settings.setbackTemperature, 1,     SettingsData::Temperature ),
-         SettingsData("Channel 1\nIdle time",     nvinit.ch1Settings.setbackTime,        10000, SettingsData::Time        ),
-         SettingsData("Channel 2\nIdle time",     nvinit.ch2Settings.setbackTime,        10000, SettingsData::Time        ),
-         SettingsData("Channel 1\nSafety time",   nvinit.ch1Settings.safetyOffTime,      10000, SettingsData::Time        ),
-         SettingsData("Channel 2\nSafety time",   nvinit.ch2Settings.safetyOffTime,      10000, SettingsData::Time        ),
-         SettingsData("PID Kp",                   nvinit.pidSettings.kp,                 50,    SettingsData::Pid         ),
-         SettingsData("PID Ki",                   nvinit.pidSettings.ki,                 50,    SettingsData::Pid         ),
-         SettingsData("PID Kd",                   nvinit.pidSettings.kd,                 5,     SettingsData::Pid         ),
-   };
-
-//   console.write("Size    = ").writeln(sizeof(settingsData));
-//   console.write("Address = ").writeln(&settingsData);
-
-   const char *items[] = {
-         "Ch1 Setback temp.",
-         "Ch2 Setback temp.",
-         "Ch1 Idle time",
-         "Ch2 Idle time",
-         "Ch1 Safety time",
-         "Ch1 Safety time",
-         "PID Kp",
-         "PID Ki",
-         "PID Kd",
-   };
-
-   int  offset    = 0;
-   BoundedInteger<0,sizeof(settingsData)/sizeof(settingsData[0])-1>  selection{0};
-
-   bool refresh = true;
-   EventType key;
-
-   for (;;) {
-      if (refresh) {
-         display.displayMenuList(items, offset, selection);
-         refresh = false;
-      }
-      Event event = switchPolling.getEvent();
-      if (event.type == ev_None) {
-         continue;
-      }
-
-      // Assume refresh required
-      refresh = true;
-
-      //      console.write(getEventName(event)).write(" : ").writeln(event.change);
-
-      switch (event.type) {
-
-         case ev_SelRelease:
-         case ev_QuadRelease:
-            do {
-               key = editItem(settingsData[selection]);
-               switch(key) {
-                  case ev_Ch1Release:
-                     selection--;
-                     break;
-                  case ev_Ch2Release:
-                     selection++;
-                     break;
-                  default:
-                     break;
-               }
-            } while((key == ev_Ch1Release)||(key == ev_Ch2Release));
-            break;
-
-         case ev_Ch1Release:
-            selection--;
-            break;
-
-         case ev_Ch2Release:
-            selection++;
-            break;
-
-         case ev_QuadRotate:
-            selection += event.change;
-            break;
-
-         case ev_QuadHold:
-         case ev_SelHold:
-            return;
-
-         default:
-            refresh = false;
-            break;
-      }
-      if (selection < offset) {
-         offset = selection;
-      }
-      else if ((selection-offset) >= Display::MIN_MENU_ENTRIES) {
-         offset = selection-(Display::MIN_MENU_ENTRIES-1);
-      }
-   }
-}
 
 

@@ -45,7 +45,7 @@ using Ch1ColdJunctionNtc = USBDM::Adc0::Channel<15>;  // PTC1/SE15
 using Ch2ColdJunctionNtc = USBDM::Adc0::Channel<14>;  // PTC0/SE14
 
 /// NTC measurement current
-constexpr float NTC_MEASUREMENT_CURRENT  = 238E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA
+constexpr float NTC_MEASUREMENT_CURRENT  = 237E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA!
 
 /// Gain of NTC measurement amplifier - voltage follower
 constexpr float NTC_MEASUREMENT_GAIN   = 1.0;

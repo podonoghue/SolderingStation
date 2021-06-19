@@ -8,33 +8,34 @@
 #ifndef SOURCES_ENCODER_H_
 #define SOURCES_ENCODER_H_
 
-class Quadecoder {
+class QuadDecoder {
 
 private:
 
    /// Variable used by callback to track encoder position
    volatile int position;
 
-   /// This point for static callback function
-   static Quadecoder *This;
+   /// This pointer for static callback function
+   static QuadDecoder *This;
 
-   Quadecoder(const Quadecoder &other) = delete;
-   Quadecoder(Quadecoder &&other) = delete;
-   Quadecoder& operator=(const Quadecoder &other) = delete;
-   Quadecoder& operator=(Quadecoder &&other) = delete;
+   QuadDecoder(const QuadDecoder &other) = delete;
+   QuadDecoder(QuadDecoder &&other) = delete;
+   QuadDecoder& operator=(const QuadDecoder &other) = delete;
+   QuadDecoder& operator=(QuadDecoder &&other) = delete;
 
 public:
    /**
     * Constructor
     */
-   Quadecoder(){
+   QuadDecoder(){
+      usbdm_assert(This == nullptr, "QuadDecoder instantiated more than once");
       This = this;
    }
 
    /**
     * Destructor
     */
-   ~Quadecoder() {}
+   ~QuadDecoder() {}
 
    /**
     * Pin IRQ call-back.

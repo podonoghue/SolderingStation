@@ -16,6 +16,7 @@ public:
    USBDM::Nonvolatile<float> kp;
    USBDM::Nonvolatile<float> ki;
    USBDM::Nonvolatile<float> kd;
+   USBDM::Nonvolatile<float> iLimit;
 };
 
 #endif /* SOURCES_PIDSETTINGS_H_ */

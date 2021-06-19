@@ -11,6 +11,9 @@
 __attribute__ ((section(".flexRAM")))
 NonvolatileSettings nvinit;
 
+/**
+ * Constructor
+ */
 NonvolatileSettings::NonvolatileSettings() : Flash() {
 
    // Initialise the non-volatile system and configure if necessary
@@ -29,6 +32,11 @@ NonvolatileSettings::NonvolatileSettings() : Flash() {
    }
 }
 
+/**
+ * Initialise a non-volatile channel settings object
+ *
+ * @param settings Settings for a channel
+ */
 void NonvolatileSettings::initialiseChannelSettings(ChannelSettings &settings) {
 
    constexpr unsigned IDLE_MAX_TIME      =  5*60*1000; //  5 minutes in ms
@@ -42,16 +50,29 @@ void NonvolatileSettings::initialiseChannelSettings(ChannelSettings &settings) {
    settings.safetyOffTime        = LONGIDLE_MAX_TIME;
 }
 
+/**
+ * Initialise PID non-volatile settings
+ */
 void NonvolatileSettings::initialisePidSettings() {
    pidSettings.kp = 5;
    pidSettings.ki = 0;
    pidSettings.kd = 0;
 }
 
+/**
+ * Initialise all Tip non-volatile settings
+ */
+void NonvolatileSettings::initialiseTipSettings() {
+   // No initialisation needed as default erased flash value is suitable
+}
+
+/**
+ * Initialise non-volatile storage to default values
+ */
 void NonvolatileSettings::initialiseNonvolatileStorage() {
    initialiseChannelSettings(ch1Settings);
    initialiseChannelSettings(ch2Settings);
    initialisePidSettings();
+   initialiseTipSettings();
 }
-
 

@@ -16,27 +16,17 @@
 #include "Pid.h"
 #include "BangBang.h"
 #include "StepResponse.h"
+#include "Tips.h"
 
 /// States for the channel
 enum ChannelState {
    ch_off,        ///< Channel is off
    ch_noTip,      ///< No tip in iron
    ch_overload,   ///< Overload has been detected
+   ch_fixedPower, ///< Tip supplied with constant power (T not maintained)
    ch_setback,    ///< Tip temperature has been lowered as idle for set-back period
    ch_active,     ///< Tip is being heated to user target temperature
 };
-
-/**
- * Get human readable name of channel state
- *
- * @param state State to describe
- *
- * @return Name of state
- */
-const char *getChannelStateName(ChannelState state);
-
-/// Number of preset temperatures provided
-static constexpr unsigned NUM_PRESETS  = 3;
 
 /**
  * Class representing a channel
@@ -46,6 +36,9 @@ class Channel : public DutyCycleCounter {
    using Controller = Pid;
 
 public:
+
+   /// Number of preset temperatures provided
+   static constexpr unsigned NUM_PRESETS  = 3;
 
    /// Reference to non-volatile settings stored in Flash
    ChannelSettings  &nvSettings;
@@ -57,14 +50,13 @@ public:
    ThermistorAverage coldJunctionTemperature;
 
    /// Average power - just for display purposes
-   MovingWindowAverage<50> power;
+   SimpleMovingAverage<5> power;
 
    friend class Control;
 
 private:
    bool              tipPresent          = false;    ///< Indicates that the tip is present
    int               toolIdleTime        = 0;        ///< How long the tool has been idle
-   bool              overloadDetected    = false;    ///< Indicates an overload was detected
    float             currentTemperature  = 0;        ///< Measured temperature of tool
    ChannelState      state               = ch_off;   ///< State of channel ch_off/ch_standby/ch_backoff/ch_active
    int               targetTemperature   = 0;        ///< Desired temperature of tool
@@ -73,6 +65,9 @@ private:
    Controller        controller;                     ///< Loop controller
 
    bool              applyPowerCorrection = false;
+
+   /// Settings for currently selected tip or nullptr if none selected
+   TipSettings       *tipSettings         = nullptr;
 
 public:
    /**
@@ -88,14 +83,74 @@ public:
    }
 
    /**
-    * Gets state of iron modified by physical status of tip
+    * Set selected tip for this channel
+    *
+    * @param index Index into tip settings table
+    */
+   void setTip(TipSettings *tipSettings) {
+      if (isRunning() && (tipSettings == nullptr)) {
+         // Must be off without tip selection
+         setState(ch_off);
+      }
+      this->tipSettings = tipSettings;
+   }
+
+   /**
+    * Get selected tip for this channel
+    *
+    * @return Index into tip settings table
+    */
+   const TipSettings* getTip() {
+      return tipSettings;
+   }
+
+   const char *getTipName() {
+      if (tipSettings == nullptr) {
+         return "----";
+      }
+      return tipSettings->getTipName();
+   }
+
+   /**
+    * Get human readable name of channel state
+    *
+    * @param state State to describe
+    *
+    * @return Name of state
+    */
+   static const char *getStateName(ChannelState state) {
+      static const char *names[] = {
+            "Off",
+            "No Tip",
+            "Over Ld",
+            "Fixed Pwr",
+            "Setback",
+            "Active",
+      };
+      if (state >= (sizeof(names)/sizeof(names[0]))) {
+         return "???";
+      }
+      return names[state];
+   }
+
+   /**
+    * Set presence of tip.
+    *
+    * @param tipPresent
+    */
+   void setTipPresent(bool tipPresent) {
+      if (tipSettings == nullptr) {
+         setState(ch_off);
+      }
+      this->tipPresent = tipPresent;
+   }
+
+   /**
+    * Gets state of channel modified by physical status of tip
     *
     * @return Status value
     */
-   ChannelState getState() {
-      if (overloadDetected) {
-         return ch_overload;
-      }
+   ChannelState getState() const {
       if (!tipPresent) {
          return ch_noTip;
       }
@@ -103,16 +158,31 @@ public:
    }
 
    /**
+    * Get human readable name of channel state
+    *
+    * @return Name of state
+    */
+   const char *getStateName() const {
+      return getStateName(getState());
+   }
+
+   /**
     * Set desired state of iron.
-    * Clears physical status of iron but this will be updated when the iron is polled.
+    * Clears physical status of iron but this will be updated when the iron is next polled.
     *
     * @param newState
     */
    void setState(ChannelState newState) {
+      if (isRunning(newState) && tipSettings == nullptr) {
+         // Can't turn on without tip selection
+         return;
+      }
       state            = newState;
-      overloadDetected = false;
 
-      controller.enable(isRunning());
+      controller.enable(isControlled());
+      if (!isRunning()) {
+         controller.setOutput(0);
+      }
       applyPowerCorrection = false;
    }
 
@@ -122,25 +192,30 @@ public:
     * @param value
     */
    void setOverload() {
-      overloadDetected = true;
+      state = ch_overload;
 
       // Disable drive
       DutyCycleCounter::disable();
    }
 
    /**
-    * Change tip present state of channel
-    *
-    * @param value
+    * Indicates if the channel is running i.e. in active, back-off or fixed-power states
     */
-   void setTipPresent(bool value) {
-      tipPresent = value;
+   bool isRunning(ChannelState state) const {
+      return (state == ch_active) || (state == ch_setback)|| (state == ch_fixedPower) ;
    }
 
    /**
-    * Indicates if the channel is running i.e. in active or back-off states
+    * Indicates if the channel is running i.e. in active, back-off or fixed-power states
     */
-   bool isRunning() {
+   bool isRunning() const {
+      return isRunning(getState());
+   }
+
+   /**
+    * Indicates if the channel temperature is being controlled i.e. in active or back-off states
+    */
+   bool isControlled() const {
       ChannelState state = getState();
       return (state == ch_active) || (state == ch_setback) ;
    }
@@ -151,7 +226,7 @@ public:
     *
     * @return User set temperature
     */
-   int getUserTemperature() {
+   int getUserTemperature() const {
       return targetTemperature;
    }
 
@@ -161,7 +236,7 @@ public:
     *
     * @return Target temperature
     */
-   int getTargetTemperature() {
+   int getTargetTemperature() const {
       switch(getState()) {
          case ch_active:
             return targetTemperature;
@@ -183,8 +258,8 @@ public:
     *
     * @return Current temperature
     */
-   int getCurrentTemperature() {
-      return currentTemperature;
+   int getCurrentTemperature() const {
+      return round(currentTemperature);
    }
 
    /**
@@ -206,9 +281,10 @@ public:
       power.accumulate(getDutyCycle());
    }
 
-   int getPower() {
-      static constexpr int NOMINAL_MAX_POWER = (24 * 24)/8.5; // 24Vrms, 8.5 ohm element
-      int pwr = power.getAverage()*NOMINAL_MAX_POWER/100;
+   float getPower() const {
+      // Assume 24Vrms, 8.5 ohm element
+      static constexpr float NOMINAL_MAX_POWER = (24 * 24)/8.5;
+      float pwr = power.getAverage()*NOMINAL_MAX_POWER/100;
       return pwr;
    }
 
@@ -245,7 +321,7 @@ public:
    /**
     * Get currently selected preset (1..NUM_PRESETS)
     */
-   unsigned getPreset() {
+   unsigned getPreset() const {
       return preset+1;
    }
 
@@ -254,7 +330,7 @@ public:
     *
     * @return Temperature from preset
     */
-   int getPresetTemperature() {
+   int getPresetTemperature() const {
       return nvSettings.presets[preset];
    }
 
@@ -272,7 +348,7 @@ public:
     *
     * @return true if temperature has been changed
     */
-   bool isTempModified() {
+   bool isTempModified() const {
       return targetTemperature != nvSettings.presets[preset];
    }
 
