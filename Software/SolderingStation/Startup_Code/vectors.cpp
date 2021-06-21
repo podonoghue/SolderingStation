@@ -15,6 +15,8 @@
 #include "derivative.h"
 #include "hardware.h"
 
+#include "Peripherals.h"
+
 /*********** $start(VectorsIncludeFiles) *** Do not edit after this comment ****************/
 #include "cmp.h"
 #include "gpio.h"
@@ -52,6 +54,9 @@ void Default_Handler(void) {
 #endif
 
    while (1) {
+      Ch1Drive::setIn();
+      Ch2Drive::setIn();
+
       __asm__("bkpt");
    }
 }
@@ -137,8 +142,13 @@ void _HardFault_Handler(
 #endif
 
    while (1) {
+
+      Ch1Drive::setIn();
+      Ch2Drive::setIn();
+
       // Stop here for debugger
       __asm__("bkpt");
+
    }
 }
 
