@@ -10,7 +10,6 @@
 
 #include "flash.h"
 #include "ChannelSettings.h"
-#include "PidSettings.h"
 #include "Tips.h"
 
 /**
@@ -35,24 +34,15 @@ private:
    ///  Channel 2 non-volatile settings
    ChannelSettings ch2Settings;
 
-   /// Settings for control loop
-   PidSettings     pidSettings;
-
    /// Settings for tips selected as available
    Tips::TipSettingsArray tipSettings;
 
 private:
 
    /**
-    * Initialise a non-volatile channel settings object
-    *
-    * @param settings Settings for a channel
+    * Initialise a non-volatile channel settings
     */
-   void initialiseChannelSettings(ChannelSettings &settings);
-   /**
-    * Initialise PID non-volatile settings
-    */
-   void initialisePidSettings();
+   void initialiseChannelSettings();
    /**
     * Initialise all Tip non-volatile settings
     */

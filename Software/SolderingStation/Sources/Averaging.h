@@ -87,12 +87,12 @@ public:
     *
     * @return value calculated over window
     */
-   int getAverage() const {
+   float getAverage() const {
       if (count == 0) {
          return 0;
       }
       // Calculate average over window
-      return round((float)sum/WindowSize);
+      return (float)sum/count;
    }
 
    /**
@@ -105,7 +105,7 @@ public:
       float voltage;
 
       // Calculate average over window
-      voltage = (float)sum/count;
+      voltage = getAverage();
 
       // Convert ADC value to voltage
       voltage  *= (ADC_REF_VOLTAGE/USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION));
@@ -126,7 +126,7 @@ class MovingAverage {
 
 private:
    /// Sample accumulator
-   int accumulator = 0;
+   float accumulator = 0;
    bool initial = true;
 
    MovingAverage(const MovingAverage &other) = delete;
@@ -173,7 +173,7 @@ public:
     *
     * @return value calculated
     */
-   int getAverage() const {
+   float getAverage() const {
       return accumulator;
    }
 
@@ -286,7 +286,7 @@ private:
     *
     * @return Corresponding temperature in Celsius
     */
-   float resistanceToCelsius(float resistance){
+   static float resistanceToCelsius(float resistance) {
 
       // Value from curve fitting see spreadsheet
       constexpr float A_constant =  1.62770581419817E-03;
@@ -356,7 +356,7 @@ private:
     *
     * @return Temperature in Celsius
     */
-   float voltageToCelsius(float voltage) {
+   static float voltageToCelsius(float voltage) {
 
       // Curve fitting was done using mV
       voltage *= 1000;
@@ -409,7 +409,7 @@ private:
     *
     * @return Chip temperature in Celsius
     */
-   float voltageToCelsius(float voltage) {
+   static float voltageToCelsius(float voltage) {
       return 25 - (voltage-0.719)/.001715;
    }
 

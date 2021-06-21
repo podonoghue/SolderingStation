@@ -11,8 +11,15 @@
 
 using namespace USBDM;
 
-/// Handles the OLED display
-Display        display;
+/// Information about tips
+Tips tips;
+
+/// Channel interface and state
+Channels       channels;
+
+// Create non-volatile storage in FlexRAM
+__attribute__ ((section(".flexRAM")))
+NonvolatileSettings nvinit;
 
 /// Polls the switches and the set-back switches
 SwitchPolling  switchPolling;
@@ -20,8 +27,8 @@ SwitchPolling  switchPolling;
 /// Main control class
 Control        control;
 
-/// Channel interface and state
-Channels       channels;
+/// Handles the OLED display
+Display        display;
 
 void initialise() {
    display.initialise();

@@ -23,6 +23,7 @@ public:
    EventType (*handler)(const SettingsData &);
 
    union {
+      USBDM::Nonvolatile<uint16_t>  *settingUint16;
       USBDM::Nonvolatile<int>       *settingInt;
       USBDM::Nonvolatile<float>     *settingFloat;
    };
@@ -38,6 +39,18 @@ public:
     */
    constexpr SettingsData(const char *name, EventType (*handler)(const SettingsData &), USBDM::Nonvolatile<int> &setting, int increment)
    : name(name), handler(handler), settingInt(&setting), increment(increment) {
+   }
+
+   /**
+    * Constructor for Nonvolatile<uint16_t> setting
+    *
+    * @param name       Name to display
+    * @param handler    Code to handle changes
+    * @param setting    The non-volatile value being modified
+    * @param increment  How large an increment for rotary encoder indent
+    */
+   constexpr SettingsData(const char *name, EventType (*handler)(const SettingsData &), USBDM::Nonvolatile<uint16_t> &setting, int increment)
+   : name(name), handler(handler), settingUint16(&setting), increment(increment) {
    }
 
    /**

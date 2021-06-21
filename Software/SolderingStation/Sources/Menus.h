@@ -13,6 +13,7 @@
 #include "Channel.h"
 
 class Menus {
+
 private:
    Menus(const Menus &other) = delete;
    Menus(Menus &&other) = delete;
@@ -28,7 +29,7 @@ public:
     * @param prompt Prompt to display
     *
     * @return True if confirmed
-    * @return false if cancelled
+    * @return False if cancelled
     */
    static bool confirmAction(const char *prompt);
 
@@ -56,22 +57,52 @@ public:
    static EventType editFloat(const SettingsData &data);
 
    /**
-    * Edit a non-volatile temperatire setting.
+    * Edit a non-volatile temperature setting.
     *
     * @param data Data describing setting to change
     *
     * @return Exiting event
     */
-   static EventType editTemp(const SettingsData &data);
+   static EventType editTemperature(const SettingsData &data);
 
    /**
-    * Edit a non-volatile tip setting.
+    * Calibrate a tip
+    *
+    * @param[in]     ch            Channel being used
+    * @param[in/out] tipsettings   Tipsettings being determined
+    * @param[in]     stage         Stage is calibration sequence
+    *
+    * @return  false - abort or failed
+    * @return  true  - continue to next stage
+    */
+   static bool calibrateTip(Channel &ch, TipSettings &tipsettings, TipSettings::Calib stage);
+
+   /**
+    * Calculate a non-volatile tip calibration setting.
     *
     * @param data Data describing setting to change
     *
     * @return Exiting event
     */
-   static EventType editTipSettings(const SettingsData &data);
+   static EventType calculateTipSettings(const SettingsData &data);
+
+   /**
+    * Edit a non-volatile tip calibration setting.
+    *
+    * @param data Data describing setting to change
+    *
+    * @return Exiting event
+    */
+   static bool editPidSetting(TipSettings &tipSettings);
+
+   /**
+    * Edit a non-volatile tip PID setting.
+    *
+    * @param data Data describing setting to change
+    *
+    * @return Exiting event
+    */
+   static EventType editPidSettings(const SettingsData &);
 
    /**
     * Edit a available tips in non-volatile settings.
@@ -82,7 +113,6 @@ public:
     */
    static EventType selectAvailableTips(const SettingsData &);
 
-   static bool calibrate(Channel &ch, TipSettings &tipsettings, TipSettings::Calib stage);
 };
 
 #endif /* SOURCES_MENUS_H_ */

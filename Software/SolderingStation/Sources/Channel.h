@@ -34,6 +34,7 @@ enum ChannelState {
 class Channel : public DutyCycleCounter {
 
    using Controller = Pid;
+//   using Controller = StepResponse;
 
 public:
 
@@ -66,20 +67,43 @@ private:
 
    bool              applyPowerCorrection = false;
 
-   /// Settings for currently selected tip or nullptr if none selected
-   TipSettings       *tipSettings         = nullptr;
-
 public:
    /**
     * Constructor for channel
     *
     * @param settings Non-volatile channel settings to associate with this channel
     */
-   Channel(ChannelSettings &settings, PidSettings &pidSettings) :
+   Channel(ChannelSettings &settings) :
       DutyCycleCounter(100),
-      nvSettings(settings),
-      controller(pidSettings) {
+      nvSettings(settings){
       setUserTemperature(settings.presets[preset]);
+      refreshPid();
+   }
+
+   /**
+    * Check for a valid tip selection and re-assign if necessary
+    *
+    * @param defaultTip Tip use for channel if necessary
+    */
+   void checkTipSelected(TipSettings *defaultTip) {
+      const TipSettings *ts = nvSettings.selectedTip;
+      if ((ts == nullptr) || (ts->isFree())) {
+         setTip(defaultTip);
+      }
+      else {
+         // Refresh tip in case PID parameters changed
+         setTip(nvSettings.selectedTip);
+      }
+   }
+
+   void refreshPid() {
+      const TipSettings *ts = nvSettings.selectedTip;
+
+      controller.setControlParameters(
+            ts->getKp(),
+            ts->getKi(),
+            ts->getKd(),
+            ts->getILimit());
    }
 
    /**
@@ -87,12 +111,20 @@ public:
     *
     * @param index Index into tip settings table
     */
-   void setTip(TipSettings *tipSettings) {
-      if (isRunning() && (tipSettings == nullptr)) {
-         // Must be off without tip selection
-         setState(ch_off);
-      }
-      this->tipSettings = tipSettings;
+   void nextTip() {
+      nvSettings.selectedTip = tips.getNextTip(nvSettings.selectedTip);
+      refreshPid();
+   }
+
+   /**
+    * Set selected tip for this channel
+    *
+    * @param index Index into tip settings table
+    */
+   void setTip(const TipSettings *tipSettings) {
+      usbdm_assert(tipSettings != nullptr, "Illegal tip");
+      nvSettings.selectedTip = tipSettings;
+      refreshPid();
    }
 
    /**
@@ -100,15 +132,17 @@ public:
     *
     * @return Index into tip settings table
     */
-   const TipSettings* getTip() {
-      return tipSettings;
+   const TipSettings* getTip() const {
+      return nvSettings.selectedTip;
    }
 
    const char *getTipName() {
-      if (tipSettings == nullptr) {
+      const TipSettings *ts = nvSettings.selectedTip;
+
+      if (ts == nullptr) {
          return "----";
       }
-      return tipSettings->getTipName();
+      return ts->getTipName();
    }
 
    /**
@@ -139,7 +173,7 @@ public:
     * @param tipPresent
     */
    void setTipPresent(bool tipPresent) {
-      if (tipSettings == nullptr) {
+      if (nvSettings.selectedTip == nullptr) {
          setState(ch_off);
       }
       this->tipPresent = tipPresent;
@@ -173,15 +207,18 @@ public:
     * @param newState
     */
    void setState(ChannelState newState) {
-      if (isRunning(newState) && tipSettings == nullptr) {
-         // Can't turn on without tip selection
-         return;
-      }
-      state            = newState;
+      const TipSettings *ts = nvSettings.selectedTip;
+      (void) ts;
 
+      usbdm_assert((ts != nullptr) && !ts->isFree(), "No tip selected");
+      state            = newState;
+      refreshPid();
       controller.enable(isControlled());
       if (!isRunning()) {
          controller.setOutput(0);
+         // For safety while debugging immediately turn off drive
+         Ch1Drive::off();
+         Ch2Drive::off();
       }
       applyPowerCorrection = false;
    }

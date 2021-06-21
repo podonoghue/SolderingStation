@@ -292,18 +292,25 @@ void Control::zeroCrossingHandler() {
       setNeedsRefresh();
    }
 
-   // Counter to initiate screen refresh
+   // Counter to initiate pid update
    static unsigned pidCount = 0;
 
-   if (pidCount++ >= PID_INTERVAL) {
+   // Counter to initiate pid reporting
+   static unsigned reportCount = 0;
+
+   if (++pidCount >= PID_INTERVAL) {
       pidCount = 0;
 
       // Update averages and run PID
       channels[1].upDateCurrentTemperature();
       channels[2].upDateCurrentTemperature();
 
-      doReport = true;
+      if (++reportCount >= 10) {
+         reportCount = 0;
+         doReport = true;
+      }
    }
+
 
    GpioSpare2::clear();
 }
@@ -446,7 +453,7 @@ void Control::refresh() {
    needRefresh = false;
 
    // Update display
-   display.displayTools();
+   display.displayChannels();
 }
 
 /**
@@ -488,19 +495,22 @@ void Control::reportPid(Channel &ch) {
    if (doReportTitle) {
       doReportTitle = false;
       console.
-      write("Kp = ").
-      write(ch.controller.nvSettings.kp);
+         write("Kp = ").
+         write(ch.getTip()->getKp()).
+         write(',').
+         write("Drive").write(',').
+         write("Temp").write(',').
+         write("Error").write(',').
+         write("P").write(',').
+         write("I").write('<').write(ch.getTip()->getILimit()).write(',').
+         write("D").writeln();
       console.
-      write(',').
-      write("Drive").write(',').
-      write("Temp").write(',').
-      write("Error").write(',').
-      write("P").write(',').
-      write("I").write('<').write(ch.controller.nvSettings.iLimit).write(',').
-      write("D").writeln();
+         write("Ki = ").
+         write(ch.getTip()->getKi()).
+         write(',').
+         writeln(ch.getTipName());
       console.
-      write("Ki = ").writeln(ch.controller.nvSettings.ki).
-      write("Kd = ").writeln(ch.controller.nvSettings.kd);
+         write("Kd = ").writeln(ch.getTip()->getKd());
    }
    if (ch.controller.isEnabled()) {
       double time  = ch.controller.getElapsedTime();
@@ -546,8 +556,14 @@ void Control::eventLoop()  {
       //         console.write("Position = ").write(event.change).write(", Event = ").writeln(getEventName(event));
       //         console.write("Event = ").writeln(getEventName(event));
       switch(event.type) {
-         case ev_Ch1Hold      : toggleEnable(1);             break;
-         case ev_Ch2Hold      : toggleEnable(2);             break;
+         case ev_Ch1Hold      :
+            setSelectedChannel(1);
+            toggleEnable(1);
+            break;
+         case ev_Ch2Hold      :
+            setSelectedChannel(2);
+            toggleEnable(2);
+            break;
          case ev_Ch1Ch2Hold   :
             if (!isEnabled(1) && !isEnabled(2)) {
                // Both currently off - turn on both channels
@@ -571,7 +587,7 @@ void Control::eventLoop()  {
                setSelectedChannel(1);
             }
             else {
-               nextPreset();
+               channels[1].nextTip();
             }
             break;
          case ev_Ch2Release      :
@@ -579,14 +595,18 @@ void Control::eventLoop()  {
                setSelectedChannel(2);
             }
             else {
-               nextPreset();
+               channels[2].nextTip();
             }
             break;
          case ev_QuadRelease   : updatePreset();            break;
          case ev_QuadRotate    : changeTemp(event.change);  break;
 
-         case ev_QuadHold :
          case ev_SelRelease :
+            nextPreset();
+            break;
+
+         case ev_SelHold :
+         case ev_QuadHold :
             disable(1);
             disable(2);
 
@@ -604,6 +624,3 @@ void Control::eventLoop()  {
 
 /// this pointer for static members (call-backs)
 Control *Control::This = nullptr;
-
-
-

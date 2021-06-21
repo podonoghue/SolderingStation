@@ -22,10 +22,10 @@ private:
    unsigned selectedChannel = 1;
 
    /// Channel1 state information
-   Channel  channel1 = Channel(nvinit.ch1Settings, nvinit.pidSettings);
+   Channel  channel1 = Channel(nvinit.ch1Settings);
 
    /// Channel2 state information
-   Channel  channel2 = Channel(nvinit.ch2Settings, nvinit.pidSettings);
+   Channel  channel2 = Channel(nvinit.ch2Settings);
 
 public:
 

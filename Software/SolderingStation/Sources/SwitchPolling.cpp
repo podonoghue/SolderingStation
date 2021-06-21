@@ -183,11 +183,11 @@ EventType SwitchPolling::pollSetbacks() {
          // Tool in holder - increment idle time
          int idleTime = channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
 
-         if ((channel.nvSettings.setbackTime > 0) && (idleTime == channel.nvSettings.setbackTime)) {
+         if ((channel.nvSettings.setbackTime > 0) && (idleTime == channel.nvSettings.setbackTime*1000)) {
             // Idle for a short while
             return static_cast<EventType>(ev_Tool1Idle+tool);
          }
-         if ((channel.nvSettings.safetyOffTime > 0) && (idleTime == channel.nvSettings.safetyOffTime)) {
+         if ((channel.nvSettings.safetyOffTime > 0) && (idleTime == channel.nvSettings.safetyOffTime*1000)) {
             // Idle for a long time
             return static_cast<EventType>(ev_Tool1LongIdle+tool);
          }

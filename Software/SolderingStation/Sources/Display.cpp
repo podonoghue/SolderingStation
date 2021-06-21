@@ -10,13 +10,61 @@
 using namespace USBDM;
 
 /**
- * Display channel information
+ * Display information about one channel on OLED.
+ * Used to draw left and right halves of screen
  *
- * @param ch1              Channel 1 properties
- * @param ch2              Channel 2 properties
- * @param selectedChannel  The currently selected channel
+ * @param ch         Channel to display
+ * @param selected   Whether the channel is currently selected
+ * @param offset     Y offset for display
  */
-void Display::displayTools() {
+void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
+   using namespace USBDM;
+
+   oled.setFont(fontMedium);
+   oled.moveXY(offset, 0).write(ch.getStateName());
+
+   oled.setPadding(Padding_LeadingSpaces).setWidth(3);
+
+   oled.setFont(fontVeryLarge);
+   if ((ch.getState() == ch_noTip) || (ch.getState() == ch_overload)) {
+      oled.moveXY(offset+6, 9).write("---");
+   }
+   else {
+      int currentTemp = ch.getCurrentTemperature();
+      if (currentTemp>999) {
+         currentTemp = 999;
+      }
+      oled.moveXY(offset+2, 9).write(currentTemp);
+      oled.setFont(fontMedium);
+      oled.moveXY(offset+48, 14).write("C");
+   }
+
+   if (selected) {
+      oled.drawRect(offset,  11, offset+57,  12+23, WriteMode_Xor);
+   }
+
+   oled.setFont(fontLarge);
+   oled.moveXY(offset,  38).write("P").setWidth(1).write(ch.getPreset()).
+         write(ch.isTempModified()?"*:":" :").setWidth(3).write(ch.getUserTemperature());
+
+   float power = ch.getPower();
+
+   oled.setFont(fontSmall);
+
+   oled.moveXY(offset,  55).write(ch.getTipName());
+
+   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+   oled.moveXY(offset+30,  55).write(power).write('W');
+   if (power>0) {
+      oled.drawRect(offset,   54, offset-1+power/2,  62, WriteMode_Xor);
+   }
+   oled.resetFormat();
+}
+
+/**
+ * Display channel information on OLED
+ */
+void Display::displayChannels() {
    using namespace USBDM;
 
    static constexpr unsigned LEFT_OFFSET  = 1;
@@ -25,75 +73,14 @@ void Display::displayTools() {
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
 
+   bool ch1Selected = channels.getSelectedChannelNumber() == 1;
+
    oled.clearDisplay();
 
-   oled.setPadding(Padding_LeadingSpaces).setWidth(3);
+   displayChannel(ch1, ch1Selected,  LEFT_OFFSET);
+   displayChannel(ch2, !ch1Selected, RIGHT_OFFSET);
 
-   oled.setFont(fontVeryLarge);
-   if ((ch1.getState() == ch_noTip) || (ch1.getState() == ch_overload)) {
-      oled.moveXY(LEFT_OFFSET+4, 10).write("---");
-   }
-   else {
-      int currentTemp = ch1.getCurrentTemperature();
-      if (currentTemp>999) {
-         currentTemp = 999;
-      }
-      oled.moveXY(LEFT_OFFSET, 10).write(currentTemp);
-      oled.setFont(fontMedium);
-      oled.moveXY(LEFT_OFFSET+47, 15).write("C");
-   }
-
-   oled.setFont(fontVeryLarge);
-   if ((ch2.getState() == ch_noTip) || (ch2.getState() == ch_overload)) {
-      oled.moveXY(RIGHT_OFFSET+4, 10).write("---");
-   }
-   else {
-      int currentTemp = ch2.getCurrentTemperature();
-      if (currentTemp>999) {
-         currentTemp = 999;
-      }
-      oled.moveXY(RIGHT_OFFSET, 10).write(currentTemp);
-      oled.setFont(fontMedium);
-      oled.moveXY(RIGHT_OFFSET+47, 15).write("C");
-   }
-
-   switch (channels.getSelectedChannelNumber()) {
-      case 1:
-         oled.drawRect(LEFT_OFFSET-1,  12, LEFT_OFFSET+56,  12+23, WriteMode_Xor);
-         break;
-      case 2:
-         oled.drawRect(RIGHT_OFFSET-1,  12, RIGHT_OFFSET+56,  12+23, WriteMode_Xor);
-         break;
-   }
-
-   oled.setFont(fontMedium);
-   oled.moveXY(LEFT_OFFSET, 0).write(ch1.getStateName());
-   oled.moveXY(RIGHT_OFFSET, 0).write(ch2.getStateName());
-
-   oled.setFont(fontLarge);
-   oled.moveXY(LEFT_OFFSET,  40).write("P").setWidth(1).write(ch1.getPreset()).
-         write(ch1.isTempModified()?"*:":" :").setWidth(3).write(ch1.getUserTemperature());
-   oled.moveXY(RIGHT_OFFSET, 40).write("P").setWidth(1).write(ch2.getPreset()).
-         write(ch2.isTempModified()?"*:":" :").setWidth(3).write(ch2.getUserTemperature());
-
-   float ch1Power = ch1.getPower();
-   float ch2Power = ch2.getPower();
-
-   oled.setFont(fontSmall);
-
-   oled.moveXY(LEFT_OFFSET+1,  56).write(ch1.getTipName());
-   oled.moveXY(RIGHT_OFFSET+1, 56).write(ch2.getTipName());
-
-   oled.setFloatFormat(1, Padding_LeadingSpaces, 4);
-   oled.moveXY(LEFT_OFFSET+18,  56).write(ch1Power).write('W');
-   oled.moveXY(RIGHT_OFFSET+18, 56).write(ch2Power).write('W');
-   if (ch1Power>0) {
-      oled.drawRect(LEFT_OFFSET,   55, LEFT_OFFSET-1+ch1Power/2,  63, WriteMode_Xor);
-   }
-   if (ch2Power>0) {
-      oled.drawRect(RIGHT_OFFSET,  55, RIGHT_OFFSET-1+ch2Power/2, 63, WriteMode_Xor);
-   }
-   oled.drawVerticalLine(RIGHT_OFFSET-4, 0, oled.HEIGHT-1, WriteMode_Write);
+   oled.drawVerticalLine(RIGHT_OFFSET-3, 0, oled.HEIGHT-1, WriteMode_Write);
 
    oled.refreshImage();
 
@@ -116,7 +103,7 @@ void Display::displayTimeMenuItem(const char *description, unsigned ms, bool mod
    oled.setFont(fontVeryLarge);
    oled.moveXY(0, 30).write(modified?'*':' ');
 
-   int seconds = ms/1000;
+   int seconds = ms;
 
    if (ms>0) {
       oled.setPadding(Padding_LeadingSpaces).setWidth(2).write(seconds/60).write("m");
@@ -134,10 +121,10 @@ void Display::displayTimeMenuItem(const char *description, unsigned ms, bool mod
 }
 
 /**
- * Display temperature menu item
+ * Display floating point menu item
  *
  * @param description   Description to display at top of screen.  May include a single newline to split into 2 lines.
- * @param temperature   Temperature to display
+ * @param value         Value to display.  This value is /1000 for scaling as a float value
  * @param modified      Indicates item has been modified since saving - adds indicator to display
  */
 void Display::displayFloatMenuItem(const char *description, int value, bool modified) {
@@ -202,7 +189,7 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
    oled.writeln(title);
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY());
 
-   oled.moveXY(0, oled.getY()+1);
+   oled.moveXY(0, oled.getY()+2);
    oled.setFont(font);
 
    if (selection < offset) {
@@ -234,11 +221,12 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
       if (item.modifiers&MenuItem::Starred) {
          *p = '*';
       }
+      oled.moveXY(1, oled.getY()+1);
       int menuY = oled.getY();
       oled.write(prefix);
       oled.writeln(item.name);
       if ((line+offset) == selection) {
-         oled.drawRect(0,  menuY, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+         oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
       }
    }
 
@@ -256,7 +244,6 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
  * @param[in] selection Selected item
  */
 void Display::displayChoice(const char *title, const char *prompt, const char *options[], int selection) {
-   Font &font = fontSmall;
 
    oled.clearDisplay();
 
@@ -264,18 +251,22 @@ void Display::displayChoice(const char *title, const char *prompt, const char *o
    oled.moveXY(0, 0);
    oled.writeln(title);
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY());
+   oled.moveXY(0, oled.getY()+2);
 
+   Font &font = fontSmall;
    oled.setFont(font);
    oled.writeln(prompt);
+   oled.moveXY(0, oled.getY()+2);
 
    for(int line=0; line<MIN_MENU_ENTRIES; line++) {
       if (options[line] == nullptr) {
          break;
       }
       int menuY = oled.getY();
+      oled.moveXY(1, oled.getY()+1);
       oled.writeln(options[line]);
       if (line == selection) {
-         oled.drawRect(0,  menuY, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+         oled.drawRect(0,  menuY, oled.WIDTH, menuY+font.height, WriteMode_Xor);
       }
    }
 
@@ -288,7 +279,7 @@ void Display::displayChoice(const char *title, const char *prompt, const char *o
  * Display message and waits for user action
  *
  * @param[in] title     Title to display at top of screen
- * @param message       Message to display
+ * @param[in] message   Message to display
  *
  * @return Event type that exited wait
  */
@@ -317,6 +308,13 @@ Event Display::displayMessage(const char *title, const char *message) {
    return event;
 }
 
+/**
+ * Display calibration information for tip during calibration sequence
+ *
+ * @param title               Title to display
+ * @param ch                  Channel being used for calibration
+ * @param targetTemperature   Target temperature for this calibration stage
+ */
 void Display::displayCalibration(const char *title, Channel &ch, unsigned targetTemperature) {
 
    oled.clearDisplay();
@@ -348,3 +346,62 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
    oled.resetFormat();
 }
 
+/**
+ * Display PID setting values
+ *
+ * @param tipname    Name of tip to display
+ * @param selection  Index of selected item
+ * @param stars      Array containing character to prefix menu items with
+ * @param kp         Scaled PID Kp value
+ * @param ki         Scaled PID Ki value
+ * @param kd         Scaled PID Kd value
+ * @param iLimit     Scaled PID I limit value
+ *
+ * @return
+ */
+EventType Display::displayPidSettings(const char *tipname, unsigned selection, char stars[4], int kp, int ki, int kd, int iLimit) {
+   static constexpr float SCALE_FACTOR = TipSettings::FLOAT_SCALE_FACTOR;
+
+   oled.clearDisplay();
+   oled.setFont(fontMedium);
+   oled.moveXY(0, 0);
+   oled.writeln(" PID Settings");
+   oled.moveXY(0, oled.getY()+3);
+   oled.write(" Tip: ").writeln(tipname);
+   oled.drawHorizontalLine(0, oled.WIDTH, oled.getY()+1);
+   oled.moveXY(0, oled.getY()+5);
+
+   Font &font = fontMedium;
+   oled.setFont(font);
+   oled.setFloatFormat(2, Padding_LeadingSpaces, 2);
+
+   int menuY= oled.getY();
+   oled.write(stars[0]).write("Kp      ").writeln(kp/SCALE_FACTOR);
+   if (selection == 0) {
+      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+   }
+   oled.moveXY(0, oled.getY()+2);
+   menuY= oled.getY();
+   oled.write(stars[1]).write("Ki      ").writeln(ki/SCALE_FACTOR);
+   if (selection == 1) {
+      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+   }
+   oled.moveXY(0, oled.getY()+2);
+   menuY= oled.getY();
+   oled.write(stars[2]).write("Kd      ").writeln(kd/SCALE_FACTOR);
+   if (selection == 2) {
+      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+   }
+   oled.moveXY(0, oled.getY()+2);
+   menuY= oled.getY();
+   oled.write(stars[3]).write("I limit ").writeln(iLimit/SCALE_FACTOR);
+   if (selection == 3) {
+      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+   }
+
+   oled.refreshImage();
+
+   oled.resetFormat();
+
+   return ev_None;
+}

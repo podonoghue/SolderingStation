@@ -12,7 +12,7 @@
 #include "NonvolatileSettings.h"
 
 /**
- * PID Controller
+ * BangBang Controller
  */
 class BangBang {
 
@@ -34,7 +34,7 @@ public:
    /**
     * Constructor
     */
-   BangBang(PidSettings &){ }
+   BangBang(){ }
 
    /**
    * Destructor

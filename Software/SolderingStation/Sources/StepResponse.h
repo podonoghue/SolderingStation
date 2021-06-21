@@ -11,30 +11,36 @@
 #include "error.h"
 #include "NonvolatileSettings.h"
 
+class Channel;
+
 /**
- * PID Controller
+ * Dummy Controller
  */
 class StepResponse {
 
 private:
-   double interval = 10*USBDM::ms;     //!< Interval for sampling
-   float  outMin   = 0.0;              //!< Minimum limit for output
-   float  outMax   = 100.0;            //!< Maximum limit for output
+   Channel &channel;                         ///< Associated channel
 
-   bool     enabled        = false;    //!< Enable for controller
+   double   interval       = 10*USBDM::ms;   ///< Interval for sampling
+   float    outMin         = 0.0;            ///< Minimum limit for output
+   float    outMax         = 100.0;          ///< Maximum limit for output
 
-   double   lastInput      = 0.0;      //!< Last input sample
-   double   currentInput   = 0.0;      //!< Current input sample
-   double   currentOutput  = 0.0;      //!< Current output
-   double   currentError   = 0.0;      //!< Current error calculation
+   bool     enabled        = false;          ///< Enable for controller
 
-   unsigned tickCount      = 0;        //!< Time in ticks since last enabled
+   double   lastInput      = 0.0;            ///< Last input sample
+   double   currentInput   = 0.0;            ///< Current input sample
+   double   currentOutput  = 0.0;            ///< Current output
+   double   currentError   = 0.0;            ///< Current error calculation
+
+   unsigned tickCount      = 0;              ///< Time in ticks since last enabled
+   unsigned cycleCount     = 0;
+
 
 public:
    /**
     * Constructor
     */
-   StepResponse(PidSettings &){ }
+   StepResponse(Channel &channel) : channel(channel) { }
 
    /**
    * Destructor
@@ -53,6 +59,7 @@ public:
          if (!enabled) {
             // Just enabled
             tickCount    = 0;
+            cycleCount = 0;
          }
       }
       enabled = enable;
@@ -108,12 +115,22 @@ public:
    }
 
    /**
-    * Get setpoint of controller
+    * Get output of controller
     *
-    * @return Last output sample
+    * @return Last output value
     */
    double getOutput() {
       return currentOutput;
+   }
+
+   /**
+    * Set output of controller
+    * This is used when the controller is disabled
+    *
+    * @param newOutput New output value
+    */
+   void setOutput(double newOutput) {
+      currentOutput = newOutput;
    }
 
    /**
@@ -138,7 +155,7 @@ public:
    double newSample(double setpoint, double sample) {
 
       if(!enabled) {
-         return 0;
+         return currentOutput;
       }
 
       tickCount++;
@@ -148,32 +165,33 @@ public:
       currentInput = sample;
       currentError = setpoint - currentInput;
 
-      unsigned elapsedTime = round(tickCount*interval);
+      static constexpr unsigned minValue = 1;
+      static constexpr unsigned maxValue = 5;
 
-      static constexpr unsigned minValue = 4;
-      static constexpr unsigned maxValue = 8;
+      const unsigned INITIAL_INTERVAL = 50/interval;
+      const unsigned STEP_INTERVAL    = 500/interval;
 
-      if (elapsedTime<50) {
-         currentOutput = minValue;
-      }
-      else if (elapsedTime < (50+200)) {
-         currentOutput = maxValue;
-      }
-      else if (elapsedTime < (50+200+200)) {
-         currentOutput = minValue;
-      }
-      else if (elapsedTime < (50+200+200+200)) {
-         currentOutput = maxValue;
-      }
-      else if (elapsedTime < (50+200+200+200+200)) {
-         currentOutput = minValue;
+      if (tickCount<INITIAL_INTERVAL) {
+         currentOutput = 0;
+         cycleCount    = 0;
       }
       else {
-         currentOutput = 0;
+         if ((tickCount % STEP_INTERVAL) == INITIAL_INTERVAL) {
+            cycleCount++;
+            currentOutput = (cycleCount&1)?maxValue:minValue;
+         }
+         if (cycleCount > 4) {
+            currentOutput = 0;
+            enable(false);
+         }
       }
 
       // Update output
       return currentOutput;
+   }
+
+   void report() {
+      USBDM::console.writeln();
    }
 };
 

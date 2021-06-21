@@ -9,22 +9,25 @@
 #define PROJECT_HEADERS_PID_H_
 
 #include "error.h"
-#include "NonvolatileSettings.h"
+
+class Channel;
 
 /**
  * PID Controller
  */
 class Pid {
 
-public:
-   const PidSettings &nvSettings;      //!< Proportional, Integral and Derivative tuning parameters
-
 private:
-   double   interval       = 10*USBDM::ms;     //!< Interval for sampling
+   float    interval       = 10*USBDM::ms;     //!< Interval for sampling
    float    outMin         = 0.0;              //!< Minimum limit for output
    float    outMax         = 100.0;            //!< Maximum limit for output
 
    bool     enabled        = false;    //!< Enable for controller
+
+   double   kp             = 0.0;
+   double   ki             = 0.0;
+   double   kd             = 0.0;
+   double   iLimit         = 0.0;
 
    double   lastInput      = 0.0;      //!< Last input sample
    double   currentInput   = 0.0;      //!< Current input sample
@@ -37,47 +40,37 @@ private:
 
    unsigned tickCount      = 0;        //!< Time in ticks since last enabled
 
-private:
-
    /**
     * Get proportional control factor
     *
     * @return factor as double
     */
-   double getKp() {
-      return  nvSettings.kp;
-   }
+   double getKp() const { return kp; };
+
    /**
     * Get integral control factor
     * This is scaled for internal use
     *
     * @return factor as double
     */
-   double getKi() {
-      return  nvSettings.ki*interval;
-   }
+   double getKi() const { return ki; };
+
    /**
     * Get differential control factor
     * This is scaled for internal use
     *
     * @return factor as double
     */
-   double getKd() {
-      return  nvSettings.kd/interval;
-   }
+   double getKd() const {return kd; };
 
 public:
+
    /**
     * Constructor
     *
-    * @param[in] Kp          Initial proportional constant
-    * @param[in] Ki          Initial integral constant
-    * @param[in] Kd          Initial differential constant
-    * @param[in] outMin      Minimum value of output variable
-    * @param[in] outMax      Maximum value of output variable
+    * @param channel Associated channel
     */
-   Pid(PidSettings &pidSettings) :
-      nvSettings(pidSettings), enabled(false) {
+   Pid() {
    }
 
    /**
@@ -112,11 +105,17 @@ public:
     * @param[in] min       Minimum value of output variable
     * @param[in] max       Maximum value of output variable
     */
-   void setParameters(double newInterval, float min, float max) {
-      interval = newInterval;
-      outMin   = min;
-      outMax   = max;
-   }
+   void setParameters(float newInterval, float min, float max);
+
+   /**
+    * Set control parameters
+    *
+    * @param kp
+    * @param ki
+    * @param kd
+    * @param iLimit
+    */
+   void setControlParameters(float kp, float ki, float kd, float iLimit);
 
    /**
     * Indicates if the controller is enabled
@@ -192,50 +191,9 @@ public:
     *
     * @return  Adjustment predicted
     */
-   double newSample(double setpoint, double sample) {
+   double newSample(double setpoint, double sample);
 
-      if(!enabled) {
-         return currentOutput;
-      }
-
-      tickCount++;
-
-      // Update input samples & error
-      lastInput    = currentInput;
-      currentInput = sample;
-      currentError = setpoint - currentInput;
-
-      integral += (getKi() * currentError);
-
-      // Limit integral term
-      if(integral > nvSettings.iLimit) {
-         integral = nvSettings.iLimit;
-      }
-      else if(integral < -nvSettings.iLimit) {
-         integral = -nvSettings.iLimit;
-      }
-
-      differential = getKd() * (currentInput - lastInput);
-
-      proportional = getKp() * currentError;
-
-      currentOutput = proportional + integral - differential;
-
-      if(currentOutput > outMax) {
-         currentOutput = outMax;
-      }
-      else if(currentOutput < outMin) {
-         currentOutput = outMin;
-      }
-      // Update output
-      return currentOutput;
-   }
-
-   void report() {
-      USBDM::console.setFloatFormat(2, USBDM::Padding_LeadingSpaces, 5);
-      USBDM::console.write(",").write(currentError).write(",").write(proportional).write(",").write(integral).write(",").writeln(differential);
-      USBDM::console.resetFormat();
-   }
+   void report();
 };
 
 #endif // PROJECT_HEADERS_PID_H_
