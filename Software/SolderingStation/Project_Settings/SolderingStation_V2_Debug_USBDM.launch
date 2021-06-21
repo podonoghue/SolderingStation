@@ -21,7 +21,7 @@
     <intAttribute key="net.sourceforge.usbdm.gdb.interfaceFrequency" value="12000000"/>
     <stringAttribute key="net.sourceforge.usbdm.gdb.interfaceType" value="T_ARM"/>
     <booleanAttribute key="net.sourceforge.usbdm.gdb.loadImage" value="true"/>
-    <booleanAttribute key="net.sourceforge.usbdm.gdb.maskInterrupts" value="false"/>
+    <booleanAttribute key="net.sourceforge.usbdm.gdb.maskInterrupts" value="true"/>
     <stringAttribute key="net.sourceforge.usbdm.gdb.nvmClockTrimLocation" value="0"/>
     <stringAttribute key="net.sourceforge.usbdm.gdb.pcRegisterValue" value="__HardReset"/>
     <intAttribute key="net.sourceforge.usbdm.gdb.port" value="1234"/>
@@ -56,6 +56,6 @@
     <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
         <listEntry value="4"/>
     </listAttribute>
-    <stringAttribute key="org.eclipse.dsf.launch.MEMORY_BLOCKS" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&lt;memoryBlockExpressionList context=&quot;reserved-for-future-use&quot;/&gt;"/>
+    <stringAttribute key="org.eclipse.dsf.launch.MEMORY_BLOCKS" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&lt;memoryBlockExpressionList context=&quot;reserved-for-future-use&quot;&gt;&lt;gdbmemoryBlockExpression address=&quot;335544320&quot; label=&quot;0x14000000&quot;/&gt;&lt;/memoryBlockExpressionList&gt;"/>
     <stringAttribute key="process_factory_id" value="org.eclipse.cdt.dsf.gdb.GdbProcessFactory"/>
 </launchConfiguration>

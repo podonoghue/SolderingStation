@@ -245,14 +245,18 @@ M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECT
    .flexRAM (NOLOAD) :
    {
       . = ALIGN(4);
+      PROVIDE(__FlexRamStart = .);
       KEEP(*(.flexRAM))
+      PROVIDE(__FlexRamEnd = .);
    } > flexRAM
 
    /* flexNVM flash region */
    .flexNVM (NOLOAD) :
    {
       . = ALIGN(4);
+      PROVIDE(__FlexNvmStart = .);
       KEEP(*(.flexNVM))
+      PROVIDE(__FlexNvmEnd = .);
    } > flexNVM
 
 

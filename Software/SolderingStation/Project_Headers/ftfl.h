@@ -14,10 +14,14 @@
 #ifndef SOURCES_FLASH_H_
 #define SOURCES_FLASH_H_
 
+#include <string.h>
 #include "derivative.h"
 #include "hardware.h"
 #include "delay.h"
 #include "smc.h"
+
+extern uint8_t __FlexRamStart[];
+extern uint8_t __FlexRamEnd[];
 
 namespace USBDM {
 /**
@@ -148,6 +152,7 @@ protected:
       if (isFlexRamConfigured()) {
 //         console.write("flashController().FCNFG.FTFL_FCNFG_EEERDY = ").writeln((bool)(flashController().FCNFG&FTFL_FCNFG_EEERDY_MASK));
 //         console.writeln("Flex RAM is already configured");
+         // Note: This means, even when using the debug build, if the FlexRAM has been previously configured then real FlexRAM will be used.
          return FLASH_ERR_OK;
       }
 //      console.write("flashController().FCNFG.FTFL_FCNFG_EEERDY = ").writeln((bool)(flashController().FCNFG&FTFL_FCNFG_EEERDY_MASK));
@@ -171,6 +176,8 @@ protected:
       (void) split;
 
       // For debug, initialise FlexRam every time (no actual writes to flash)
+      // This highlights any initialisation missed by user code
+      memset(__FlexRamStart, -1, __FlexRamEnd-__FlexRamStart);
 
       // Initialisation pretend EEPROM on every reset
       // This return code is not an error
