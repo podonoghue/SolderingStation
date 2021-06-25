@@ -47,7 +47,7 @@ public:
       return &tipSettings[tipSettingsIndex];
    }
 
-   const TipSettings *getNextTip(const TipSettings *selectedTip) {
+   const TipSettings *changeTip(const TipSettings *selectedTip, int delta) {
       // Get sorted list of tips available
       MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS];
       unsigned availableTips = populateSelectedTips(menuItems, nullptr);
@@ -64,10 +64,8 @@ public:
             break;
          }
       }
-      index++;
-      if (index >= availableTips) {
-         index = 0;
-      }
+      index += delta;
+      index %= availableTips;
       return menuItems[index].tipSettings;
    }
 

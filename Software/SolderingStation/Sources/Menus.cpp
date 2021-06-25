@@ -13,6 +13,7 @@
 #include "stringFormatter.h"
 #include "hardware.h"
 #include "Channels.h"
+#include "StepResponseDriver.h"
 
 using namespace USBDM;
 
@@ -354,7 +355,7 @@ EventType Menus::calculateTipSettings(const SettingsData &) {
 /**
  * Edit a non-volatile tip calibration setting.
  *
- * @param data Data describing setting to change
+ * @param settings Data describing setting to change
  *
  * @return Exiting event
  */
@@ -426,13 +427,13 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
          case ev_QuadRotate:
             switch(selection) {
                case 0:
-                  kp += event.change*100;  // 0.1 steps
+                  kp += event.change*10;  // 0.01 steps
                   break;
                case 1:
-                  ki += event.change*10;  // 0.01 steps
+                  ki += event.change*1;  // 0.001 steps
                   break;
                case 2:
-                  kd += event.change*10;  // 0.01 steps
+                  kd += event.change*1;  // 0.001 steps
                   break;
                case 3:
                   iLimit += event.change*100; // 0.1 steps
@@ -465,8 +466,6 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
 
 /**
  * Edit a non-volatile tip PID setting.
- *
- * @param data Data describing setting to change
  *
  * @return Exiting event
  */
@@ -539,106 +538,120 @@ EventType Menus::editPidSettings(const SettingsData &) {
       }
    } while (loopControl == working);
 
+   channels[1].refreshPid();
+   channels[2].refreshPid();
+
    return event.type;
 }
 
-///**
-// * Edit a non-volatile tip PID setting.
-// *
-// * @param data Data describing setting to change
-// *
-// * @return Exiting event
-// */
-//EventType Menus::editPidSettingsA(const SettingsData &) {
-//
-//   // Todo - for debugging - disable channels
-////   Ch1Drive::setIn();
-////   Ch2Drive::setIn();
-//
-//   static constexpr unsigned modifiers = MenuItem::Starred;
-//
-//   MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS] = {0};
-//
-//   int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isPidCalibrated);
-//
-//   int  offset    = 0;
-//   BoundedInteger<0,TipSettings::NUM_TIP_SETTINGS-1>  selection{0};
-//
-//   // This is a dummy settings object that is NOT in nv-storage
-//   // Made static to avoid warnings about non-initialised object
-//   static TipSettings settings;
-//
-//   bool refresh  = true;
-//   enum {working, complete, fail} loopControl = working;
-//   Event event;
-//
-//   do {
-//      if (refresh) {
-//         display.displayMenuList("PID Calibration", menuItems, modifiers, offset, selection);
-//         refresh = false;
-//      }
-//
-//      event = switchPolling.getEvent();
-//      if (event.type == ev_None) {
-//         continue;
-//      }
-//
-//      // Assume refresh required
-//      refresh = true;
-//
-//      switch (event.type) {
-//
-//         case ev_SelRelease:
-//         case ev_QuadRelease: {
-//            if (menuItems[selection].name == nullptr) {
-//               break;
-//            }
-////            Event ev = display.displayMessage(
-////                  "Calibrate PID",
-////                  "This will take\n"
-////                  "a while, please\n"
-////                  "be patient\n\n"
-////                  "Press'n'hold to abort");
-//
-////            if (ev.isSelRelease()) {
-//               settings.tipNameIndex = tips.getTip(selection)->tipNameIndex;
-//               bool success = editPidSetting(settings);
-//
-//               if (success) {
-//                  TipSettings *ts = (TipSettings*)menuItems[selection].tipSettings;
-//                  ts->setPidControlValues(settings);
-//                  menuItems[selection].modifiers |= MenuItem::Starred;
-//               }
-////            }
-//         }
-//         break;
-//
-//         case ev_QuadRotate:
-//            selection += event.change;
-//            if (selection >= tipsAllocated) {
-//               selection = tipsAllocated-1;
-//            }
-//            break;
-//
-//         case ev_Ch1Release:
-//         case ev_Ch2Release:
-//            loopControl = complete;
-//            break;
-//
-//         case ev_QuadHold:
-//         case ev_SelHold:
-//            event.type  = ev_None;
-//            loopControl = complete;
-//            break;
-//
-//         default:
-//            refresh = false;
-//            break;
-//      }
-//   } while (loopControl == working);
-//
-//   return event.type;
-//}
+/**
+ * Calculate a non-volatile tip PID setting.
+ *
+ * @param settings Data describing setting to change
+ *
+ * @return Exiting event
+ */
+bool Menus::calculatePidSetting(TipSettings &tipSettings) {
+   Channel &channel = channels[1];
+   channel.setTip(&tipSettings);
+   StepResponseDriver driver(channels[1]);
+
+   return driver.run() && false;
+}
+
+/**
+ * Calculate a non-volatile tip PID settings.
+ *
+ * @return Exiting event
+ */
+EventType Menus::calculatePidSettings(const SettingsData &) {
+
+   static constexpr unsigned modifiers = MenuItem::Starred;
+
+   MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS] = {0};
+
+   int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isPidCalibrated);
+
+   int  offset    = 0;
+   BoundedInteger<0,TipSettings::NUM_TIP_SETTINGS-1>  selection{0};
+
+   // This is a dummy settings object that is NOT in nv-storage
+   // Made static to avoid warnings about non-initialised object
+   static TipSettings settings;
+
+   bool refresh  = true;
+   enum {working, complete, fail} loopControl = working;
+   Event event;
+
+   do {
+      if (refresh) {
+         display.displayMenuList("PID Calibration", menuItems, modifiers, offset, selection);
+         refresh = false;
+      }
+
+      event = switchPolling.getEvent();
+      if (event.type == ev_None) {
+         continue;
+      }
+
+      // Assume refresh required
+      refresh = true;
+
+      switch (event.type) {
+
+         case ev_SelRelease:
+         case ev_QuadRelease: {
+            if (menuItems[selection].name == nullptr) {
+               break;
+            }
+            Event ev = display.displayMessage(
+                  "Calibrate PID",
+                  "This will take\n"
+                  "a while, please\n"
+                  "be patient\n\n"
+                  "Press'n'hold to abort");
+            if (ev.isSelRelease()) {
+               settings.tipNameIndex = tips.getTip(selection)->tipNameIndex;
+               bool success = calculatePidSetting(settings);
+
+               if (success) {
+                  TipSettings *ts = (TipSettings*)menuItems[selection].tipSettings;
+                  ts->setPidControlValues(settings);
+                  menuItems[selection].modifiers |= MenuItem::Starred;
+               }
+            }
+         }
+         break;
+
+         case ev_QuadRotate:
+            selection += event.change;
+            if (selection >= tipsAllocated) {
+               selection = tipsAllocated-1;
+            }
+            break;
+
+         case ev_Ch1Release:
+         case ev_Ch2Release:
+            loopControl = complete;
+            break;
+
+         case ev_QuadHold:
+         case ev_SelHold:
+            event.type  = ev_None;
+            loopControl = complete;
+            break;
+
+         default:
+            refresh = false;
+            break;
+      }
+   } while (loopControl == working);
+
+   channels[1].refreshPid();
+   channels[2].refreshPid();
+
+   return event.type;
+}
 
 /**
  * Edit a available tips in non-volatile settings.
@@ -797,7 +810,8 @@ void Menus::settingsMenu() {
    static const SettingsData settingsData[] = {
          {"Tip Selection",            selectAvailableTips                                               },
          {"Temp Calibration",         calculateTipSettings                                              },
-         {"PID Calibration",          editPidSettings                                                   },
+         {"PID Calibration",          calculatePidSettings                                              },
+         {"PID Manual",               editPidSettings                                                   },
          {"Channel 1\nSetback temp.", editTemperature,      nvinit.ch1Settings.setbackTemperature, 1    }, // C
          {"Channel 2\nSetback temp.", editTemperature,      nvinit.ch2Settings.setbackTemperature, 1    }, // C
          {"Channel 1\nIdle time",     editTime,             nvinit.ch1Settings.setbackTime,        30   }, // seconds
@@ -813,6 +827,7 @@ void Menus::settingsMenu() {
          {"Tip Selection",     },
          {"Temp Calibration",  },
          {"Pid Calibration",   },
+         {"Pid Manual set",   },
          {"Ch1 Setback temp.", },
          {"Ch2 Setback temp.", },
          {"Ch1 Idle time",     },

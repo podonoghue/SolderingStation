@@ -71,6 +71,14 @@ public:
    void setSelectedChannel(unsigned channel) {
       selectedChannel = channel;
    }
+
+   /**
+    * Restart idle timers on all channels
+    */
+   void restartIdleTimers() {
+      channel1.restartIdleTimer();
+      channel2.restartIdleTimer();
+   }
 };
 
 /// The channel information

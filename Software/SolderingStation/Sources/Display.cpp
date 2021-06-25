@@ -27,36 +27,36 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
 
    oled.setFont(fontVeryLarge);
    if ((ch.getState() == ch_noTip) || (ch.getState() == ch_overload)) {
-      oled.moveXY(offset+6, 9).write("---");
+      oled.moveXY(offset+6, 8).write("---");
    }
    else {
-      int currentTemp = ch.getCurrentTemperature();
+      int currentTemp = round(ch.getCurrentTemperature());
       if (currentTemp>999) {
          currentTemp = 999;
       }
-      oled.moveXY(offset+2, 9).write(currentTemp);
+      oled.moveXY(offset+2, 8).write(currentTemp);
       oled.setFont(fontMedium);
       oled.moveXY(offset+48, 14).write("C");
    }
 
    if (selected) {
-      oled.drawRect(offset,  11, offset+57,  12+23, WriteMode_Xor);
+      oled.drawRect(offset,  10, offset+57,  10+fontVeryLarge.height-9, WriteMode_Xor);
    }
 
    oled.setFont(fontLarge);
-   oled.moveXY(offset,  38).write("P").setWidth(1).write(ch.getPreset()).
+   oled.moveXY(offset,  35).write("P").setWidth(1).write(ch.getPreset()).
          write(ch.isTempModified()?"*:":" :").setWidth(3).write(ch.getUserTemperature());
 
    float power = ch.getPower();
 
    oled.setFont(fontSmall);
-
-   oled.moveXY(offset,  55).write(ch.getTipName());
+   oled.moveXY(offset,  50).write(ch.getTipName());
 
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.moveXY(offset+30,  55).write(power).write('W');
+   oled.moveXY(offset+30,  50).write(power).writeln('W');
    if (power>0) {
-      oled.drawRect(offset,   54, offset-1+power/2,  62, WriteMode_Xor);
+      int y = 59; //oled.getY();
+      oled.drawRect(offset, y, offset-1+power,  y+4, WriteMode_Xor);
    }
    oled.resetFormat();
 }
@@ -328,7 +328,7 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
    oled.write("Target       ").write(targetTemperature).writeln(" C");
 
    oled.moveXY(0, oled.getY()+2);
-   oled.write("Measured     ").write(ch.getCurrentTemperature()).writeln(" C");
+   oled.write("Measured     ").write(round(ch.getCurrentTemperature())).writeln(" C");
 
    oled.moveXY(0, oled.getY()+2);
    oled.write("Controlled   ").write(ch.getUserTemperature()).writeln(" C");
@@ -373,7 +373,7 @@ EventType Display::displayPidSettings(const char *tipname, unsigned selection, c
 
    Font &font = fontMedium;
    oled.setFont(font);
-   oled.setFloatFormat(2, Padding_LeadingSpaces, 2);
+   oled.setFloatFormat(3, Padding_LeadingSpaces, 2);
 
    int menuY= oled.getY();
    oled.write(stars[0]).write("Kp      ").writeln(kp/SCALE_FACTOR);
@@ -394,6 +394,7 @@ EventType Display::displayPidSettings(const char *tipname, unsigned selection, c
    }
    oled.moveXY(0, oled.getY()+2);
    menuY= oled.getY();
+   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
    oled.write(stars[3]).write("I limit ").writeln(iLimit/SCALE_FACTOR);
    if (selection == 3) {
       oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);

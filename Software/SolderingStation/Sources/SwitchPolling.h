@@ -36,15 +36,7 @@ enum EventType : uint8_t {
    ev_Ch1Ch2Hold      = ev_Ch1Ch2Press + 2,
 
    ev_QuadRotate   ,
-
-   ev_Tool1Active  ,
-   ev_Tool2Active  = ev_Tool1Active+1,
-
-   ev_Tool1Idle    ,
-   ev_Tool2Idle    = ev_Tool1Idle+1,
-
-   ev_Tool1LongIdle,
-   ev_Tool2LongIdle = ev_Tool1LongIdle+1,
+   ev_QuadRotatePressed = ev_QuadRotate+1,
 };
 
 /**
@@ -93,7 +85,7 @@ class SwitchPolling {
 private:
 
    EventType pollSwitches();
-   EventType pollSetbacks();
+   void      pollSetbacks();
 
    /// Quadrature decode for rotary encoder
    QuadDecoder encoder;
@@ -103,6 +95,14 @@ private:
 
    /// Static handle on class for timer call-back
    static SwitchPolling *This;
+
+   enum QuadState {
+      QuadState_Normal,          // Quad button not pressed
+      QuadState_Pressed,         // Quad button currently pressed
+      QuadState_Pressed_Rotate   // Quad button pressed and rotation detected
+   };
+
+   QuadState quadState = QuadState_Normal;
 
 public:
    Event getEvent();

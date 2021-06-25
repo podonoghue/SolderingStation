@@ -14,12 +14,12 @@ using namespace USBDM;
 /// Information about tips
 Tips tips;
 
-/// Channel interface and state
-Channels       channels;
-
 // Create non-volatile storage in FlexRAM
 __attribute__ ((section(".flexRAM")))
 NonvolatileSettings nvinit;
+
+/// Channel interface and state
+Channels       channels;
 
 /// Polls the switches and the set-back switches
 SwitchPolling  switchPolling;

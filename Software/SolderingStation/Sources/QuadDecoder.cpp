@@ -18,7 +18,7 @@ using namespace USBDM;
  *
  * @note Assumes 4 transitions/detent
  *
- * @param eventMask Mask indicating active channel
+    * @param eventMask Mask indicating active pins
  */
 void QuadDecoder::pinIrqCallback(uint32_t eventMask) {
 
@@ -89,7 +89,7 @@ void QuadDecoder::initialise() {
    position = 0;
 
    // Static call-back function
-   static auto cb = [](unsigned long int pinMask) {
+   static auto cb = [](uint32_t pinMask) {
       This->pinIrqCallback(pinMask);
    };
 

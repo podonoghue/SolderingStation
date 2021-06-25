@@ -44,7 +44,7 @@ public:
     *
     * @note Assumes 4 transitions/detent
     *
-    * @param eventMask Mask indicating active channel
+    * @param eventMask Mask indicating active pins
     */
    void pinIrqCallback(uint32_t eventMask);
 

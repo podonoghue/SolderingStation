@@ -89,7 +89,7 @@ public:
    /**
     * Edit a non-volatile tip calibration setting.
     *
-    * @param data Data describing setting to change
+    * @param settings Data describing setting to change
     *
     * @return Exiting event
     */
@@ -98,16 +98,28 @@ public:
    /**
     * Edit a non-volatile tip PID setting.
     *
-    * @param data Data describing setting to change
-    *
     * @return Exiting event
     */
    static EventType editPidSettings(const SettingsData &);
 
    /**
-    * Edit a available tips in non-volatile settings.
+    * Calculate a non-volatile tip PID setting.
     *
-    * @param data Data describing setting to change
+    * @param settings Data describing setting to change
+    *
+    * @return Exiting event
+    */
+   static bool calculatePidSetting(TipSettings &settings);
+
+   /**
+    * Calculate a non-volatile tip PID settings.
+    *
+    * @return Exiting event
+    */
+   static EventType calculatePidSettings(const SettingsData &);
+
+   /**
+    * Edit a available tips in non-volatile settings.
     *
     * @return Exiting event
     */

@@ -93,31 +93,42 @@ EventType SwitchPolling::pollSwitches() {
       // Button change - start over
       stableButtonCount = 0;
       lastButtonPoll    = currentButtonValue;
+
+      // Restart idle timers on any button activity
+      channels.restartIdleTimers();
+
       return ev_None;
    }
 
    if (currentButtonValue == 0) {
-      if (lastEvent != ev_None) {
-         EventType event = ((EventType)(lastEvent+1));
-         lastEvent = ev_None;
-         return event;
+      EventType event = ev_None;
+      if (lastEvent == ev_None) {
+         // Not a button release
       }
-      // No buttons pressed
-      return ev_None;
+      else if (quadState == QuadState_Pressed_Rotate) {
+         // Swallow quad-release
+      }
+      else {
+         // Regular button release
+         event = ((EventType)(lastEvent+1));
+      }
+      lastEvent = ev_None;
+      quadState = QuadState_Normal;
+      return event;
    }
 
    // Check at debounce time for valid button
    if (stableButtonCount == DEBOUNCE_COUNT) {
-//      console.write('d');
+      //      console.write('d');
 
       // We have a button pressed for the debounce time - regular button press
       switch(currentButtonValue) {
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : lastEvent = ev_Ch1Press;    break;
          case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : lastEvent = ev_Ch2Press;    break;
          case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : lastEvent = ev_SelPress;    break;
-         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : lastEvent = ev_QuadPress;   break;
+         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : lastEvent = ev_QuadPress;   quadState = QuadState_Pressed; break;
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
-              (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : lastEvent = ev_Ch1Ch2Press; break;
+               (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : lastEvent = ev_Ch1Ch2Press; break;
          default:                                        lastEvent = ev_None;        break;
       }
       return lastEvent;
@@ -125,7 +136,7 @@ EventType SwitchPolling::pollSwitches() {
 
    // Check at hold time for valid button
    if (stableButtonCount == HOLD_COUNT) {
-//      console.write('l');
+      //      console.write('l');
       EventType event = ev_None;
 
       // Don't record releases after hold
@@ -136,10 +147,15 @@ EventType SwitchPolling::pollSwitches() {
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch1Hold;    break;
          case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch2Hold;    break;
          case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : event = ev_SelHold;    break;
-         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : event = ev_QuadHold;   break;
+         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) :
+            // Swallow QuadHold when rotating
+            if (quadState != QuadState_Pressed_Rotate) {
+               event = ev_QuadHold;
+            }
+            break;
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
-              (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch1Ch2Hold; break;
-         default:                                        event = ev_None;       break;
+               (1<<(Ch2Button::BITNUM-Buttons::RIGHT)) : event = ev_Ch1Ch2Hold; break;
+         default                                       : event = ev_None;       break;
       }
       return event;
    }
@@ -149,12 +165,12 @@ EventType SwitchPolling::pollSwitches() {
 /**
  * Set-back Polling
  */
-EventType SwitchPolling::pollSetbacks() {
+void SwitchPolling::pollSetbacks() {
 
-   // Indicates tool1 was in use
+   // Indicates tool was in use when last polled
    static bool lastToolBusy[channels.NUM_CHANNELS] = {false};
 
-   // Indicates tool is in use
+   // Indicates tool is in use currently
    bool toolBusy[channels.NUM_CHANNELS];
 
    // Get current tool rest state
@@ -172,28 +188,14 @@ EventType SwitchPolling::pollSetbacks() {
 
          // Tool moved - start over
          channel.restartIdleTimer();
-         lastToolBusy[tool]  = toolBusy[tool];
-         if (toolBusy[tool]) {
-            // Just started use of iron
-            return static_cast<EventType>(ev_Tool1Active+tool);
-         }
+         lastToolBusy[tool] = toolBusy[tool];
       }
       else if (!toolBusy[tool]) {
 
          // Tool in holder - increment idle time
-         int idleTime = channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
-
-         if ((channel.nvSettings.setbackTime > 0) && (idleTime == channel.nvSettings.setbackTime*1000)) {
-            // Idle for a short while
-            return static_cast<EventType>(ev_Tool1Idle+tool);
-         }
-         if ((channel.nvSettings.safetyOffTime > 0) && (idleTime == channel.nvSettings.safetyOffTime*1000)) {
-            // Idle for a long time
-            return static_cast<EventType>(ev_Tool1LongIdle+tool);
-         }
+         channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
       }
    }
-   return ev_None;
 }
 
 /**
@@ -207,12 +209,22 @@ Event SwitchPolling::getEvent() {
    t.type = eventQueue.get();
 
    if (t.type == ev_None) {
+      // Check rotary encoder
       static int16_t lastQuadPosition = 0;
       int16_t currentQuadPosition = encoder.getPosition();
-      int16_t delta = currentQuadPosition - lastQuadPosition;
-      if (delta != 0) {
-         t.type   = ev_QuadRotate;
-         t.change = delta;
+      t.change = currentQuadPosition - lastQuadPosition;
+      if (t.change != 0) {
+
+         // Restart timers on use of rotary encoder
+         channels.restartIdleTimers();
+
+         if (quadState == QuadState_Normal) {
+            t.type   = ev_QuadRotate;
+         }
+         else {
+            quadState = QuadState_Pressed_Rotate;
+            t.type = ev_QuadRotatePressed;
+         }
          lastQuadPosition = currentQuadPosition;
       }
    }
@@ -226,16 +238,18 @@ void SwitchPolling::initialise() {
 
    encoder.initialise();
 
+   quadState = QuadState_Normal;
+
    Buttons::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
    Setbacks::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
    /**
-    * Call-back handling switch polling
+    * Call-back handling switch and set-back polling
     */
    static const auto callBack = []() {
       This->eventQueue.add(This->pollSwitches());
-      This->eventQueue.add(This->pollSetbacks());
+      This->pollSetbacks();
    };
 
    PollingTimerChannel::configureIfNeeded(PitDebugMode_Stop);

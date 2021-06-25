@@ -13,7 +13,7 @@
 NonvolatileSettings::NonvolatileSettings() : Flash() {
 
    // Initialise the non-volatile system and configure if necessary
-   volatile USBDM::FlashDriverError_t rc = initialiseEeprom<EepromSel_2KBytes, PartitionSel_flash0K_eeprom32K, SplitSel_disabled>();
+   volatile USBDM::FlashDriverError_t rc = initialiseEeprom<EepromSel_1KBytes, PartitionSel_flash0K_eeprom32K, SplitSel_disabled>();
 
    if (rc == USBDM::FLASH_ERR_NEW_EEPROM) {
       // This is the first reset after programming the device

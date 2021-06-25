@@ -15,8 +15,9 @@
 #include "DutyCycleCounter.h"
 #include "Pid.h"
 #include "BangBang.h"
-#include "StepResponse.h"
 #include "Tips.h"
+
+class StepResponseDriver;
 
 /// States for the channel
 enum ChannelState {
@@ -32,6 +33,10 @@ enum ChannelState {
  * Class representing a channel
  */
 class Channel : public DutyCycleCounter {
+
+   friend StepResponseDriver;
+
+public:
 
    using Controller = Pid;
 //   using Controller = StepResponse;
@@ -111,8 +116,8 @@ public:
     *
     * @param index Index into tip settings table
     */
-   void nextTip() {
-      nvSettings.selectedTip = tips.getNextTip(nvSettings.selectedTip);
+   void changeTip(int delta) {
+      nvSettings.selectedTip = tips.changeTip(nvSettings.selectedTip, delta);
       refreshPid();
    }
 
@@ -157,7 +162,7 @@ public:
             "Off",
             "No Tip",
             "Over Ld",
-            "Fixed Pwr",
+            "Fixed",
             "Setback",
             "Active",
       };
@@ -209,13 +214,17 @@ public:
    void setState(ChannelState newState) {
       const TipSettings *ts = nvSettings.selectedTip;
       (void) ts;
-
       usbdm_assert((ts != nullptr) && !ts->isFree(), "No tip selected");
-      state            = newState;
+
+      state = newState;
+
       refreshPid();
+
       controller.enable(isControlled());
+
       if (!isRunning()) {
          controller.setOutput(0);
+
          // For safety while debugging immediately turn off drive
          Ch1Drive::off();
          Ch2Drive::off();
@@ -295,8 +304,8 @@ public:
     *
     * @return Current temperature
     */
-   int getCurrentTemperature() const {
-      return round(currentTemperature);
+   float getCurrentTemperature() const {
+      return currentTemperature;
    }
 
    /**
@@ -312,8 +321,9 @@ public:
 //         powerCorrection = std::min(30,(std::max(getPower()-8, 0))*13);
 //      }
       tipPresent = tipTemperature.getAverage() < (USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION)-200);
-      setDutyCycle(controller.newSample(getTargetTemperature(), currentTemperature));
-
+      if (state != ch_fixedPower) {
+         setDutyCycle(controller.newSample(getTargetTemperature(), currentTemperature));
+      }
       // Long term power average
       power.accumulate(getDutyCycle());
    }
@@ -335,24 +345,16 @@ public:
    }
 
    /**
-    * Restart tool idle time counter
-    * If in set-back state it will change to active state
+    * Increment currently selected preset.
+    * Set temperature is updated
+    * Restart timer is cleared
     */
-   void restartIdleTimer() {
-      if (getState() == ch_setback) {
-         setState(ch_active);
-      }
-      toolIdleTime = 0;
-   }
-
-   /**
-    * Increment currently selected preset
-    */
-   void incrementPreset() {
+   void nextPreset() {
       preset++;
       if (preset>=NUM_PRESETS) {
          preset = 0;
       }
+      setUserTemperature(getPresetTemperature());
    }
 
    /**
@@ -390,18 +392,39 @@ public:
    }
 
    /**
+    * Restart tool idle time counter.
+    * If in set-back state it will change to active state.
+    */
+   void restartIdleTimer() {
+      if (getState() == ch_setback) {
+         setState(ch_active);
+      }
+      toolIdleTime = 0;
+   }
+
+   /**
     * Increment tool idle time.
     * Protected from roll-over.
+    * Does set-back when idle or off when idle for long time.
     *
-    * @param milliseconds Amount to increment the counter by
+    * @param milliseconds Amount to increment the idle time by
     *
-    * @return idle time
+    *
     */
-   unsigned incrementIdleTime(int milliseconds) {
+   void incrementIdleTime(int milliseconds) {
+
       if (toolIdleTime<(INT_MAX-milliseconds)) {
          toolIdleTime += milliseconds;
       }
-      return toolIdleTime;
+
+      if ((state == ch_active) && (nvSettings.setbackTime > 0) && (toolIdleTime >= nvSettings.setbackTime*1000)) {
+         // Idle for a short while while active
+         setState(ch_setback);
+      }
+      if (isRunning() && (nvSettings.safetyOffTime > 0) && (toolIdleTime >= nvSettings.safetyOffTime*1000)) {
+         // Idle for a long while running
+         setState(ch_off);
+      }
    }
 };
 

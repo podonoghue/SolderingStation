@@ -72,7 +72,7 @@ void Control::initialise() {
       This->zeroCrossingHandler();
    };
 
-   static constexpr uint8_t DAC_THRESHOLD = (3.3/2)*(Cmp0::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
+   static constexpr uint8_t DAC_THRESHOLD = 2*(Cmp0::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
 
    Pit::configureIfNeeded();
 
@@ -84,7 +84,7 @@ void Control::initialise() {
    ZeroCrossingComparator::configureDac(DAC_THRESHOLD, CmpDacSource_Vdda);
    ZeroCrossingComparator::selectInputs(Cmp0Input_Ptc7, Cmp0Input_Cmp0Dac);
    ZeroCrossingComparator::setCallback(zx_cb);
-   ZeroCrossingComparator::enableInterrupts(CmpInterrupt_Both);
+   ZeroCrossingComparator::enableInterrupts(CmpInterrupt_Falling);
    ZeroCrossingComparator::enableNvicInterrupts(NvicPriority_Normal);
 
    static auto overcurrent_cb = [](uint32_t){
@@ -134,7 +134,6 @@ void Control::enable(unsigned ch) {
    Channel &channel = channels[ch];
 
    channel.setState(ch_active);
-   channel.restartIdleTimer();
    doReportTitle = true;
 }
 
@@ -151,34 +150,6 @@ void Control::disable(unsigned ch) {
 }
 
 /**
- * Backoff channel (if enabled).
- *
- * @param ch Channel to modify
- */
-void Control::backOff(unsigned ch) {
-
-   Channel &channel = channels[ch];
-
-   if (channel.isRunning()) {
-      channel.setState(ch_setback);
-   }
-}
-
-/**
- * Wake-up channel (if in back-off).
- * It also becomes selected.
- *
- * @param ch Channel to modify
- */
-void Control::wakeUp(unsigned ch) {
-
-   Channel &channel = channels[ch];
-   if (channel.getState() == ch_setback) {
-      enable(ch);
-   }
-}
-
-/**
  * Set the selected channel
  *
  * @param ch Channel to select
@@ -186,19 +157,6 @@ void Control::wakeUp(unsigned ch) {
 void Control::setSelectedChannel(unsigned ch) {
 
    channels.setSelectedChannel(ch);
-   channels.getSelectedChannel().restartIdleTimer();
-}
-
-/**
- * Change the temperature to the next preset value for the currently selected channel
- */
-void Control::nextPreset() {
-
-   Channel &channel = channels.getSelectedChannel();
-
-   channel.incrementPreset();
-   channel.setUserTemperature(channel.getPresetTemperature());
-   channel.restartIdleTimer();
 }
 
 /**
@@ -220,25 +178,6 @@ void Control::changeTemp(int16_t delta) {
       targetTemperature = MIN_TEMP;
    }
    channel.setUserTemperature(targetTemperature);
-   channel.restartIdleTimer();
-
-   //   {
-   //      unsigned currentDutyCycle = channel.dutyCycle;
-   //
-   //      // Dummy code
-   //      currentDutyCycle += delta;
-   //      if ((int)currentDutyCycle < 0) {
-   //         currentDutyCycle = 0;
-   //      }
-   //      if (currentDutyCycle>100) {
-   //         currentDutyCycle = 100;
-   //      }
-   //      channel.dutyCycle = currentDutyCycle;
-   //      if (selectedChannel == 1) {
-   //         ch1DutyCycleCounter.setDutyCycle(currentDutyCycle);
-   //      }
-   //   }
-
 }
 
 /**
@@ -266,6 +205,7 @@ void Control::overCurrentHandler() {
  * Interrupt handler for mains zero crossing Comparator
  * This uses the timer to schedule the switchHandler().
  * Occurs @100Hz or 120Hz ~ 10ms or 8.3ms
+ * Worse case execution time ~170us.
  */
 void Control::zeroCrossingHandler() {
 
@@ -274,7 +214,6 @@ void Control::zeroCrossingHandler() {
       This->switchOnHandler();
    };
    if (!sequenceBusy) {
-
       // For debug when single stepping only do if previous sequence completed!
       sequenceBusy = true;
 
@@ -303,15 +242,20 @@ void Control::zeroCrossingHandler() {
 
       // Update averages and run PID
       channels[1].upDateCurrentTemperature();
-      channels[2].upDateCurrentTemperature();
 
-      if (++reportCount >= 10) {
+      doSampleCh1 = true;
+
+      if (++reportCount >= 2) {
          reportCount = 0;
          doReport = true;
       }
    }
+   else if (pidCount == PID_INTERVAL/2) {
+      // Update averages and run PID
+      channels[2].upDateCurrentTemperature();
 
-
+      doSampleCh2 = true;
+   }
    GpioSpare2::clear();
 }
 
@@ -320,6 +264,8 @@ void Control::zeroCrossingHandler() {
  * It also uses the timer to schedule the sampleHandler().
  */
 void Control::switchOnHandler() {
+
+   GpioSpare2::set();
 
    // Schedule sampleHandler()
    static auto cb = [](){
@@ -343,6 +289,8 @@ void Control::switchOnHandler() {
 
    Ch1SelectedLed::write(ch1.isRunning());
    Ch2SelectedLed::write(ch2.isRunning());
+
+   GpioSpare2::clear();
 }
 
 /**
@@ -355,17 +303,21 @@ void Control::sampleHandler() {
    static auto cb = [](){
       This->switchOffHandler();
    };
-   ControlTimerChannel::oneShotInMicroseconds(cb, POWER_OFF_DELAY);
+   ControlTimerChannel::oneShotInMicroseconds(cb, POWER_OFF_DELAY-200);
+
+   GpioSpare2::set();
 
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
 
    // Measure channel 1 if idle this cycle
-   if (!ch1.isOn()) {
+   if (!ch1.isOn() && doSampleCh1) {
+      doSampleCh1 = false;
       adcChannelMask |= (1<<Ch1ColdJunctionNtc::CHANNEL) | (1<<Ch1TipThermocouple::CHANNEL);
    }
    // Measure channel 2 if idle this cycle
-   if (!ch2.isOn()) {
+   if (!ch2.isOn() && doSampleCh2) {
+      doSampleCh2 = false;
       adcChannelMask |= (1<<Ch2ColdJunctionNtc::CHANNEL) | (1<<Ch2TipThermocouple::CHANNEL);
    }
 
@@ -375,12 +327,16 @@ void Control::sampleHandler() {
 
    ch1.advance();
    ch2.advance();
+
+   GpioSpare2::clear();
 }
 
 /**
  * Timer interrupt handler for turning off the heaters.
  */
 void Control::switchOffHandler() {
+
+   GpioSpare2::set();
 
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
@@ -394,6 +350,8 @@ void Control::switchOffHandler() {
    }
 
    sequenceBusy = false;
+
+   GpioSpare2::clear();
 }
 
 /**
@@ -407,7 +365,7 @@ void Control::switchOffHandler() {
  */
 void Control::adcHandler(uint32_t result, int adcChannel) {
 
-   GpioSpare2::toggle();
+   GpioSpare2::set();
 
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
@@ -443,7 +401,7 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
    // Note - this means each conversion is done twice except for chip temperature
    adcChannelMask &= ~(1<<adcChannel);
 
-   GpioSpare2::toggle();
+   GpioSpare2::clear();
 }
 
 /**
@@ -555,15 +513,18 @@ void Control::eventLoop()  {
 
       //         console.write("Position = ").write(event.change).write(", Event = ").writeln(getEventName(event));
       //         console.write("Event = ").writeln(getEventName(event));
+
       switch(event.type) {
          case ev_Ch1Hold      :
             setSelectedChannel(1);
             toggleEnable(1);
             break;
+
          case ev_Ch2Hold      :
             setSelectedChannel(2);
             toggleEnable(2);
             break;
+
          case ev_Ch1Ch2Hold   :
             if (!isEnabled(1) && !isEnabled(2)) {
                // Both currently off - turn on both channels
@@ -571,38 +532,34 @@ void Control::eventLoop()  {
                enable(1); // Active channel
             }
             else {
-               // >= 1 channel on - turn off both
+               // >= 1 channel on - turn both off
                disable(1);
                disable(2);
             }
             break;
-         case ev_Tool1Active   : wakeUp(1);                 break;
-         case ev_Tool2Active   : wakeUp(2);                 break;
-         case ev_Tool1Idle     : backOff(1);                break;
-         case ev_Tool2Idle     : backOff(2);                break;
-         case ev_Tool1LongIdle : disable(1);                break;
-         case ev_Tool2LongIdle : disable(2);                break;
+
          case ev_Ch1Release      :
-            if (channels.getSelectedChannelNumber() != 1) {
-               setSelectedChannel(1);
-            }
-            else {
-               channels[1].nextTip();
-            }
+            setSelectedChannel(1);
             break;
+
          case ev_Ch2Release      :
-            if (channels.getSelectedChannelNumber() != 2) {
-               setSelectedChannel(2);
-            }
-            else {
-               channels[2].nextTip();
-            }
+            setSelectedChannel(2);
             break;
-         case ev_QuadRelease   : updatePreset();            break;
-         case ev_QuadRotate    : changeTemp(event.change);  break;
+
+         case ev_QuadRelease   :
+            updatePreset();
+            break;
+
+         case ev_QuadRotate    :
+            changeTemp(event.change);
+            break;
+
+         case ev_QuadRotatePressed    :
+            channels.getSelectedChannel().changeTip(event.change);
+            break;
 
          case ev_SelRelease :
-            nextPreset();
+            channels.getSelectedChannel().nextPreset();
             break;
 
          case ev_SelHold :
@@ -616,7 +573,6 @@ void Control::eventLoop()  {
             // Change to settings sub-menu
             Menus::settingsMenu();
             break;
-
          default: break;
       }
    }

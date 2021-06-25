@@ -46,17 +46,23 @@ public:
 
 private:
    /// Delay between zero crossing and switching heaters on (us)
-   static constexpr unsigned POWER_ON_DELAY  = 900;
+   static constexpr unsigned POWER_ON_DELAY  = 200;
 
    /// Delay between switching heater off and ADC conversions start (us)
-   static constexpr unsigned SAMPLE_DELAY    = 4000;
+   static constexpr unsigned SAMPLE_DELAY    = 5000-POWER_ON_DELAY-100;
 
    /// Delay between ADC conversions start and switching heaters off (us)
    /// TODO - needs to change with main period
-   static constexpr unsigned POWER_OFF_DELAY = 10000-SAMPLE_DELAY-1100;
+   static constexpr unsigned POWER_OFF_DELAY = 10000-SAMPLE_DELAY-1000;
 
    /// Indicates the display needs updating
    bool     needRefresh = true;
+
+   /// Indicates to sample temperatures on channel 1
+   bool doSampleCh1 = false;
+
+   /// Indicates to sample temperatures on channel 2
+   bool doSampleCh2 = false;
 
    bool doReport       = false;
    bool doReportTitle  = false;
@@ -70,6 +76,7 @@ private:
    /// Moving window average for Chip temperature (internal MCU sensor)
    ChipTemperatureAverage chipTemperature;
 
+   /// Debug - stop sequence restart when debugging
    bool sequenceBusy = false;
 
 public:
@@ -120,31 +127,11 @@ public:
    void disable(unsigned ch);
 
    /**
-    * Backoff channel (if enabled).
-    *
-    * @param ch Channel to modify
-    */
-   void backOff(unsigned ch);
-
-   /**
-    * Wake-up channel (if in back-off).
-    * It also becomes selected.
-    *
-    * @param ch Channel to modify
-    */
-   void wakeUp(unsigned ch);
-
-   /**
     * Set the selected channel
     *
     * @param ch Channel to select
     */
    void setSelectedChannel(unsigned channel);
-
-   /**
-    * Change the temperature to the next preset value for the currently selected channel
-    */
-   void nextPreset();
 
    /**
     * Change temperature of currently selected channel

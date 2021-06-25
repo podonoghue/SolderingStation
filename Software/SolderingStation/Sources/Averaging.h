@@ -266,9 +266,9 @@ public:
 };
 
 // Three methods for averaging
-using AveragingMethod = SimpleMovingAverage<10>;
-//using AveragingMethod = MovingAverage<2>;
-//using AveragingMethod = DummyAverage;
+//using AveragingMethod = SimpleMovingAverage<10>; // 20*100ms = 2s average
+//using AveragingMethod = MovingAverage<5>;
+using AveragingMethod = DummyAverage;
 
 /**
  * Class representing a average customised for a thermistor

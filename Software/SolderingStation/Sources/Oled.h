@@ -16,9 +16,9 @@
 
 namespace USBDM {
 
-enum OledVccControl : int8_t {
+enum OledVccControl : uint8_t {
    OledVccControl_Internal = 0,
-         OledVccControl_External = 1,
+   OledVccControl_External = 1,
 };
 
 enum WriteMode {
@@ -131,7 +131,9 @@ public:
    /// Buffer type for display data
    /// This is prefixed by a command byte for transmission to OLED
    struct Buffer {
+      /// Command byte
       uint8_t  controlByte;
+      /// Data values
       uint8_t  buffer[WIDTH * ((HEIGHT + 7) / 8)];
    };
 #pragma pack(pop)
