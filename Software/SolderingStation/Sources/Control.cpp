@@ -49,7 +49,7 @@ void Control::initialise() {
    static auto adc_cb = [](uint32_t result, int channel){
       This->adcHandler(result, channel);
    };
-   Adc0::configure(
+   ADConverter::configure(
          ADC_RESOLUTION,
          AdcClockSource_Bus,
          AdcSample_20,
@@ -58,12 +58,12 @@ void Control::initialise() {
          AdcClockRange_Normal,
          AdcAsyncClock_Disabled);
    unsigned retry = 10;
-   while ((Adc0::calibrate() != E_NO_ERROR) && (retry-->0)) {
+   while ((ADConverter::calibrate() != E_NO_ERROR) && (retry-->0)) {
       console.WRITE("ADC calibration failed, retry #").writeln(retry);
    }
-   Adc0::setAveraging(AdcAveraging_32);
-   Adc0::setCallback(adc_cb);
-   Adc0::enableNvicInterrupts(NvicPriority_Normal);
+   ADConverter::setAveraging(AdcAveraging_32);
+   ADConverter::setCallback(adc_cb);
+   ADConverter::enableNvicInterrupts(NvicPriority_Normal);
 
    static auto zx_cb = [](CmpStatus){
       This->zeroCrossingHandler();
@@ -388,7 +388,7 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
    // Set up next conversion as needed
    int nextAdcChannel = __builtin_ffs(adcChannelMask)-1;
    if (nextAdcChannel >= 0) {
-      TemperatureAdc::startConversion(AdcInterrupt_Enabled|nextAdcChannel);
+      ADConverter::startConversion(AdcInterrupt_Enabled|nextAdcChannel);
    }
 
    // Mark done current conversion

@@ -320,7 +320,7 @@ public:
 //          (abs(getTargetTemperature() - currentTemperature) < 10)) {
 //         powerCorrection = std::min(30,(std::max(getPower()-8, 0))*13);
 //      }
-      tipPresent = tipTemperature.getAverage() < (USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION)-200);
+      tipPresent = tipTemperature.getAverage() < (ADConverter::getSingleEndedMaximum(ADC_RESOLUTION)-200);
       if (state != ch_fixedPower) {
          setDutyCycle(controller.newSample(getTargetTemperature(), currentTemperature));
       }

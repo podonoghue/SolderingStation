@@ -30,19 +30,20 @@ using Overcurrent     = USBDM::GpioD<7, USBDM::ActiveHigh>;
 /// Resolution used for all ADC conversions.
 constexpr USBDM::AdcResolution ADC_RESOLUTION = USBDM::AdcResolution_16bit_se;
 
-using TemperatureAdc = USBDM::Adc0;
+/// Converter being used
+using ADConverter = USBDM::Adc0;
 
 /// Channel 1 tip thermocouple
-using Ch1TipThermocouple = USBDM::Adc0::Channel<0>;   // DP0/SE0
+using Ch1TipThermocouple = ADConverter::Channel<0>;   // DP0/SE0
 
 /// Channel 2 tip thermocouple
-using Ch2TipThermocouple = USBDM::Adc0::Channel<19>;  // DM0/SE19
+using Ch2TipThermocouple = ADConverter::Channel<19>;  // DM0/SE19
 
 /// Channel 1 handle thermocouple (cold junction)
-using Ch1ColdJunctionNtc = USBDM::Adc0::Channel<15>;  // PTC1/SE15
+using Ch1ColdJunctionNtc = ADConverter::Channel<15>;  // PTC1/SE15
 
 /// Channel 2 handle thermocouple (cold junction)
-using Ch2ColdJunctionNtc = USBDM::Adc0::Channel<14>;  // PTC0/SE14
+using Ch2ColdJunctionNtc = ADConverter::Channel<14>;  // PTC0/SE14
 
 /// NTC measurement current
 constexpr float NTC_MEASUREMENT_CURRENT  = 237E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA!
@@ -58,10 +59,10 @@ constexpr float NTC_MEASUREMENT_RATIO   = 1/(NTC_MEASUREMENT_CURRENT*NTC_MEASURE
 constexpr float TC_MEASUREMENT_RATIO   = (1.0/100.0);
 
 /// Internal temperature sensor (25 - (Tvolts-0.719)/.001715)
-using ChipTemperature    = USBDM::Adc0::Channel<0b11010>;
+using ChipTemperature    = ADConverter::Channel<0b11010>;
 
 /// Internal band-gap (1.00V)
-using BandGap            = USBDM::Adc0::Channel<0b11011>;
+using BandGap            = ADConverter::Channel<0b11011>;
 
 /// External voltage reference for ADC (Vrefh)
 constexpr float ADC_REF_VOLTAGE = 3.00;
@@ -73,10 +74,10 @@ using Ch1SelectedLed  = USBDM::GpioC<6, USBDM::ActiveHigh>;
 using Ch2SelectedLed  = USBDM::GpioD<6, USBDM::ActiveHigh>;
 
 /// Channel 1 ID pin
-using Ch1Id        = USBDM::GpioC<2, USBDM::ActiveLow>; // V3 only
+using Ch1Id           = ADConverter::Channel<4>; // V3 only
 
 /// Channel 2 ID pin
-using Ch2Id        = USBDM::GpioD<1, USBDM::ActiveLow>; // V3 only
+using Ch2Id           = ADConverter::Channel<5>; // V3 only
 
 /// Channel 1 Drive
 using Ch1Drive        = USBDM::GpioC<3, USBDM::ActiveLow>;

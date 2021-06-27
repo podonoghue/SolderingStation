@@ -108,7 +108,7 @@ public:
       voltage = getAverage();
 
       // Convert ADC value to voltage
-      voltage  *= (ADC_REF_VOLTAGE/USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION));
+      voltage  *= (ADC_REF_VOLTAGE/ADConverter::getSingleEndedMaximum(ADC_RESOLUTION));
 
       return voltage;
    }
@@ -190,7 +190,7 @@ public:
       voltage = getAverage();
 
       // Convert ADC value to voltage
-      voltage  *= (ADC_REF_VOLTAGE/USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION));
+      voltage  *= (ADC_REF_VOLTAGE/ADConverter::getSingleEndedMaximum(ADC_RESOLUTION));
 
       return voltage;
    }
@@ -259,7 +259,7 @@ public:
       voltage = getAverage();
 
       // Convert ADC value to voltage
-      voltage  *= (ADC_REF_VOLTAGE/USBDM::Adc0::getSingleEndedMaximum(ADC_RESOLUTION));
+      voltage  *= (ADC_REF_VOLTAGE/ADConverter::getSingleEndedMaximum(ADC_RESOLUTION));
 
       return voltage;
    }
