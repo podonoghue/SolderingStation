@@ -147,16 +147,6 @@ void Control::disable(unsigned ch) {
 }
 
 /**
- * Set the selected channel
- *
- * @param ch Channel to select
- */
-void Control::setSelectedChannel(unsigned ch) {
-
-   channels.setSelectedChannel(ch);
-}
-
-/**
  * Change temperature of currently selected channel
  *
  * @param delta Amount to change by
@@ -510,12 +500,12 @@ void Control::eventLoop()  {
 
       switch(event.type) {
          case ev_Ch1Hold      :
-            setSelectedChannel(1);
+            channels.setSelectedChannel(1);
             toggleEnable(1);
             break;
 
          case ev_Ch2Hold      :
-            setSelectedChannel(2);
+            channels.setSelectedChannel(2);
             toggleEnable(2);
             break;
 
@@ -533,11 +523,11 @@ void Control::eventLoop()  {
             break;
 
          case ev_Ch1Release      :
-            setSelectedChannel(1);
+            channels.setSelectedChannel(1);
             break;
 
          case ev_Ch2Release      :
-            setSelectedChannel(2);
+            channels.setSelectedChannel(2);
             break;
 
          case ev_QuadRelease   :

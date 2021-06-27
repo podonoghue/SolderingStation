@@ -127,13 +127,6 @@ public:
    void disable(unsigned ch);
 
    /**
-    * Set the selected channel
-    *
-    * @param ch Channel to select
-    */
-   void setSelectedChannel(unsigned channel);
-
-   /**
     * Change temperature of currently selected channel
     *
     * @param delta Amount to change by

@@ -18,7 +18,7 @@ namespace USBDM {
 
 enum OledVccControl : uint8_t {
    OledVccControl_Internal = 0,
-   OledVccControl_External = 1,
+         OledVccControl_External = 1,
 };
 
 enum WriteMode {
@@ -203,11 +203,13 @@ public:
     Oled &clearDisplay();
 
     /**
-     * Control display dimming
+     * Control display contrast/brightness
      *
-     * @param dim
+     *  Has no appreciable effect on display tested
+     *
+     * @param level
      */
-    void dim(bool dim);
+    void setContrast(uint8_t level);
 
     /**
      * Refresh OLED from frame buffer

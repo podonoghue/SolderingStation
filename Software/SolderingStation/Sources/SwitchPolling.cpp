@@ -79,7 +79,8 @@ EventType SwitchPolling::pollSwitches() {
    // Result from when the buttons were last polled
    static unsigned lastButtonPoll    = 0;
 
-   static EventType lastEvent = ev_None;
+   // Button held event but pending until released
+   static EventType pendingEvent = ev_None;
 
    // Poll buttons
    unsigned  currentButtonValue = Buttons::read();
@@ -93,16 +94,12 @@ EventType SwitchPolling::pollSwitches() {
       // Button change - start over
       stableButtonCount = 0;
       lastButtonPoll    = currentButtonValue;
-
-      // Restart idle timers on any button activity
-      channels.restartIdleTimers();
-
       return ev_None;
    }
 
    if (currentButtonValue == 0) {
       EventType event = ev_None;
-      if (lastEvent == ev_None) {
+      if (pendingEvent == ev_None) {
          // Not a button release
       }
       else if (quadState == QuadState_Pressed_Rotate) {
@@ -110,9 +107,9 @@ EventType SwitchPolling::pollSwitches() {
       }
       else {
          // Regular button release
-         event = ((EventType)(lastEvent+1));
+         event = pendingEvent;
       }
-      lastEvent = ev_None;
+      pendingEvent = ev_None;
       quadState = QuadState_Normal;
       return event;
    }
@@ -123,15 +120,17 @@ EventType SwitchPolling::pollSwitches() {
 
       // We have a button pressed for the debounce time - regular button press
       switch(currentButtonValue) {
-         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : lastEvent = ev_Ch1Press;    break;
-         case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : lastEvent = ev_Ch2Press;    break;
-         case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : lastEvent = ev_SelPress;    break;
-         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : lastEvent = ev_QuadPress;   quadState = QuadState_Pressed; break;
+         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch1Release;    break;
+         case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch2Release;    break;
+         case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_SelRelease;    break;
+         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : pendingEvent = ev_QuadRelease;   quadState = QuadState_Pressed; break;
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
-               (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : lastEvent = ev_Ch1Ch2Press; break;
-         default:                                        lastEvent = ev_None;        break;
+               (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch1Ch2Release; break;
+         default:                                        pendingEvent = ev_None;        break;
       }
-      return lastEvent;
+      // Don't report button presses - only releases
+      // This allows use of hold events
+      return ev_None;
    }
 
    // Check at hold time for valid button
@@ -139,8 +138,8 @@ EventType SwitchPolling::pollSwitches() {
       //      console.write('l');
       EventType event = ev_None;
 
-      // Don't record releases after hold
-      lastEvent = ev_None;
+      // Ignore button releases after hold
+      pendingEvent = ev_None;
 
       // We have a button pressed for the hold time - long held button
       switch(currentButtonValue) {

@@ -120,25 +120,19 @@ void Oled::initialise() {
 }
 
 /**
- * Control display dimming
+ * Control display contrast/brightness
  *
- * @param dim
+ *  Has no appreciable effect on display tested
+ *
+ * @param level
  */
-void Oled::dim(bool dim) {
-   static const uint8_t contrastOffCommand[] = {
-      SSD1306_SETCONTRAST,                  // 0x81
-      0x00,
+void Oled::setContrast(uint8_t level) {
+   uint8_t contrastCommand[] = {
+         MULTIPLE_COMMANDS,                    // Co = 0, D/C = 0
+         SSD1306_SETCONTRAST,                  // 0x81
+         level,
    };
-   static const uint8_t contrastOnCommand[] = {
-      SSD1306_SETCONTRAST,                  // 0x81
-      ((VCC_CONTROL == OledVccControl_External) ? 0x9F : 0xCF),
-   };
-
-  if (dim) {
-     i2c.transmit(I2C_ADDRESS, sizeof(contrastOffCommand), contrastOffCommand);
-  } else {
-     i2c.transmit(I2C_ADDRESS, sizeof(contrastOnCommand), contrastOnCommand);
-  }
+   i2c.transmit(I2C_ADDRESS, sizeof(contrastCommand), contrastCommand);
 }
 
 /**

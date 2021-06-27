@@ -15,25 +15,20 @@
 enum EventType : uint8_t {
    ev_None         ,
 
-   ev_QuadPress    ,
-   ev_QuadRelease  = ev_QuadPress + 1,
-   ev_QuadHold     = ev_QuadPress + 2,
+   ev_QuadRelease,
+   ev_QuadHold     = ev_QuadRelease + 1,
 
-   ev_Ch1Press     ,
-   ev_Ch1Release   = ev_Ch1Press + 1,
-   ev_Ch1Hold      = ev_Ch1Press + 2,
+   ev_Ch1Release,
+   ev_Ch1Hold      = ev_Ch1Release + 1,
 
-   ev_Ch2Press     ,
-   ev_Ch2Release   = ev_Ch2Press + 1,
-   ev_Ch2Hold      = ev_Ch2Press + 2,
+   ev_Ch2Release,
+   ev_Ch2Hold      = ev_Ch2Release + 1,
 
-   ev_SelPress     ,
-   ev_SelRelease   = ev_SelPress + 1,
-   ev_SelHold      = ev_SelPress + 2,
+   ev_SelRelease,
+   ev_SelHold      = ev_SelRelease + 1,
 
-   ev_Ch1Ch2Press  ,
-   ev_Ch1Ch2Release   = ev_Ch1Ch2Press + 1,
-   ev_Ch1Ch2Hold      = ev_Ch1Ch2Press + 2,
+   ev_Ch1Ch2Release,
+   ev_Ch1Ch2Hold      = ev_Ch1Ch2Release + 1,
 
    ev_QuadRotate   ,
    ev_QuadRotatePressed = ev_QuadRotate+1,

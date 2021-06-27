@@ -65,11 +65,13 @@ public:
 
    /**
     * Set currently selected channel for front panel controls
+    * Restarts the idle counter for the selected channel
     *
     * @param channel Channel to make selected
     */
    void setSelectedChannel(unsigned channel) {
       selectedChannel = channel;
+      getSelectedChannel().restartIdleTimer();
    }
 
    /**
