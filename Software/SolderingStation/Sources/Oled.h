@@ -203,6 +203,13 @@ public:
     Oled &clearDisplay();
 
     /**
+     * Control display dimming
+     *
+     * @param dim
+     */
+    void dim(bool dim);
+
+    /**
      * Refresh OLED from frame buffer
      */
     void refreshImage();

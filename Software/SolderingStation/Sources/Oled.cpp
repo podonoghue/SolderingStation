@@ -120,6 +120,28 @@ void Oled::initialise() {
 }
 
 /**
+ * Control display dimming
+ *
+ * @param dim
+ */
+void Oled::dim(bool dim) {
+   static const uint8_t contrastOffCommand[] = {
+      SSD1306_SETCONTRAST,                  // 0x81
+      0x00,
+   };
+   static const uint8_t contrastOnCommand[] = {
+      SSD1306_SETCONTRAST,                  // 0x81
+      ((VCC_CONTROL == OledVccControl_External) ? 0x9F : 0xCF),
+   };
+
+  if (dim) {
+     i2c.transmit(I2C_ADDRESS, sizeof(contrastOffCommand), contrastOffCommand);
+  } else {
+     i2c.transmit(I2C_ADDRESS, sizeof(contrastOnCommand), contrastOnCommand);
+  }
+}
+
+/**
  * Refresh OLED from frame buffer
  */
 void Oled::refreshImage() {
