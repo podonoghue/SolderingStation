@@ -53,7 +53,7 @@ private:
 
    /// Delay between ADC conversions start and switching heaters off (us)
    /// TODO - needs to change with main period
-   static constexpr unsigned POWER_OFF_DELAY = 10000-SAMPLE_DELAY-1000;
+   static constexpr unsigned POWER_OFF_DELAY = 10000-SAMPLE_DELAY-200;
 
    /// Indicates the display needs updating
    bool     needRefresh = true;

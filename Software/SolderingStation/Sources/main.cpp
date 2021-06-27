@@ -14,7 +14,7 @@ using namespace USBDM;
 /// Information about tips
 Tips tips;
 
-// Create non-volatile storage in FlexRAM
+/// Create non-volatile storage in FlexRAM
 __attribute__ ((section(".flexRAM")))
 NonvolatileSettings nvinit;
 
@@ -37,9 +37,6 @@ void initialise() {
 }
 
 int main() {
-
-   console.WRITELN("Starting\n");
-
    initialise();
 
 //   control.testMenu();

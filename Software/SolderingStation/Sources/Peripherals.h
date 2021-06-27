@@ -72,11 +72,11 @@ using Ch1SelectedLed  = USBDM::GpioC<6, USBDM::ActiveHigh>;
 /// Channel 2 Selected LED
 using Ch2SelectedLed  = USBDM::GpioD<6, USBDM::ActiveHigh>;
 
-/// Channel 1 Activity LED
-using Ch1ActiveLed    = USBDM::GpioD<0, USBDM::ActiveHigh>;
+/// Channel 1 ID pin
+using Ch1Id        = USBDM::GpioC<2, USBDM::ActiveLow>; // V3 only
 
-/// Channel 2 Activity LED
-using Ch2ActiveLed    = USBDM::GpioC<5, USBDM::ActiveHigh>;
+/// Channel 2 ID pin
+using Ch2Id        = USBDM::GpioD<1, USBDM::ActiveLow>; // V3 only
 
 /// Channel 1 Drive
 using Ch1Drive        = USBDM::GpioC<3, USBDM::ActiveLow>;
@@ -90,13 +90,13 @@ using PollingTimerChannel = USBDM::Pit::Channel<0>;
 /// PIT Channel to use for sample and control timing
 using ControlTimerChannel = USBDM::Pit::Channel<1>;
 
-/// Quadrature Encoder - not used
-//using QuadDecoder = USBDM::FtmQuadDecoder1;
-
 /// Quadrature Encoder shaft button
 using QuadButton  = USBDM::GpioD<2, USBDM::ActiveLow>;
 
-/** Quadrature Encoder pins as a GPIO field */
+// Quadrature Encoder - not used
+//using QuadDecoder = USBDM::FtmQuadDecoder1;
+
+/// Quadrature Encoder pins as a GPIO field
 using QuadPhases = USBDM::GpioBField<1, 0, USBDM::ActiveLow>;
 
 /// Channel 1 Button
@@ -118,7 +118,7 @@ using ZeroCrossingComparator = USBDM::Cmp0;
 constexpr USBDM::Cmp0Input ZeroCrossingChannel = USBDM::Cmp0Input_Ptc7;
 
 using GpioSpare1 = USBDM::GpioA<4,USBDM::ActiveHigh>;
-using GpioSpare2 = USBDM::GpioC<2,USBDM::ActiveHigh>;
-using GpioSpare3 = USBDM::GpioD<1,USBDM::ActiveHigh>;
+using GpioSpare2 = USBDM::GpioC<2,USBDM::ActiveHigh>; // V2 only
+using GpioSpare3 = USBDM::GpioD<1,USBDM::ActiveHigh>; // V2 only
 
 #endif /* SOURCES_PERIPHERALS_H_ */

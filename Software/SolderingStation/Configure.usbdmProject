@@ -40,20 +40,20 @@
    <item key="$signal$PTC0_muxSetting"                     value="mux0" />
    <item key="$signal$PTC1_descriptionSetting"             value="CH1_NTC" />
    <item key="$signal$PTC1_muxSetting"                     value="mux0" />
-   <item key="$signal$PTC2_descriptionSetting"             value="SPARE_2" />
+   <item key="$signal$PTC2_descriptionSetting"             value="CH1_ID" />
+   <item key="$signal$PTC2_muxSetting"                     value="mux0" />
    <item key="$signal$PTC3_descriptionSetting"             value="CH1_DRV" />
    <item key="$signal$PTC3_muxSetting"                     value="mux1" />
    <item key="$signal$PTC4_descriptionSetting"             value="CH2_DRV" />
    <item key="$signal$PTC4_muxSetting"                     value="mux1" />
-   <item key="$signal$PTC5_descriptionSetting"             value="CH2_ACT" />
-   <item key="$signal$PTC5_muxSetting"                     value="mux1" />
+   <item key="$signal$PTC5_descriptionSetting"             value="SPARE_2" />
    <item key="$signal$PTC6_descriptionSetting"             value="CH1_SEL" />
    <item key="$signal$PTC6_muxSetting"                     value="mux1" />
    <item key="$signal$PTC7_descriptionSetting"             value="AC_REF" />
    <item key="$signal$PTC7_muxSetting"                     value="mux0" />
-   <item key="$signal$PTD0_descriptionSetting"             value="CH1_ACT" />
-   <item key="$signal$PTD0_muxSetting"                     value="mux1" />
-   <item key="$signal$PTD1_descriptionSetting"             value="SPARE_3" />
+   <item key="$signal$PTD0_descriptionSetting"             value="SPARE_3" />
+   <item key="$signal$PTD1_descriptionSetting"             value="CH2_ID" />
+   <item key="$signal$PTD1_muxSetting"                     value="mux0" />
    <item key="$signal$PTD2_descriptionSetting"             value="QUAD_BTN" />
    <item key="$signal$PTD2_muxSetting"                     value="mux1" />
    <item key="$signal$PTD3_descriptionSetting"             value="CH2_BTN" />

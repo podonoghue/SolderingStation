@@ -46,9 +46,6 @@ void Control::initialise() {
    Ch1SelectedLed::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
    Ch2SelectedLed::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
 
-   Ch1ActiveLed::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
-   Ch2ActiveLed::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
-
    static auto adc_cb = [](uint32_t result, int channel){
       This->adcHandler(result, channel);
    };
@@ -284,9 +281,6 @@ void Control::switchOnHandler() {
       Ch2Drive::write(true);
    }
 
-   Ch1ActiveLed::write(ch1.isOn());
-   Ch2ActiveLed::write(ch2.isOn());
-
    Ch1SelectedLed::write(ch1.isRunning());
    Ch2SelectedLed::write(ch2.isRunning());
 
@@ -303,7 +297,7 @@ void Control::sampleHandler() {
    static auto cb = [](){
       This->switchOffHandler();
    };
-   ControlTimerChannel::oneShotInMicroseconds(cb, POWER_OFF_DELAY-200);
+   ControlTimerChannel::oneShotInMicroseconds(cb, POWER_OFF_DELAY);
 
    GpioSpare2::set();
 

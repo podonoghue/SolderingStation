@@ -1496,8 +1496,8 @@ public:
          /*   1: --                   = --                             */  { NoPortInfo, 0,         INVALID_PCR,  0 },
          /*   2: --                   = --                             */  { NoPortInfo, 0,         INVALID_PCR,  0 },
          /*   3: ADC0_SE3             = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
-         /*   4: ADC0_SE4b            = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
-         /*   5: ADC0_SE5b            = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
+         /*   4: ADC0_SE4b            = PTC2 (p35)                     */  { PortCInfo,  GPIOC_BasePtr,  2,       PORT_PCR_MUX(0)|defaultPcrValue  },
+         /*   5: ADC0_SE5b            = PTD1 (p42)                     */  { PortDInfo,  GPIOD_BasePtr,  1,       PORT_PCR_MUX(0)|defaultPcrValue  },
          /*   6: ADC0_SE6b            = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
          /*   7: ADC0_SE7b            = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
          /*   8: ADC0_SE8             = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
@@ -1530,10 +1530,12 @@ public:
    static void initPCRs(uint32_t pcrValue=defaultPcrValue) {
 #ifdef PCC_PCCn_CGC_MASK
       PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
+      PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
 #else
-      enablePortClocks(PORTC_CLOCK_MASK);
+      enablePortClocks(PORTC_CLOCK_MASK|PORTD_CLOCK_MASK);
 #endif
-      PORTC->GPCLR = pcrValue|PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x0003UL);
+      PORTC->GPCLR = pcrValue|PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x0007UL);
+      PORTD->GPCLR = pcrValue|PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x0002UL);
    }
 
    /**
@@ -1542,10 +1544,12 @@ public:
    static void clearPCRs() {
 #ifdef PCC_PCCn_CGC_MASK
       PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
+      PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
 #else
-      enablePortClocks(PORTC_CLOCK_MASK);
+      enablePortClocks(PORTC_CLOCK_MASK|PORTD_CLOCK_MASK);
 #endif
-      PORTC->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x3U);
+      PORTC->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x7U);
+      PORTD->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x2U);
    }
 
 #define USBDM_ADC0_INFODP_IS_DEFINED
@@ -1882,7 +1886,7 @@ public:
    static constexpr PinInfo  info[] = {
 
          //      Signal                 Pin                                  portInfo    gpioAddress     gpioBit  PCR value
-         /*   0: CMP1_IN0             = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
+         /*   0: CMP1_IN0             = PTC2 (p35)                     */  { PortCInfo,  GPIOC_BasePtr,  2,       PORT_PCR_MUX(0)|defaultPcrValue  },
          /*   1: CMP1_IN1             = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
          /*   2: --                   = --                             */  { NoPortInfo, 0,         INVALID_PCR,  0 },
          /*   3: CMP1_IN3             = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
@@ -1899,13 +1903,24 @@ public:
     * @param pcrValue PCR value controlling pin options
     */
    static void initPCRs(uint32_t pcrValue=defaultPcrValue) {
-      (void)pcrValue;
+#ifdef PCC_PCCn_CGC_MASK
+      PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
+#else
+      enablePortClocks(PORTC_CLOCK_MASK);
+#endif
+      PORTC->GPCLR = pcrValue|PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x0004UL);
    }
 
    /**
     * Resets pins used by peripheral
     */
    static void clearPCRs() {
+#ifdef PCC_PCCn_CGC_MASK
+      PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
+#else
+      enablePortClocks(PORTC_CLOCK_MASK);
+#endif
+      PORTC->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x4U);
    }
 
 };
@@ -3412,10 +3427,10 @@ public:
          /*   6: LLWU_P6              = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
          /*   7: LLWU_P7              = PTC3 (p36)                     */  { PortCInfo,  GPIOC_BasePtr,  3,       PORT_PCR_MUX(1)|defaultPcrValue  },
          /*   8: LLWU_P8              = PTC4 (p37)                     */  { PortCInfo,  GPIOC_BasePtr,  4,       PORT_PCR_MUX(1)|defaultPcrValue  },
-         /*   9: LLWU_P9              = PTC5 (p38)                     */  { PortCInfo,  GPIOC_BasePtr,  5,       PORT_PCR_MUX(1)|defaultPcrValue  },
+         /*   9: LLWU_P9              = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
          /*  10: LLWU_P10             = PTC6 (p39)                     */  { PortCInfo,  GPIOC_BasePtr,  6,       PORT_PCR_MUX(1)|defaultPcrValue  },
          /*  11: LLWU_P11             = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
-         /*  12: LLWU_P12             = PTD0 (p41)                     */  { PortDInfo,  GPIOD_BasePtr,  0,       PORT_PCR_MUX(1)|defaultPcrValue  },
+         /*  12: LLWU_P12             = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
          /*  13: LLWU_P13             = PTD2 (p43)                     */  { PortDInfo,  GPIOD_BasePtr,  2,       PORT_PCR_MUX(1)|defaultPcrValue  },
          /*  14: LLWU_P14             = PTD4 (p45)                     */  { PortDInfo,  GPIOD_BasePtr,  4,       PORT_PCR_MUX(1)|defaultPcrValue  },
          /*  15: LLWU_P15             = PTD6 (p47)                     */  { PortDInfo,  GPIOD_BasePtr,  6,       PORT_PCR_MUX(1)|defaultPcrValue  },
@@ -3433,8 +3448,8 @@ public:
 #else
       enablePortClocks(PORTC_CLOCK_MASK|PORTD_CLOCK_MASK);
 #endif
-      PORTC->GPCLR = pcrValue|PORT_PCR_MUX(1)|PORT_GPCLR_GPWE(0x0078UL);
-      PORTD->GPCLR = pcrValue|PORT_PCR_MUX(1)|PORT_GPCLR_GPWE(0x0055UL);
+      PORTC->GPCLR = pcrValue|PORT_PCR_MUX(1)|PORT_GPCLR_GPWE(0x0058UL);
+      PORTD->GPCLR = pcrValue|PORT_PCR_MUX(1)|PORT_GPCLR_GPWE(0x0054UL);
    }
 
    /**
@@ -3447,8 +3462,8 @@ public:
 #else
       enablePortClocks(PORTC_CLOCK_MASK|PORTD_CLOCK_MASK);
 #endif
-      PORTC->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x78U);
-      PORTD->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x55U);
+      PORTC->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x58U);
+      PORTD->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x54U);
    }
 
 };
@@ -4305,7 +4320,7 @@ public:
          /*  12: TSI0_CH12            = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
          /*  13: TSI0_CH13            = PTC0 (p33)                     */  { PortCInfo,  GPIOC_BasePtr,  0,       PORT_PCR_MUX(0)|defaultPcrValue  },
          /*  14: TSI0_CH14            = PTC1 (p34)                     */  { PortCInfo,  GPIOC_BasePtr,  1,       PORT_PCR_MUX(0)|defaultPcrValue  },
-         /*  15: TSI0_CH15            = --                             */  { NoPortInfo, 0,         UNMAPPED_PCR, 0 },
+         /*  15: TSI0_CH15            = PTC2 (p35)                     */  { PortCInfo,  GPIOC_BasePtr,  2,       PORT_PCR_MUX(0)|defaultPcrValue  },
    };
 
    /**
@@ -4319,7 +4334,7 @@ public:
 #else
       enablePortClocks(PORTC_CLOCK_MASK);
 #endif
-      PORTC->GPCLR = pcrValue|PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x0003UL);
+      PORTC->GPCLR = pcrValue|PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x0007UL);
    }
 
    /**
@@ -4331,7 +4346,7 @@ public:
 #else
       enablePortClocks(PORTC_CLOCK_MASK);
 #endif
-      PORTC->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x3U);
+      PORTC->GPCLR = PORT_PCR_MUX(0)|PORT_GPCLR_GPWE(0x7U);
    }
 
 };
@@ -5051,6 +5066,8 @@ using Adc_p7               = const USBDM::Adc0::Channel<0>;
 using Adc_Internal         = const USBDM::Adc0::Channel<27>;
 using Adc_p33              = const USBDM::Adc0::Channel<14>;
 using Adc_p34              = const USBDM::Adc0::Channel<15>;
+using Adc_p35              = const USBDM::Adc0::Channel<4>;
+using Adc_p42              = const USBDM::Adc0::Channel<5>;
 //using Adc_Internal         = const USBDM::Adc0::Channel<26>;
 /** 
  * End group ADC_Group
@@ -5065,9 +5082,7 @@ using Gpio_p31             = const USBDM::GpioB<16>;
 using Gpio_p32             = const USBDM::GpioB<17>;
 using Gpio_p36             = const USBDM::GpioC<3>;
 using Gpio_p37             = const USBDM::GpioC<4>;
-using Gpio_p38             = const USBDM::GpioC<5>;
 using Gpio_p39             = const USBDM::GpioC<6>;
-using Gpio_p41             = const USBDM::GpioD<0>;
 using Gpio_p43             = const USBDM::GpioD<2>;
 using Gpio_p44             = const USBDM::GpioD<3>;
 using Gpio_p45             = const USBDM::GpioD<4>;
@@ -5112,14 +5127,14 @@ using Gpio_p48             = const USBDM::GpioD<7>;
  *  PTB17                    | GPIOB_17                                    | p32                       | CH2_SB       
  *  PTC0                     | ADC0_SE14/TSI0_CH13                         | p33                       | CH2_NTC       
  *  PTC1                     | ADC0_SE15/TSI0_CH14                         | p34                       | CH1_NTC       
- *  PTC2                     | -                                           | p35                       | SPARE_2       
+ *  PTC2                     | ADC0_SE4b/CMP1_IN0/TSI0_CH15                | p35                       | CH1_ID       
  *  PTC3                     | GPIOC_3/LLWU_P7                             | p36                       | CH1_DRV       
  *  PTC4                     | GPIOC_4/LLWU_P8                             | p37                       | CH2_DRV       
- *  PTC5                     | GPIOC_5/LLWU_P9                             | p38                       | CH2_ACT       
+ *  PTC5                     | -                                           | p38                       | SPARE_2       
  *  PTC6                     | GPIOC_6/LLWU_P10                            | p39                       | CH1_SEL       
  *  PTC7                     | CMP0_IN1                                    | p40                       | AC_REF       
- *  PTD0                     | GPIOD_0/LLWU_P12                            | p41                       | CH1_ACT       
- *  PTD1                     | -                                           | p42                       | SPARE_3       
+ *  PTD0                     | -                                           | p41                       | SPARE_3       
+ *  PTD1                     | ADC0_SE5b                                   | p42                       | CH2_ID       
  *  PTD2                     | GPIOD_2/LLWU_P13                            | p43                       | QUAD_BTN       
  *  PTD3                     | GPIOD_3                                     | p44                       | CH2_BTN       
  *  PTD4                     | GPIOD_4/LLWU_P14                            | p45                       | CH1_BTN       
@@ -5184,14 +5199,14 @@ using Gpio_p48             = const USBDM::GpioD<7>;
  *  PTB17                    | GPIOB_17                                    | p32                       | CH2_SB       
  *  PTC0                     | ADC0_SE14/TSI0_CH13                         | p33                       | CH2_NTC       
  *  PTC1                     | ADC0_SE15/TSI0_CH14                         | p34                       | CH1_NTC       
- *  PTC2                     | -                                           | p35                       | SPARE_2       
+ *  PTC2                     | ADC0_SE4b/CMP1_IN0/TSI0_CH15                | p35                       | CH1_ID       
  *  PTC3                     | GPIOC_3/LLWU_P7                             | p36                       | CH1_DRV       
  *  PTC4                     | GPIOC_4/LLWU_P8                             | p37                       | CH2_DRV       
- *  PTC5                     | GPIOC_5/LLWU_P9                             | p38                       | CH2_ACT       
+ *  PTC5                     | -                                           | p38                       | SPARE_2       
  *  PTC6                     | GPIOC_6/LLWU_P10                            | p39                       | CH1_SEL       
  *  PTC7                     | CMP0_IN1                                    | p40                       | AC_REF       
- *  PTD0                     | GPIOD_0/LLWU_P12                            | p41                       | CH1_ACT       
- *  PTD1                     | -                                           | p42                       | SPARE_3       
+ *  PTD0                     | -                                           | p41                       | SPARE_3       
+ *  PTD1                     | ADC0_SE5b                                   | p42                       | CH2_ID       
  *  PTD2                     | GPIOD_2/LLWU_P13                            | p43                       | QUAD_BTN       
  *  PTD3                     | GPIOD_3                                     | p44                       | CH2_BTN       
  *  PTD4                     | GPIOD_4/LLWU_P14                            | p45                       | CH1_BTN       
@@ -5204,9 +5219,11 @@ using Gpio_p48             = const USBDM::GpioD<7>;
  *
  *    Pin Name               |   Functions                                 |  Location                 |  Description  
  *  ------------------------ | --------------------------------------------|---------------------------| ------------- 
- *  PTD1                     | -                                           | p42                       | SPARE_3       
+ *  PTD0                     | -                                           | p41                       | SPARE_3       
  *  ADC0_DM0                 | ADC0_DM0/ADC0_SE19                          | p8                        | CH2_TC       
  *  ADC0_DP0                 | ADC0_DP0/ADC0_SE0                           | p7                        | CH1_TC       
+ *  PTC2                     | ADC0_SE4b/CMP1_IN0/TSI0_CH15                | p35                       | CH1_ID       
+ *  PTD1                     | ADC0_SE5b                                   | p42                       | CH2_ID       
  *  PTC0                     | ADC0_SE14/TSI0_CH13                         | p33                       | CH2_NTC       
  *  PTC1                     | ADC0_SE15/TSI0_CH14                         | p34                       | CH1_NTC       
  *  TempSensor               | ADC0_SE26                                   | Internal                  | -       
@@ -5220,9 +5237,7 @@ using Gpio_p48             = const USBDM::GpioD<7>;
  *  PTB17                    | GPIOB_17                                    | p32                       | CH2_SB       
  *  PTC3                     | GPIOC_3/LLWU_P7                             | p36                       | CH1_DRV       
  *  PTC4                     | GPIOC_4/LLWU_P8                             | p37                       | CH2_DRV       
- *  PTC5                     | GPIOC_5/LLWU_P9                             | p38                       | CH2_ACT       
  *  PTC6                     | GPIOC_6/LLWU_P10                            | p39                       | CH1_SEL       
- *  PTD0                     | GPIOD_0/LLWU_P12                            | p41                       | CH1_ACT       
  *  PTD2                     | GPIOD_2/LLWU_P13                            | p43                       | QUAD_BTN       
  *  PTD3                     | GPIOD_3                                     | p44                       | CH2_BTN       
  *  PTD4                     | GPIOD_4/LLWU_P14                            | p45                       | CH1_BTN       

@@ -116,9 +116,7 @@ enum LlwuPin : uint32_t {
    // Mapped pins
    LlwuPin_Ptc3         = LlwuPin_7,    //!< Mapped pin PTC3
    LlwuPin_Ptc4         = LlwuPin_8,    //!< Mapped pin PTC4
-   LlwuPin_Ptc5         = LlwuPin_9,    //!< Mapped pin PTC5
    LlwuPin_Ptc6         = LlwuPin_10,   //!< Mapped pin PTC6
-   LlwuPin_Ptd0         = LlwuPin_12,   //!< Mapped pin PTD0
    LlwuPin_Ptd2         = LlwuPin_13,   //!< Mapped pin PTD2
    LlwuPin_Ptd4         = LlwuPin_14,   //!< Mapped pin PTD4
    LlwuPin_Ptd6         = LlwuPin_15,   //!< Mapped pin PTD6
