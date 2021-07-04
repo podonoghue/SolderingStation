@@ -36,9 +36,33 @@ void initialise() {
    switchPolling.initialise();
 }
 
+extern "C" {
+/**
+ * exit
+ *
+ * Exit process - overridden to ensure heaters are off
+ *
+ * @param rc - Return code from process
+ */
+void _exit(int rc __attribute__((unused))) {
+   for(;;) {
+      Ch1Drive::setIn();
+      Ch2Drive::setIn();
+
+      __asm__("bkpt");
+   }
+}
+}
+
 int main() {
    initialise();
 
+//   for(;;) {
+//      display.enable(true);
+//      waitMS(1000);
+//      display.enable(false);
+//      waitMS(1000);
+//   }
 //   control.testMenu();
 
 //   reportBandgapVoltage();

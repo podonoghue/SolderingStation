@@ -19,7 +19,7 @@
  * @tparam emptyValue   Special token indicating empty
  * @tparam size         Size of queue
  */
-template<typename T, T emptyValue, int size>
+template<typename T, T emptyValue, unsigned size>
 class EventQueue {
    T queue[size];
    unsigned head  = 0;

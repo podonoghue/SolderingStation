@@ -23,6 +23,9 @@ private:
    /// Samples over entire window (circular buffer)
    int samples[WindowSize] = {0};
 
+   /// Last sample added
+   int lastSample = 0;
+
    /// Index into samples
    unsigned index = 0;
 
@@ -62,6 +65,8 @@ public:
     */
    void accumulate(int value) {
 
+      lastSample = value;
+
       // Add new value
       sum += value;
 
@@ -96,6 +101,15 @@ public:
    }
 
    /**
+    * Get the value of the last sample added
+    *
+    * @return Sample as integer
+    */
+   int getLastSample() {
+      return lastSample;
+   }
+
+   /**
     * Return ADC voltage averaged over window
     *
     * @return value calculated over window
@@ -127,6 +141,10 @@ class MovingAverage {
 private:
    /// Sample accumulator
    float accumulator = 0;
+
+   /// Last sample added
+   int lastSample = 0;
+
    bool initial = true;
 
    MovingAverage(const MovingAverage &other) = delete;
@@ -159,6 +177,9 @@ public:
     * @param value to add
     */
    void accumulate(int value) {
+
+      lastSample = value;
+
       if (initial) {
          accumulator = value;
          initial     = false;
@@ -166,6 +187,15 @@ public:
       else {
          accumulator = ((N-1)*accumulator + value)/N;
       }
+   }
+
+   /**
+    * Get the value of the last sample added
+    *
+    * @return Sample as integer
+    */
+   int getLastSample() {
+      return lastSample;
    }
 
    /**
@@ -239,6 +269,15 @@ public:
    }
 
    /**
+    * Get the value of the last sample added
+    *
+    * @return Sample as integer
+    */
+   int getLastSample() {
+      return accumulator;
+   }
+
+   /**
     * Return raw ADC value as weighted average
     *
     * @return value calculated
@@ -266,9 +305,9 @@ public:
 };
 
 // Three methods for averaging
-//using AveragingMethod = SimpleMovingAverage<10>; // 20*100ms = 2s average
-//using AveragingMethod = MovingAverage<5>;
-using AveragingMethod = DummyAverage;
+//using AveragingMethod = SimpleMovingAverage<10>; // 10*10ms = even weights over 100ms average
+using AveragingMethod = MovingAverage<10>; // 10*10ms = declining weights over 100ms average
+//using AveragingMethod = DummyAverage;
 
 /**
  * Class representing a average customised for a thermistor
@@ -277,7 +316,7 @@ using AveragingMethod = DummyAverage;
  */
 class ThermistorAverage : public AveragingMethod {
 
-private:
+public:
 
    /**
     * Converts thermistor resistance value to temperature
@@ -289,14 +328,14 @@ private:
    static float resistanceToCelsius(float resistance) {
 
       // Value from curve fitting see spreadsheet
-      constexpr float A_constant =  1.62770581419817E-03;
-      constexpr float B_constant =  6.39056547750702E-05;
-      constexpr float C_constant =  1.91419439391882E-05;
-      constexpr float D_constant = -6.36504328625315E-07;
+      // Thermistor (ntc_mf58, 10k B3950) curve fit.ods
+      constexpr float A_constant =  1.29869E-03;
+      constexpr float B_constant =  1.89836E-04;
+      constexpr float C_constant =  3.45639E-06;
 
       constexpr float KelvinToCelsius = -274.15;
 
-      // Used to calculate R^N
+      // Used to calculate log(R)^N
       float log_R_Nth = log(resistance);
 
       float power;
@@ -309,15 +348,12 @@ private:
       reciprocalTemperature += B_constant * power;
       power *= log_R_Nth;
       reciprocalTemperature += C_constant * power;
-      power *= log_R_Nth;
-      reciprocalTemperature += D_constant * power;
 
       float temperatureInKelvin = 1/reciprocalTemperature;
 
       return temperatureInKelvin + KelvinToCelsius;
    }
 
-public:
    /**
     * Returns the average of the thermistor resistance
     *
@@ -347,8 +383,6 @@ public:
  */
 class ThermocoupleAverage : public AveragingMethod {
 
-private:
-
    /**
     * Converts a thermocouple voltage to temperature
     *
@@ -362,8 +396,8 @@ private:
       voltage *= 1000;
 
       // Value from linear curve fitting see spreadsheet 250 to 455 range
-      constexpr float Ah_constant = -17.75 ;//15.25; //-20.3057343295616; // -12.9509284993216;
-      constexpr float Bh_constant = 41.59; //38.48; // 46.191866056261;  //45.4204980163692;
+      constexpr float Ah_constant = -17.75;
+      constexpr float Bh_constant = 41.59;
 
       float temperature = Ah_constant + Bh_constant*voltage;
 

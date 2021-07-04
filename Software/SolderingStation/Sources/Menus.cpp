@@ -29,7 +29,7 @@ EventType Menus::editTime(const SettingsData &data) {
 
    Event event;;
 
-   BoundedInteger<0, MAX_TIME> scratch(*data.settingUint16);
+   BoundedInteger scratch(0,  MAX_TIME, *data.settingUint16);
 
    int unchanged = scratch;
 
@@ -84,7 +84,7 @@ EventType Menus::editFloat(const SettingsData &data) {
 
    Event event;
 
-   BoundedInteger<0, INT_MAX> scratch = round(*data.settingFloat * 1000);
+   BoundedInteger scratch(0, INT_MAX, round(*data.settingFloat * 1000));
 
    int unchanged = scratch;
 
@@ -139,7 +139,7 @@ EventType Menus::editTemperature(const SettingsData &data) {
 
    Event event;;
 
-   BoundedInteger<Control::MIN_TEMP, Control::MAX_TEMP> scratch(*data.settingUint16);
+   BoundedInteger scratch(Control::MIN_TEMP, Control::MAX_TEMP, *data.settingUint16);
 
    int unchanged = scratch;
 
@@ -205,7 +205,7 @@ bool Menus::calibrateTip(Channel &ch, TipSettings &tipsettings, TipSettings::Cal
 
    bool doUpdate = true;
 
-   BoundedInteger<Control::MIN_TEMP, Control::MAX_TEMP> controlledTemperature = targetTemperatures[stage];
+   BoundedInteger controlledTemperature{Control::MIN_TEMP, Control::MAX_TEMP, (int)targetTemperatures[stage]};
 
    ch.setState(ch_active);
    ch.setUserTemperature(controlledTemperature);
@@ -258,7 +258,7 @@ bool Menus::calibrateTip(Channel &ch, TipSettings &tipsettings, TipSettings::Cal
  */
 EventType Menus::calculateTipSettings(const SettingsData &) {
 
-   // Todo - for debugging - disable channels
+   // For debugging - disable channels
 //   Ch1Drive::setIn();
 //   Ch2Drive::setIn();
 
@@ -271,7 +271,7 @@ EventType Menus::calculateTipSettings(const SettingsData &) {
    int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isTemperatureCalibrated);
 
    int  offset    = 0;
-   BoundedInteger<0,TipSettings::NUM_TIP_SETTINGS-1>  selection{0};
+   BoundedInteger  selection{0, tipsAllocated-1, 0};
 
    // This is a dummy settings object that is NOT in nv-storage
    // Made static to avoid warnings about non-initialised object
@@ -311,7 +311,7 @@ EventType Menus::calculateTipSettings(const SettingsData &) {
                   "Press'n'hold to abort");
 
             if (ev.isSelRelease()) {
-               settings.tipNameIndex = tips.getTip(selection)->tipNameIndex;
+               settings.tipNameIndex = menuItems[selection].tipSettings->tipNameIndex;
                bool success = calibrateTip(channel, settings, TipSettings::Calib_250) &&
                      calibrateTip(channel, settings, TipSettings::Calib_350) &&
                      calibrateTip(channel, settings, TipSettings::Calib_400);
@@ -327,9 +327,6 @@ EventType Menus::calculateTipSettings(const SettingsData &) {
 
          case ev_QuadRotate:
             selection += event.change;
-            if (selection >= tipsAllocated) {
-               selection = tipsAllocated-1;
-            }
             break;
 
          case ev_Ch1Release:
@@ -364,10 +361,10 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
    // Max value truncated to nearest 100 (0.1 as float)
    static constexpr int MAX_VALUE = UINT16_MAX-UINT16_MAX%100;
 
-   BoundedInteger<0, MAX_VALUE> kp       = static_cast<int>(tipSettings.kp);
-   BoundedInteger<0, MAX_VALUE> ki       = static_cast<int>(tipSettings.ki);
-   BoundedInteger<0, MAX_VALUE> kd       = static_cast<int>(tipSettings.kd);
-   BoundedInteger<0, MAX_VALUE> iLimit   = static_cast<int>(tipSettings.iLimit);
+   BoundedInteger kp(    0, MAX_VALUE,    tipSettings.kp);
+   BoundedInteger ki(    0, MAX_VALUE,    tipSettings.ki);
+   BoundedInteger kd(    0, MAX_VALUE,    tipSettings.kd);
+   BoundedInteger iLimit(0, MAX_VALUE,    tipSettings.iLimit);
 
    int scratchKp     = kp;
    int scratchKi     = ki;
@@ -376,7 +373,7 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
 
    enum {working, complete, fail} loopControl = working;
    Event event;
-   BoundedInteger<0,3> selection(0);
+   BoundedInteger selection(0, 3, 0);
 
    bool modified = false;
 
@@ -427,16 +424,16 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
          case ev_QuadRotate:
             switch(selection) {
                case 0:
-                  kp += event.change*10;  // 0.01 steps
+                  kp += event.change*100;  // 0.100 steps
                   break;
                case 1:
-                  ki += event.change*1;  // 0.001 steps
+                  ki += event.change*5;  // 0.005 steps
                   break;
                case 2:
-                  kd += event.change*1;  // 0.001 steps
+                  kd += event.change*5;  // 0.005 steps
                   break;
                case 3:
-                  iLimit += event.change*100; // 0.1 steps
+                  iLimit += event.change*1000; // 1.000 steps
                   break;
             }
             break;
@@ -478,7 +475,7 @@ EventType Menus::editPidSettings(const SettingsData &) {
    int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isPidCalibrated);
 
    int  offset    = 0;
-   BoundedInteger<0,TipSettings::NUM_TIP_SETTINGS-1>  selection{0};
+   BoundedInteger  selection{0, tipsAllocated-1, Tips::findTipInMenu(channels[1].getTip(), menuItems, tipsAllocated)};
 
    bool refresh  = true;
    enum {working, complete, fail} loopControl = working;
@@ -516,9 +513,6 @@ EventType Menus::editPidSettings(const SettingsData &) {
 
          case ev_QuadRotate:
             selection += event.change;
-            if (selection >= tipsAllocated) {
-               selection = tipsAllocated-1;
-            }
             break;
 
          case ev_Ch1Release:
@@ -538,8 +532,8 @@ EventType Menus::editPidSettings(const SettingsData &) {
       }
    } while (loopControl == working);
 
-   channels[1].refreshPid();
-   channels[2].refreshPid();
+   channels[1].refreshPidParameters();
+   channels[2].refreshPidParameters();
 
    return event.type;
 }
@@ -573,7 +567,7 @@ EventType Menus::calculatePidSettings(const SettingsData &) {
    int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isPidCalibrated);
 
    int  offset    = 0;
-   BoundedInteger<0,TipSettings::NUM_TIP_SETTINGS-1>  selection{0};
+   BoundedInteger  selection{0, tipsAllocated-1, Tips::findTipInMenu(channels[1].getTip(), menuItems, tipsAllocated)};
 
    // This is a dummy settings object that is NOT in nv-storage
    // Made static to avoid warnings about non-initialised object
@@ -611,7 +605,7 @@ EventType Menus::calculatePidSettings(const SettingsData &) {
                   "be patient\n\n"
                   "Press'n'hold to abort");
             if (ev.isSelRelease()) {
-               settings.tipNameIndex = tips.getTip(selection)->tipNameIndex;
+               settings.tipNameIndex = menuItems[selection].tipSettings->tipNameIndex;
                bool success = calculatePidSetting(settings);
 
                if (success) {
@@ -625,9 +619,6 @@ EventType Menus::calculatePidSettings(const SettingsData &) {
 
          case ev_QuadRotate:
             selection += event.change;
-            if (selection >= tipsAllocated) {
-               selection = tipsAllocated-1;
-            }
             break;
 
          case ev_Ch1Release:
@@ -647,8 +638,8 @@ EventType Menus::calculatePidSettings(const SettingsData &) {
       }
    } while (loopControl == working);
 
-   channels[1].refreshPid();
-   channels[2].refreshPid();
+   channels[1].refreshPidParameters();
+   channels[2].refreshPidParameters();
 
    return event.type;
 }
@@ -663,7 +654,7 @@ EventType Menus::calculatePidSettings(const SettingsData &) {
 EventType Menus::selectAvailableTips(const SettingsData &) {
 
    int  offset    = 0;
-   BoundedInteger<0,TipSettings::NUMBER_OF_TIPS-1>  selection{0};
+   BoundedInteger  selection{0,TipSettings::NUMBER_OF_TIPS-1, 0};
 
    static constexpr unsigned modifiers = MenuItem::CheckBox|MenuItem::Starred;
 
@@ -780,7 +771,7 @@ bool Menus::confirmAction(const char *prompt) {
    };
 
    bool doUpdate = true;
-   BoundedInteger<0,1> selection{1};
+   BoundedInteger selection{0, 1, 1};
    do {
       if (doUpdate) {
          display.displayChoice("Warning", prompt, options, selection);
@@ -803,11 +794,31 @@ bool Menus::confirmAction(const char *prompt) {
 }
 
 /**
+ */
+EventType Menus::displayChannelStatuses(const SettingsData &) {
+
+   BoundedInteger selection{0,1,1};
+   do {
+      display.displayChannelStatuses();
+      Event event = switchPolling.getEvent();
+      switch(event.type) {
+         case ev_SelRelease:
+         case ev_QuadRelease:
+            return ev_None;
+
+         default:
+            break;
+      }
+   } while(true);
+}
+
+/**
  * Display and execute top-level menu
  */
 void Menus::settingsMenu() {
 
    static const SettingsData settingsData[] = {
+         {"Channel Status",           displayChannelStatuses                                            },
          {"Tip Selection",            selectAvailableTips                                               },
          {"Temp Calibration",         calculateTipSettings                                              },
          {"PID Calibration",          calculatePidSettings                                              },
@@ -824,6 +835,7 @@ void Menus::settingsMenu() {
    //   console.write("Address = ").writeln(&settingsData);
 
    static const MenuItem items[] = {
+         {"Channel Status",     },
          {"Tip Selection",     },
          {"Temp Calibration",  },
          {"Pid Calibration",   },
@@ -837,7 +849,7 @@ void Menus::settingsMenu() {
    };
 
    int  offset    = 0;
-   BoundedInteger<0,sizeof(settingsData)/sizeof(settingsData[0])-1>  selection{0};
+   BoundedInteger  selection{0,(int)(sizeof(settingsData)/sizeof(settingsData[0])-1), 0};
 
    bool refresh = true;
    for (;;) {

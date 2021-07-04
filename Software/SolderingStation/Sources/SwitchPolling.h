@@ -13,7 +13,7 @@
 #include "QuadDecoder.h"
 
 enum EventType : uint8_t {
-   ev_None         ,
+   ev_None,
 
    ev_QuadRelease,
    ev_QuadHold     = ev_QuadRelease + 1,
@@ -30,7 +30,7 @@ enum EventType : uint8_t {
    ev_Ch1Ch2Release,
    ev_Ch1Ch2Hold      = ev_Ch1Ch2Release + 1,
 
-   ev_QuadRotate   ,
+   ev_QuadRotate,
    ev_QuadRotatePressed = ev_QuadRotate+1,
 };
 

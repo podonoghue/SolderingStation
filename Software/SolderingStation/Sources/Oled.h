@@ -203,6 +203,11 @@ public:
     Oled &clearDisplay();
 
     /**
+     * Turn display on or off
+     */
+    void enable(bool enable);
+
+    /**
      * Control display contrast/brightness
      *
      *  Has no appreciable effect on display tested

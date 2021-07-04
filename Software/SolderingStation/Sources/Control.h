@@ -8,7 +8,7 @@
 #ifndef SOURCES_CONTROL_H_
 #define SOURCES_CONTROL_H_
 
-#include "Pid.h"
+#include "PidControllerController.h"
 #include "Peripherals.h"
 #include "Display.h"
 #include "Channel.h"
@@ -34,41 +34,24 @@ public:
    /// Minimum iron temperature for operation
    static constexpr int      MIN_TEMP     = 100;
 
-   /// Maximum duty cycle for tip drive 80% ~ 60W for 8 ohms element
-   /// Maximum duty cycle for tip drive 95% ~ 68W for 8 ohms element
-   static constexpr int      MAX_DUTY     = 90;
+   /// Maximum duty cycle for tip drive
+   ///      80% ~ 60W for 8 ohm element
+   ///      90% ~ 65W for 8 ohm element
+   /// Can't go above 90% as cycles are stolen for sampling
+   static constexpr int      MAX_DUTY     = 100;
 
-   /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohms element
+   /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohm element
    static constexpr int      MIN_DUTY     = 0;
 
-   /// PID interval in 10ms increments
-   static constexpr int      PID_INTERVAL = 10;
+   /// PID interval (1 rectified mains cycle)
+   static constexpr float    PID_INTERVAL = 10*USBDM::ms;
 
 private:
-   /// Delay between zero crossing and switching heaters on (us)
-   static constexpr unsigned POWER_ON_DELAY  = 200;
-
-   /// Delay between switching heater off and ADC conversions start (us)
-   static constexpr unsigned SAMPLE_DELAY    = 5000-POWER_ON_DELAY-100;
-
-   /// Delay between ADC conversions start and switching heaters off (us)
-   /// TODO - needs to change with main period
-   static constexpr unsigned POWER_OFF_DELAY = 10000-SAMPLE_DELAY-200;
-
    /// Indicates the display needs updating
    bool     needRefresh = true;
 
-   /// Indicates to sample temperatures on channel 1
-   bool doSampleCh1 = false;
-
-   /// Indicates to sample temperatures on channel 2
-   bool doSampleCh2 = false;
-
-   bool doReport       = false;
-   bool doReportTitle  = false;
-
-   /// Mask indicating which ADC channels to be refreshed this cycle
-   uint32_t adcChannelMask = 0;
+   bool doReportPid       = false;
+   bool doReportPidTitle  = false;
 
    /// Static this pointer for static members (call-backs)
    static Control *This;
@@ -76,8 +59,12 @@ private:
    /// Moving window average for Chip temperature (internal MCU sensor)
    ChipTemperatureAverage chipTemperature;
 
-   /// Debug - stop sequence restart when debugging
-   bool sequenceBusy = false;
+   /// Counter to initiate PID reporting
+   unsigned reportCount = 0;
+
+   /// How often to refresh display
+   /// Multiple of zero-crossing interval
+   static constexpr unsigned REFRESH_INTERVAL = round(0.5/PID_INTERVAL);
 
 public:
    /**
@@ -87,6 +74,10 @@ public:
    Control() {
       usbdm_assert(This == nullptr, "Control instantiated more than once");
       This = this;
+   }
+
+   float getChipTemperature() {
+      return chipTemperature.getTemperature();
    }
 
    /**
@@ -151,21 +142,9 @@ public:
    void zeroCrossingHandler();
 
    /**
-    * Timer interrupt handler for turning on heaters.
-    * It also uses the timer to schedule the sampleHandler().
+    * Timer interrupt handler for updating PID
     */
-   void switchOnHandler();
-
-   /**
-    * Timer interrupt handler for starting ADC sample sequence.
-    * It also uses the timer to schedule the switchOffHandler().
-    */
-   void sampleHandler();
-
-   /**
-    * Timer interrupt handler for turning off the heaters.
-    */
-   void switchOffHandler();
+   void pidHandler();
 
    /**
     * Interrupt handler for ADC conversions

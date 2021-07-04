@@ -8,6 +8,9 @@
 #ifndef SOURCES_ENCODER_H_
 #define SOURCES_ENCODER_H_
 
+/**
+ * Interrupt drive Quadrature decoder
+ */
 class QuadDecoder {
 
 private:

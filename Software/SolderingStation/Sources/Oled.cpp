@@ -120,6 +120,21 @@ void Oled::initialise() {
 }
 
 /**
+ * Turn display on or off
+ */
+void Oled::enable(bool enable) {
+   static const uint8_t onCommand[] = {
+         MULTIPLE_COMMANDS,                    // Co = 0, D/C = 0
+         SSD1306_DISPLAYON,                    // 0xAF
+   };
+   static const uint8_t offCommand[] = {
+         MULTIPLE_COMMANDS,                    // Co = 0, D/C = 0
+         SSD1306_DISPLAYOFF,                   // 0xAE
+   };
+   i2c.transmit(I2C_ADDRESS, sizeof(onCommand), enable?onCommand:offCommand);
+}
+
+/**
  * Control display contrast/brightness
  *
  *  Has no appreciable effect on display tested

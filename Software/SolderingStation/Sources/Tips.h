@@ -47,26 +47,26 @@ public:
       return &tipSettings[tipSettingsIndex];
    }
 
+   /**
+    * Get next available tip based on current tip
+    *
+    * @param selectedTip   Current tip
+    * @param delta         Offset to wanted tip
+    *
+    * @return  newly selected tip
+    */
    const TipSettings *changeTip(const TipSettings *selectedTip, int delta) {
+
       // Get sorted list of tips available
       MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS];
       unsigned availableTips = populateSelectedTips(menuItems, nullptr);
 
-      if (selectedTip == nullptr) {
-         return menuItems[0].tipSettings;
-      }
-
       // Locate exiting tip
-      unsigned index;
-      for(index=0; index<availableTips; index++) {
-         TipSettings *ts = menuItems[index].tipSettings;
-         if (ts == selectedTip) {
-            break;
-         }
-      }
-      index += delta;
-      index %= availableTips;
-      return menuItems[index].tipSettings;
+      int tipIndex = findTipInMenu(selectedTip, menuItems, availableTips);
+
+      tipIndex += delta;
+      tipIndex %= availableTips;
+      return menuItems[tipIndex].tipSettings;
    }
 
    /**
@@ -157,6 +157,17 @@ public:
    unsigned populateSelectedTips(
          MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS],
          bool (TipSettings::*checkModifier)() const);
+
+   /**
+    * Find index of tip in menuItems
+    *
+    * @param tip           Tip to look for
+    * @param menuItems     Array of menu items to search
+    * @param tipsAllocated Size of menu items array
+    *
+    * @return Index within menuItems of the tip currently selected in the channel.
+    */
+   static int findTipInMenu(const TipSettings *tip, MenuItem menuItems[], int tipsAllocated);
 
    /**
     * Fill menu array with all tips available.

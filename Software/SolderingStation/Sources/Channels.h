@@ -8,27 +8,69 @@
 #ifndef SOURCES_CHANNELS_H_
 #define SOURCES_CHANNELS_H_
 
+#include <PidControllerController.h>
 #include "Channel.h"
+#include "Control.h"
 #include "NonvolatileSettings.h"
+#include "TakeBackHalfController.h"
 
 /**
  * Holding class for the channels
  */
 class Channels {
 
+   /**
+    * Class to tie a channel to the templated GPIOs being used
+    *
+    * @tparam LedGpio      Channel selected LED
+    * @tparam DriveGpio    Channel heater drive
+    */
+   template<class LedGpio, class DriveGpio>
+   class T_Channel : public Channel {
+   public:
+      T_Channel(ChannelSettings &settings, Controller *controller) :
+         Channel(settings, controller) {}
+      virtual ~T_Channel() {}
+
+      void intialise() {
+         LedGpio::setOutput(USBDM::PinDriveStrength_High, USBDM::PinDriveMode_PushPull, USBDM::PinSlewRate_Slow);
+         DriveGpio::setOutput(USBDM::PinDriveStrength_High, USBDM::PinDriveMode_PushPull, USBDM::PinSlewRate_Slow);
+      }
+
+   private:
+      virtual void ledWrite(bool value) {
+         LedGpio::write(value);
+      }
+      virtual void driveWrite(bool value) {
+         DriveGpio::write(value);
+      }
+      virtual bool driveReadState() {
+         return DriveGpio::readState();
+      }
+   };
 private:
 
    /// Currently selected channel for front panel controls
    unsigned selectedChannel = 1;
 
+   using TempController = PidController;
+//   using TempController = TakeBackHalfController;
+
+   TempController ch1Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
+   TempController ch2Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
+
    /// Channel1 state information
-   Channel  channel1 = Channel(nvinit.ch1Settings);
+   T_Channel<Ch1SelectedLed, Ch1Drive>  channel1{nvinit.ch1Settings, &ch1Controller};
 
    /// Channel2 state information
-   Channel  channel2 = Channel(nvinit.ch2Settings);
+   T_Channel<Ch2SelectedLed, Ch2Drive>  channel2{nvinit.ch2Settings, &ch2Controller};
 
 public:
 
+   Channels() {
+      channel1.intialise();
+      channel2.intialise();
+   }
    /// Number of channels
    static constexpr unsigned NUM_CHANNELS = 2;
 
@@ -42,7 +84,7 @@ public:
    Channel &operator[](int channelNumber) {
       usbdm_assert((channelNumber == 1)||(channelNumber == 2), "Illegal channel");
 
-      return (channelNumber==1)?channel1:channel2;
+      return (channelNumber==1)?*(Channel*)&channel1:*(Channel*)&channel2;
    }
 
    /**

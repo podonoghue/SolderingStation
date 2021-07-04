@@ -125,6 +125,7 @@ public:
     */
    static EventType selectAvailableTips(const SettingsData &);
 
+   static EventType displayChannelStatuses(const SettingsData &);
 };
 
 #endif /* SOURCES_MENUS_H_ */

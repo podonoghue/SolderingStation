@@ -60,9 +60,11 @@ private:
     *
     * @param ch         Channel to display
     * @param selected   Whether the channel is currently selected
-    * @param offset     Y offset for display
+    * @param offset     X offset for display
     */
    void displayChannel(Channel &ch, bool selected, unsigned offset);
+
+   void displayChannelStatus(Channel &ch, unsigned offset);
 
 public:
 
@@ -80,9 +82,20 @@ public:
    void initialise() {}
 
    /**
+    * Turn display on or off
+    *
+    * @param enable
+    */
+   void enable(bool enable) {
+      oled.enable(enable);
+   }
+
+   /**
     * Display channel information on OLED
     */
    void displayChannels();
+
+   void displayChannelStatuses();
 
    /**
     * Display floating point menu item

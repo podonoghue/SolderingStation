@@ -6,6 +6,7 @@
  */
 #include "Display.h"
 #include "Channels.h"
+#include "Control.h"
 
 using namespace USBDM;
 
@@ -14,8 +15,56 @@ using namespace USBDM;
  * Used to draw left and right halves of screen
  *
  * @param ch         Channel to display
- * @param selected   Whether the channel is currently selected
  * @param offset     Y offset for display
+ */
+void Display::displayChannelStatus(Channel &ch, unsigned offset) {
+   using namespace USBDM;
+
+   oled.moveXY(0, offset);
+   oled.setFont(fontMedium);
+
+   float Tc = ch.getThermisterTemperature();
+   float Tt = ch.getThermocoupleTemperature();
+
+   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+   oled.write("Rc ").write(ch.getThermisterResistance()/1000).write("k,");
+   oled.write(Tc).writeln("C");
+
+   oled.setFloatFormat(2, Padding_LeadingSpaces, 0);
+   oled.write("Vt ").write(round(ch.getThermocoupleVoltage()*100000)/100).write("mV,");
+   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+   oled.write(Tt).writeln("C");
+   oled.write("T = ").write(Tc+Tt).writeln("C");
+}
+
+/**
+ * Display information about channels on OLED.
+ */
+void Display::displayChannelStatuses() {
+   static constexpr int middle = (Oled::HEIGHT/2)-5;
+
+   oled.clearDisplay();
+
+   displayChannelStatus(channels[1], 0);
+   displayChannelStatus(channels[2], middle+1);
+
+   oled.drawHorizontalLine(0, Oled::WIDTH, middle-1, WriteMode_Write);
+
+   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+   oled.write("Chip ").write(control.getChipTemperature()).write("C");
+
+   oled.refreshImage();
+
+   oled.resetFormat();
+}
+
+/**
+ * Display information about one channel on OLED.
+ * Used to draw left and right halves of screen
+ *
+ * @param ch         Channel to display
+ * @param selected   Whether the channel is currently selected
+ * @param offset     X offset for display
  */
 void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    using namespace USBDM;
@@ -58,7 +107,6 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
       int y = 59; //oled.getY();
       oled.drawRect(offset, y, offset-1+power,  y+4, WriteMode_Xor);
    }
-   oled.resetFormat();
 }
 
 /**

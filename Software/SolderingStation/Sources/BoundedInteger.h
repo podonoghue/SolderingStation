@@ -8,14 +8,32 @@
 #ifndef SOURCES_BOUNDEDINTEGER_H_
 #define SOURCES_BOUNDEDINTEGER_H_
 
-template<int min, int max>
 class BoundedInteger {
 
 private:
-   int value = 0;
+   const int min;
+   const int max;
+   int value;
 
 public:
-   BoundedInteger(int initialValue) : value(initialValue) {
+   /**
+    * Constructor for a bounded integer
+    *
+    * @param min           Minimum value
+    * @param max           Maximum value
+    * @param initialValue  Initial value
+    */
+   BoundedInteger(int min, int max, int initialValue) : min(min), max(max), value(initialValue) {
+   }
+
+   /**
+    * Constructor for a bounded integer
+    * The minimum value defaults to zero
+    *
+    * @param max           Maximum value
+    * @param initialValue  Initial value
+    */
+   BoundedInteger(int max, int initialValue) : min(0), max(max), value(initialValue) {
    }
 
    void limit() {
@@ -60,9 +78,5 @@ public:
       return *this;
    }
 };
-
-
-
-
 
 #endif /* SOURCES_BOUNDEDINTEGER_H_ */

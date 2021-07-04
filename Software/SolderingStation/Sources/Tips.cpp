@@ -8,6 +8,7 @@
 #include "Tips.h"
 #include "NonvolatileSettings.h"
 #include "Display.h"
+#include "Channel.h"
 
 Tips::Tips() : tipSettings(nvinit.tipSettings) {
 }
@@ -42,6 +43,25 @@ unsigned Tips::populateSelectedTips(
    MenuItem::sort(menuItems, tipsAllocated);
 
    return tipsAllocated;
+}
+
+/**
+ * Find index of tip in menuItems
+ *
+ * @param tip           Tip to look for
+ * @param menuItems     Array of menu items to search
+ * @param tipsAllocated Size of menu items array
+ *
+ * @return Index within menuItems of the tip currently selected in the channel.
+ */
+int Tips::findTipInMenu(const TipSettings *tip, MenuItem menuItems[], int tipsAllocated) {
+
+   for (int tipIndex=0; tipIndex<tipsAllocated; tipIndex++) {
+      if (menuItems[tipIndex].tipSettings == tip) {
+         return tipIndex;
+      }
+   }
+   return 0;
 }
 
 /**

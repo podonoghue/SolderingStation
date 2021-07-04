@@ -13,7 +13,7 @@
 #include "Averaging.h"
 #include "ChannelSettings.h"
 #include "DutyCycleCounter.h"
-#include "Pid.h"
+#include "Controller.h"
 #include "BangBang.h"
 #include "Tips.h"
 
@@ -38,9 +38,6 @@ class Channel : public DutyCycleCounter {
 
 public:
 
-   using Controller = Pid;
-//   using Controller = StepResponse;
-
 public:
 
    /// Number of preset temperatures provided
@@ -60,6 +57,10 @@ public:
 
    friend class Control;
 
+   virtual void ledWrite(bool)   = 0;
+   virtual void driveWrite(bool) = 0;
+   virtual bool driveReadState() = 0;
+
 private:
    bool              tipPresent          = false;    ///< Indicates that the tip is present
    int               toolIdleTime        = 0;        ///< How long the tool has been idle
@@ -68,7 +69,7 @@ private:
    int               targetTemperature   = 0;        ///< Desired temperature of tool
    unsigned          preset              = 1;        ///< Currently selected preset for the channel
 
-   Controller        controller;                     ///< Loop controller
+   Controller       &controller;                     ///< Loop controller
 
    bool              applyPowerCorrection = false;
 
@@ -76,14 +77,18 @@ public:
    /**
     * Constructor for channel
     *
-    * @param settings Non-volatile channel settings to associate with this channel
+    * @param[in] settings  Non-volatile channel settings to associate with this channel
     */
-   Channel(ChannelSettings &settings) :
+   Channel(ChannelSettings &settings, Controller *controller) :
       DutyCycleCounter(100),
-      nvSettings(settings){
+      nvSettings(settings),
+      controller(*controller) {
+
       setUserTemperature(settings.presets[preset]);
-      refreshPid();
+      refreshPidParameters();
    }
+
+   virtual ~Channel() {}
 
    /**
     * Check for a valid tip selection and re-assign if necessary
@@ -101,14 +106,10 @@ public:
       }
    }
 
-   void refreshPid() {
+   void refreshPidParameters() {
       const TipSettings *ts = nvSettings.selectedTip;
 
-      controller.setControlParameters(
-            ts->getKp(),
-            ts->getKi(),
-            ts->getKd(),
-            ts->getILimit());
+      controller.setControlParameters(ts);
    }
 
    /**
@@ -118,7 +119,7 @@ public:
     */
    void changeTip(int delta) {
       nvSettings.selectedTip = tips.changeTip(nvSettings.selectedTip, delta);
-      refreshPid();
+      refreshPidParameters();
    }
 
    /**
@@ -129,7 +130,7 @@ public:
    void setTip(const TipSettings *tipSettings) {
       usbdm_assert(tipSettings != nullptr, "Illegal tip");
       nvSettings.selectedTip = tipSettings;
-      refreshPid();
+      refreshPidParameters();
    }
 
    /**
@@ -218,16 +219,16 @@ public:
 
       state = newState;
 
-      refreshPid();
+      refreshPidParameters();
 
       controller.enable(isControlled());
+      ledWrite(isRunning());
 
       if (!isRunning()) {
          controller.setOutput(0);
 
          // For safety while debugging immediately turn off drive
-         Ch1Drive::off();
-         Ch2Drive::off();
+         driveWrite(false);
       }
       applyPowerCorrection = false;
    }
@@ -313,19 +314,62 @@ public:
     * The PID controller is updated
     */
    void upDateCurrentTemperature() {
-//      static int powerCorrection = 0;
-
       currentTemperature = tipTemperature.getTemperature()+coldJunctionTemperature.getTemperature();
-//      if ((state == ch_active) && (currentTemperature > 150) && (controller.getElapsedTime()>10) &&
-//          (abs(getTargetTemperature() - currentTemperature) < 10)) {
-//         powerCorrection = std::min(30,(std::max(getPower()-8, 0))*13);
-//      }
       tipPresent = tipTemperature.getAverage() < (ADConverter::getSingleEndedMaximum(ADC_RESOLUTION)-200);
+      // Power average
+      power.accumulate(getDutyCycle());
+   }
+
+   /**
+    * Update current temperature from internal averages
+    * The PID controller is updated
+    */
+   void upDatePid() {
+      //      static int powerCorrection = 0;
+      //      if ((state == ch_active) && (currentTemperature > 150) && (controller.getElapsedTime()>10) &&
+      //          (abs(getTargetTemperature() - currentTemperature) < 10)) {
+      //         powerCorrection = std::min(30,(std::max(getPower()-8, 0))*13);
+      //      }
+
       if (state != ch_fixedPower) {
          setDutyCycle(controller.newSample(getTargetTemperature(), currentTemperature));
       }
-      // Long term power average
-      power.accumulate(getDutyCycle());
+   }
+
+   /**
+    * Get Thermistor resistance
+    *
+    * @return Resistance in ohms
+    */
+   float getThermisterResistance() {
+      return coldJunctionTemperature.getResistance();
+   }
+
+   /**
+    * Get Thermistor temperature
+    *
+    * @return Temperature in C
+    */
+   float getThermisterTemperature() {
+      return coldJunctionTemperature.getTemperature();
+   }
+
+   /**
+    * Get thermocouple voltage
+    *
+    * @return Voltage in volts
+    */
+   float getThermocoupleVoltage() {
+      return tipTemperature.getVoltage();
+   }
+
+   /**
+    * Get thermocouple temperature
+    *
+    * @return Temperature in C
+    */
+   float getThermocoupleTemperature() {
+      return tipTemperature.getTemperature();
    }
 
    float getPower() const {
@@ -383,6 +427,18 @@ public:
    }
 
    /**
+    * Update drive based on PWM state
+    */
+   /**
+    *
+    * @param borrowCycle Whether to borrow a cycle for sampling
+    */
+   void updateDrive(bool borrowCycle) {
+      advance(borrowCycle);
+      driveWrite(isOn());
+   }
+
+   /**
     * Indicates if the temperature has been changed since a preset was selected.
     *
     * @return true if temperature has been changed
@@ -425,6 +481,26 @@ public:
          // Idle for a long while running
          setState(ch_off);
       }
+   }
+
+   void report() {
+      USBDM::console.setFloatFormat(2, USBDM::Padding_LeadingSpaces, 2);
+      float tipV   = 1000*tipTemperature.getVoltage();
+      float tipT   = tipTemperature.getTemperature();
+      float coldT  = coldJunctionTemperature.getTemperature();
+
+      USBDM::console.
+      write("Tip = ").write(tipT+coldT).
+      write(" (").write(tipT).write("+").write(+coldT).
+      write("),(").write(tipV).write(" mV").
+      write(",").write(coldJunctionTemperature.getResistance()).write(" ohms)").
+      write(" ").write(tipV).write(" ").write(coldT).write(" ").
+      //         write(" C, Ch1 Cold = ").write(ch1ColdJunctionTemperature.getConvertedValue()).
+      //         write(" C, Ch2 Tip  = ").write(ch2TipTemperature.getConvertedValue()+ch2ColdJunctionTemperature.getConvertedValue()).
+      //         write(" C, Ch2 Cold = ").write(ch2ColdJunctionTemperature.getConvertedValue()).
+      //         write(" C, Chip = ").write(chipTemperature.getConvertedValue()).
+      writeln();
+      USBDM::console.resetFormat();
    }
 };
 

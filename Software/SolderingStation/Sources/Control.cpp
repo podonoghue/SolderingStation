@@ -4,7 +4,6 @@
  *  Created on: 5 Apr 2020
  *      Author: podonoghue
  */
-
 #include "smc.h"
 #include "SwitchPolling.h"
 #include "Control.h"
@@ -22,17 +21,11 @@ void Control::initialise() {
    using namespace USBDM;
 
    GpioSpare1::setOutput();
-   GpioSpare2::setOutput();
+   Debug::setOutput();
    GpioSpare3::setOutput();
-
-   Ch1Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
-   Ch2Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
 
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
-
-   ch1.controller.setParameters(PID_INTERVAL*10*ms, MIN_DUTY , MAX_DUTY);
-   ch2.controller.setParameters(PID_INTERVAL*10*ms, MIN_DUTY , MAX_DUTY);
 
    ch1.setUpperLimit(MAX_DUTY);
    ch2.setUpperLimit(MAX_DUTY);
@@ -43,39 +36,38 @@ void Control::initialise() {
    ch1.enable();
    ch2.enable();
 
-   Ch1SelectedLed::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
-   Ch2SelectedLed::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
-
    static auto adc_cb = [](uint32_t result, int channel){
       This->adcHandler(result, channel);
    };
    ADConverter::configure(
          ADC_RESOLUTION,
          AdcClockSource_Bus,
-         AdcSample_20,
+         AdcSample_6,
          AdcPower_Normal,
          AdcMuxsel_B,
          AdcClockRange_Normal,
          AdcAsyncClock_Disabled);
    unsigned retry = 10;
    while ((ADConverter::calibrate() != E_NO_ERROR) && (retry-->0)) {
-      console.WRITE("ADC calibration failed, retry #").writeln(retry);
+      console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
    }
-   ADConverter::setAveraging(AdcAveraging_32);
+   ADConverter::setAveraging(AdcAveraging_off);
    ADConverter::setCallback(adc_cb);
-   ADConverter::enableNvicInterrupts(NvicPriority_Normal);
+   ADConverter::enableNvicInterrupts(NvicPriority_MidHigh);
 
-   static auto zx_cb = [](CmpStatus){
-      This->zeroCrossingHandler();
+   static auto zx_cb = [](CmpStatus cmpStatus){
+      if (cmpStatus.event&CmpEvent_Falling) {
+         This->zeroCrossingHandler();
+      }
    };
 
-   static constexpr uint8_t DAC_THRESHOLD = 2*(Cmp0::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
+   static constexpr uint8_t DAC_THRESHOLD = 2.8*(Cmp0::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
 
    Pit::configureIfNeeded();
 
    ControlTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
 
-   ZeroCrossingComparator::configure(CmpPower_HighSpeed, CmpHysteresis_1, CmpPolarity_Noninverted);
+   ZeroCrossingComparator::configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
    ZeroCrossingComparator::setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 255);
    ZeroCrossingComparator::setInputs();
    ZeroCrossingComparator::configureDac(DAC_THRESHOLD, CmpDacSource_Vdda);
@@ -131,7 +123,8 @@ void Control::enable(unsigned ch) {
    Channel &channel = channels[ch];
 
    channel.setState(ch_active);
-   doReportTitle = true;
+   doReportPidTitle = true;
+   reportCount      = 0;
 }
 
 /**
@@ -188,154 +181,54 @@ void Control::overCurrentHandler() {
    setNeedsRefresh();
 }
 
+/// Delay between zero crossing and sampling (ADC conversion start) (us)
+static constexpr unsigned SAMPLE_DELAY  = 700;
+
 /**
- * Interrupt handler for mains zero crossing Comparator
- * This uses the timer to schedule the switchHandler().
- * Occurs @100Hz or 120Hz ~ 10ms or 8.3ms
- * Worse case execution time ~170us.
+ * Comparator interrupt handler for controlling the heaters.
+ * This is triggered just prior to the mains zero-crossing.
+ * It also uses the timer to schedule the ADC sampling.
  */
 void Control::zeroCrossingHandler() {
 
-   // Schedule switchOnHandler()
+   // Schedule ADC conversions
    static auto cb = [](){
-      This->switchOnHandler();
+      // Do chip temperature measurement
+      // This also starts the entire sequence of chained conversions
+      // This is delayed until after the thermocouple amplifier has recovered
+      // from being over-driven during the previous cycle.
+      ChipTemperature::startConversion(AdcInterrupt_Enabled);
    };
-   if (!sequenceBusy) {
-      // For debug when single stepping only do if previous sequence completed!
-      sequenceBusy = true;
+   ControlTimerChannel::oneShotInMicroseconds(cb, SAMPLE_DELAY);
 
-      ControlTimerChannel::oneShotInMicroseconds(cb, POWER_ON_DELAY);
-   }
+//   Debug::set();
 
-   GpioSpare2::set();
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
+
+   // Turn off drives
+   ch1.driveWrite(false);
+   ch2.driveWrite(false);
 
    // Counter to initiate screen refresh
    static unsigned refreshCount = 0;
-
-   if (refreshCount++>=50) {
+   if (refreshCount++ >= REFRESH_INTERVAL) {
       refreshCount = 0;
       // Update the display regularly
       setNeedsRefresh();
    }
 
-   // Counter to initiate pid update
-   static unsigned pidCount = 0;
+   /// How often to log PID
+   /// Multiple of zero-crossing interval
+   static constexpr unsigned PID_LOG_INTERVAL = round(0.25/PID_INTERVAL);
 
-   // Counter to initiate pid reporting
-   static unsigned reportCount = 0;
-
-   if (++pidCount >= PID_INTERVAL) {
-      pidCount = 0;
-
-      // Update averages and run PID
-      channels[1].upDateCurrentTemperature();
-
-      doSampleCh1 = true;
-
-      if (++reportCount >= 2) {
-         reportCount = 0;
-         doReport = true;
-      }
-   }
-   else if (pidCount == PID_INTERVAL/2) {
-      // Update averages and run PID
-      channels[2].upDateCurrentTemperature();
-
-      doSampleCh2 = true;
-   }
-   GpioSpare2::clear();
-}
-
-/**
- * Timer interrupt handler for turning on heaters.
- * It also uses the timer to schedule the sampleHandler().
- */
-void Control::switchOnHandler() {
-
-   GpioSpare2::set();
-
-   // Schedule sampleHandler()
-   static auto cb = [](){
-      This->sampleHandler();
-   };
-   ControlTimerChannel::oneShotInMicroseconds(cb, SAMPLE_DELAY);
-
-   Channel &ch1 = channels[1];
-   Channel &ch2 = channels[2];
-
-   // Enable drive to heaters as needed
-   if (ch1.isOn()) {
-      Ch1Drive::write(true);
-   }
-   if (ch2.isOn()) {
-      Ch2Drive::write(true);
+   // PID reporting
+   if (++reportCount >= PID_LOG_INTERVAL) {
+      reportCount = 0;
+      doReportPid = true;
    }
 
-   Ch1SelectedLed::write(ch1.isRunning());
-   Ch2SelectedLed::write(ch2.isRunning());
-
-   GpioSpare2::clear();
-}
-
-/**
- * Timer interrupt handler for starting ADC sample sequence.
- * It also uses the timer to schedule the switchOffHandler().
- */
-void Control::sampleHandler() {
-
-   // Schedule switchOffHandler()
-   static auto cb = [](){
-      This->switchOffHandler();
-   };
-   ControlTimerChannel::oneShotInMicroseconds(cb, POWER_OFF_DELAY);
-
-   GpioSpare2::set();
-
-   Channel &ch1 = channels[1];
-   Channel &ch2 = channels[2];
-
-   // Measure channel 1 if idle this cycle
-   if (!ch1.isOn() && doSampleCh1) {
-      doSampleCh1 = false;
-      adcChannelMask |= (1<<Ch1ColdJunctionNtc::CHANNEL) | (1<<Ch1TipThermocouple::CHANNEL);
-   }
-   // Measure channel 2 if idle this cycle
-   if (!ch2.isOn() && doSampleCh2) {
-      doSampleCh2 = false;
-      adcChannelMask |= (1<<Ch2ColdJunctionNtc::CHANNEL) | (1<<Ch2TipThermocouple::CHANNEL);
-   }
-
-   // Always do chip temperature
-   // This also starts the entire sequence of chained conversions
-   ChipTemperature::startConversion(AdcInterrupt_Enabled);
-
-   ch1.advance();
-   ch2.advance();
-
-   GpioSpare2::clear();
-}
-
-/**
- * Timer interrupt handler for turning off the heaters.
- */
-void Control::switchOffHandler() {
-
-   GpioSpare2::set();
-
-   Channel &ch1 = channels[1];
-   Channel &ch2 = channels[2];
-
-   // Disable drive to heaters as needed
-   if (!ch1.isOn()) {
-      Ch1Drive::write(false);
-   }
-   if (!ch2.isOn()) {
-      Ch2Drive::write(false);
-   }
-
-   sequenceBusy = false;
-
-   GpioSpare2::clear();
+//   Debug::clear();
 }
 
 /**
@@ -344,48 +237,80 @@ void Control::switchOffHandler() {
  * @param[in] result  Conversion result from ADC channel
  * @param[in] channel ADC channel providing the result
  *
- *   Initial conversion is started from a timer call-back when a channel has an idle cycle.
+ *   Initial conversion is started from zeroCrossingHandler().
  *   Several consecutive conversions are then chained in sequence.
  */
 void Control::adcHandler(uint32_t result, int adcChannel) {
-
-   GpioSpare2::set();
 
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
 
    switch (adcChannel) {
-      case Ch1ColdJunctionNtc::CHANNEL :
-         ch1.coldJunctionTemperature.accumulate(result);
-         break;
-      case Ch1TipThermocouple::CHANNEL :
-         ch1.tipTemperature.accumulate(result);
-         break;
-      case Ch2ColdJunctionNtc::CHANNEL :
-         ch2.coldJunctionTemperature.accumulate(result);
-         break;
-      case Ch2TipThermocouple::CHANNEL :
-         ch2.tipTemperature.accumulate(result);
-         break;
+
       case ChipTemperature::CHANNEL :
          chipTemperature.accumulate(result);
+         Ch1ColdJunctionNtc::startConversion(AdcInterrupt_Enabled);
          break;
+
+      case Ch1ColdJunctionNtc::CHANNEL :
+         ch1.coldJunctionTemperature.accumulate(result);
+         Ch2ColdJunctionNtc::startConversion(AdcInterrupt_Enabled);
+         break;
+
+      case Ch2ColdJunctionNtc::CHANNEL :
+         Debug::set();
+         ch2.coldJunctionTemperature.accumulate(result);
+         Ch1TipThermocouple::startConversion(AdcInterrupt_Enabled);
+         break;
+
+      case Ch1TipThermocouple::CHANNEL :
+         ch1.tipTemperature.accumulate(result);
+         Ch2TipThermocouple::startConversion(AdcInterrupt_Enabled);
+         usbdm_assert(!ch1.driveReadState(), "Sample while channel 1 busy");
+         break;
+
+      case Ch2TipThermocouple::CHANNEL :
+         ch2.tipTemperature.accumulate(result);
+         Debug::clear();
+         usbdm_assert(!ch2.driveReadState(), "Sample while channel 2 busy");
+         pidHandler();
+         break;
+
       default:
-         usbdm_assert(false,"Impossible ADC channel");
+         usbdm_assert(false, "Impossible ADC channel");
          break;
    }
+}
 
-   // Set up next conversion as needed
-   int nextAdcChannel = __builtin_ffs(adcChannelMask)-1;
-   if (nextAdcChannel >= 0) {
-      ADConverter::startConversion(AdcInterrupt_Enabled|nextAdcChannel);
-   }
+/**
+ * Timer interrupt handler for updating PID
+ */
+void Control::pidHandler() {
 
-   // Mark done current conversion
-   // Note - this means each conversion is done twice except for chip temperature
-   adcChannelMask &= ~(1<<adcChannel);
+//   Debug::set();
 
-   GpioSpare2::clear();
+   // Update drive to heaters as needed
+   channels[1].updateDrive(false);
+   channels[2].updateDrive(false);
+
+   Channel &ch1 = channels[1];
+   Channel &ch2 = channels[2];
+
+//   Debug::toggle();
+
+   ch1.upDateCurrentTemperature();
+   ch2.upDateCurrentTemperature();
+
+//   Debug::toggle();
+
+   // Update averages and run PID
+   ch1.upDatePid();
+//   Debug::toggle();
+
+   // Update averages and run PID
+   ch2.upDatePid();
+
+//   Debug::clear();
 }
 
 /**
@@ -406,23 +331,7 @@ void Control::reportChannel(Channel &ch) {
 
    if (count++ == 500) {
       count = 0;
-      console.setFloatFormat(2, Padding_LeadingSpaces, 2);
-      float tipV   = 1000*ch.tipTemperature.getVoltage();
-      float tipT   = ch.tipTemperature.getTemperature();
-      float coldT  = ch.coldJunctionTemperature.getTemperature();
-
-      console.
-      write("Tip = ").write(tipT+coldT).
-      write(" (").write(tipT).write("+").write(+coldT).
-      write("),(").write(tipV).write(" mV").
-      write(",").write(ch.coldJunctionTemperature.getResistance()).write(" ohms)").
-      write(" ").write(tipV).write(" ").write(coldT).write(" ").
-      //         write(" C, Ch1 Cold = ").write(ch1ColdJunctionTemperature.getConvertedValue()).
-      //         write(" C, Ch2 Tip  = ").write(ch2TipTemperature.getConvertedValue()+ch2ColdJunctionTemperature.getConvertedValue()).
-      //         write(" C, Ch2 Cold = ").write(ch2ColdJunctionTemperature.getConvertedValue()).
-      //         write(" C, Chip = ").write(chipTemperature.getConvertedValue()).
-      writeln();
-      console.resetFormat();
+      ch.report();
    }
 }
 
@@ -431,37 +340,14 @@ void Control::reportChannel(Channel &ch) {
  */
 void Control::reportPid(Channel &ch) {
 
-   doReport = false;
+   doReportPid = false;
 
-   console.setFloatFormat(2, Padding_LeadingSpaces, 2);
-   if (doReportTitle) {
-      doReportTitle = false;
-      console.
-         write("Kp = ").
-         write(ch.getTip()->getKp()).
-         write(',').
-         write("Drive").write(',').
-         write("Temp").write(',').
-         write("Error").write(',').
-         write("P").write(',').
-         write("I").write('<').write(ch.getTip()->getILimit()).write(',').
-         write("D").writeln();
-      console.
-         write("Ki = ").
-         write(ch.getTip()->getKi()).
-         write(',').
-         writeln(ch.getTipName());
-      console.
-         write("Kd = ").writeln(ch.getTip()->getKd());
+   if (doReportPidTitle) {
+      doReportPidTitle = false;
+      ch.controller.reportHeading(ch);
    }
    if (ch.controller.isEnabled()) {
-      double time  = ch.controller.getElapsedTime();
-      float input  = ch.controller.getInput();
-      float output = ch.controller.getOutput();
-
-      console.write(time).write(", ").write(output).write(", ").write(input);
-      ch.controller.report();
-      console.resetFormat();
+      ch.controller.report(ch);
    }
    console.resetFormat();
 }
@@ -475,9 +361,8 @@ void Control::eventLoop()  {
    setNeedsRefresh();
 
    for(;;) {
-      if (doReport) {
+      if (doReportPid) {
          reportPid(channels[1]);
-         //         reportChannel(channels[1]);
       }
       if (needRefresh) {
          // Redraw screen

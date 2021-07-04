@@ -16,7 +16,8 @@
 #include "cmp.h"
 
 /// Channel 1 stand sensor
-using Ch1Stand        = USBDM::GpioB<16, USBDM::ActiveLow>;
+//using Ch1Stand        = USBDM::GpioB<16, USBDM::ActiveLow>;
+using Ch1Stand        = USBDM::GpioB<17, USBDM::ActiveLow>;
 
 /// Channel 2 stand sensor
 using Ch2Stand        = USBDM::GpioB<17, USBDM::ActiveLow>;
@@ -73,17 +74,17 @@ using Ch1SelectedLed  = USBDM::GpioC<6, USBDM::ActiveHigh>;
 /// Channel 2 Selected LED
 using Ch2SelectedLed  = USBDM::GpioD<6, USBDM::ActiveHigh>;
 
-/// Channel 1 ID pin
-using Ch1Id           = ADConverter::Channel<4>; // V3 only
-
-/// Channel 2 ID pin
-using Ch2Id           = ADConverter::Channel<5>; // V3 only
-
 /// Channel 1 Drive
 using Ch1Drive        = USBDM::GpioC<3, USBDM::ActiveLow>;
 
 /// Channel 2 Drive
 using Ch2Drive        = USBDM::GpioC<4, USBDM::ActiveLow>;
+
+/// Channel 1 ID pin
+using Ch1Id           = ADConverter::Channel<4>; // V3 only
+
+/// Channel 2 ID pin
+using Ch2Id           = ADConverter::Channel<5>; // V3 only
 
 /// PIT Channel to use for switch polling
 using PollingTimerChannel = USBDM::Pit::Channel<0>;
@@ -93,9 +94,6 @@ using ControlTimerChannel = USBDM::Pit::Channel<1>;
 
 /// Quadrature Encoder shaft button
 using QuadButton  = USBDM::GpioD<2, USBDM::ActiveLow>;
-
-// Quadrature Encoder - not used
-//using QuadDecoder = USBDM::FtmQuadDecoder1;
 
 /// Quadrature Encoder pins as a GPIO field
 using QuadPhases = USBDM::GpioBField<1, 0, USBDM::ActiveLow>;
@@ -121,5 +119,7 @@ constexpr USBDM::Cmp0Input ZeroCrossingChannel = USBDM::Cmp0Input_Ptc7;
 using GpioSpare1 = USBDM::GpioA<4,USBDM::ActiveHigh>;
 using GpioSpare2 = USBDM::GpioC<2,USBDM::ActiveHigh>; // V2 only
 using GpioSpare3 = USBDM::GpioD<1,USBDM::ActiveHigh>; // V2 only
+
+using Debug        = USBDM::GpioB<16, USBDM::ActiveLow>;
 
 #endif /* SOURCES_PERIPHERALS_H_ */
