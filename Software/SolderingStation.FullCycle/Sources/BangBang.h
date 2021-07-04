@@ -1,89 +1,50 @@
 /**
- * @file    Pid.h
- * @brief   PID Controller class
+ * @file    BangBang.h
+ * @brief   Bang-Bang Controller class
  *
  *  Created on: 10 Jul 2021
  *      Author: podonoghue
  */
-#ifndef PROJECT_HEADERS_PID_H_
-#define PROJECT_HEADERS_PID_H_
+#ifndef PROJECT_HEADERS_BANGBANG_H_
+#define PROJECT_HEADERS_BANGBANG_H_
 
 #include "error.h"
-
-class Channel;
+#include "NonvolatileSettings.h"
 
 /**
- * PID Controller
+ * BangBang Controller
  */
-class Pid {
+class BangBang {
 
 private:
-   float    interval       = 10*USBDM::ms;     //!< Interval for sampling
-   float    outMin         = 0.0;              //!< Minimum limit for output
-   float    outMax         = 100.0;            //!< Maximum limit for output
+   double interval = 10*USBDM::ms;     //!< Interval for sampling
+   float  outMin   = 0.0;              //!< Minimum limit for output
+   float  outMax   = 100.0;            //!< Maximum limit for output
 
    bool     enabled        = false;    //!< Enable for controller
-
-   double   kp             = 0.0;
-   double   ki             = 0.0;
-   double   kd             = 0.0;
-   double   iLimit         = 0.0;
 
    double   lastInput      = 0.0;      //!< Last input sample
    double   currentInput   = 0.0;      //!< Current input sample
    double   currentOutput  = 0.0;      //!< Current output
    double   currentError   = 0.0;      //!< Current error calculation
 
-   double   integral       = 0.0;      //!< Integral accumulation term = sum(Ki * error(i)) * interval
-   double   differential   = 0.0;      //!< Differential term          = Kd/interval * (S(i)-S(i-1))
-   double   proportional   = 0.0;      //!< Proportional term          = Kp * error(i)
-
    unsigned tickCount      = 0;        //!< Time in ticks since last enabled
 
-   /**
-    * Get proportional control factor
-    *
-    * @return factor as double
-    */
-   double getKp() const { return kp; };
-
-   /**
-    * Get integral control factor
-    * This is scaled for internal use
-    *
-    * @return factor as double
-    */
-   double getKi() const { return ki; };
-
-   /**
-    * Get differential control factor
-    * This is scaled for internal use
-    *
-    * @return factor as double
-    */
-   double getKd() const {return kd; };
-
 public:
-
    /**
     * Constructor
-    *
-    * @param channel Associated channel
     */
-   Pid() {
-   }
+   BangBang(){ }
 
    /**
    * Destructor
    */
-   virtual ~Pid() {
+   virtual ~BangBang() {
    }
 
    /**
     * Enable controller\n
-    *
-    * @note: Controller is re-initialised when enabled.
-    * @note: Output is left unchanged when disabled.
+    * Note: Controller is re-initialised when enabled
     *
     * @param[in] enable True to enable
     */
@@ -91,7 +52,6 @@ public:
       if (enable) {
          if (!enabled) {
             // Just enabled
-            integral     = currentOutput;
             tickCount    = 0;
          }
       }
@@ -105,17 +65,11 @@ public:
     * @param[in] min       Minimum value of output variable
     * @param[in] max       Maximum value of output variable
     */
-   void setParameters(float newInterval, float min, float max);
-
-   /**
-    * Set control parameters
-    *
-    * @param kp
-    * @param ki
-    * @param kd
-    * @param iLimit
-    */
-   void setControlParameters(float kp, float ki, float kd, float iLimit);
+   void setParameters(double newInterval, float min, float max) {
+      interval = newInterval;
+      outMin   = min;
+      outMax   = max;
+   }
 
    /**
     * Indicates if the controller is enabled
@@ -154,22 +108,12 @@ public:
    }
 
    /**
-    * Get output of controller
+    * Get setpoint of controller
     *
-    * @return Last output value
+    * @return Last output sample
     */
    double getOutput() {
       return currentOutput;
-   }
-
-   /**
-    * Set output of controller
-    * This is used when the controller is disabled
-    *
-    * @param newOutput New output value
-    */
-   void setOutput(double newOutput) {
-      currentOutput = newOutput;
    }
 
    /**
@@ -191,9 +135,24 @@ public:
     *
     * @return  Adjustment predicted
     */
-   double newSample(double setpoint, double sample);
+   double newSample(double setpoint, double sample) {
 
-   void report();
+      if(!enabled) {
+         return 0;
+      }
+
+      tickCount++;
+
+      // Update input samples & error
+      lastInput    = currentInput;
+      currentInput = sample;
+      currentError = setpoint - currentInput;
+
+      currentOutput = currentError<0?outMin:outMax;
+
+      // Update output
+      return currentOutput;
+   }
 };
 
-#endif // PROJECT_HEADERS_PID_H_
+#endif // PROJECT_HEADERS_BANGBANG_H_
