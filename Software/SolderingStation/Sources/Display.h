@@ -79,7 +79,10 @@ public:
    /**
     * Initialise the display
     */
-   void initialise() {}
+   void initialise() {
+      oled.initialise();
+      oled.refreshImage();
+   }
 
    /**
     * Turn display on or off

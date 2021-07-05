@@ -182,7 +182,7 @@ void Control::overCurrentHandler() {
 }
 
 /// Delay between zero crossing and sampling (ADC conversion start) (us)
-static constexpr unsigned SAMPLE_DELAY  = 700;
+static constexpr unsigned SAMPLE_DELAY  = 500;
 
 /**
  * Comparator interrupt handler for controlling the heaters.

@@ -29,18 +29,24 @@ StepResponseDriver::StepResponseDriver(Channel &channel) : channel(channel) {
  */
 bool StepResponseDriver::run() {
 
-   static constexpr unsigned INITIAL_TIME = 50;
-   static constexpr unsigned DRIVING_TIME = 600;
-   static constexpr unsigned COOLING_TIME = 100;
+   static constexpr float TICK_INTERVAL    = 100*ms;
+
+   static constexpr unsigned INITIAL_TIME  = round( 50.0/TICK_INTERVAL);
+   static constexpr unsigned DRIVING_TIME  = round(600.0/TICK_INTERVAL);
+   static constexpr unsigned COOLING_TIME  = round(100.0/TICK_INTERVAL);
+
+   static constexpr unsigned REFRESH_TIME  = round(  1.0/TICK_INTERVAL);
+   static constexpr unsigned REPORT_TIME   = round(  0.5/TICK_INTERVAL);
 
    static constexpr unsigned MIN_DRIVE = 0;
-   static constexpr unsigned MAX_DRIVE = 5;
+   static constexpr unsigned MAX_DRIVE = 10;
 
    channel.setState(ch_fixedPower);
 
    enum {Step_Initial, Step_Driving, Step_Cooling, Step_Complete} state = Step_Initial;
 
-   unsigned tickCount = 0;
+   unsigned elapsedTime = 0;
+   unsigned tickCount   = 0;
    int drive = MIN_DRIVE;
    bool success = true;
 
@@ -48,39 +54,55 @@ bool StepResponseDriver::run() {
 
    while ((state != Step_Complete) && success) {
 
-      console.setWidth(4).setPadding(Padding_LeadingSpaces);
-      console.setFloatFormat(1, Padding_LeadingSpaces, 3);
-      console.write(tickCount).write(", ").write(drive).write(", ").writeln(channel.getCurrentTemperature());
-      console.resetFormat();
+      float currentTemp = channel.getCurrentTemperature();
 
+      if ((tickCount%REPORT_TIME) == 0) {
+         console.setWidth(4).setPadding(Padding_LeadingSpaces);
+         console.setFloatFormat(1, Padding_LeadingSpaces, 3);
+         console.write(elapsedTime*TICK_INTERVAL).write(", ").write(drive).write(", ").writeln(currentTemp);
+         console.resetFormat();
+      }
+      if ((tickCount%REFRESH_TIME) == 0) {
+         display.displayChannels();
+      }
+
+      elapsedTime++;
       tickCount++;
+
       switch(state) {
+
          case Step_Initial:
             if (tickCount >= INITIAL_TIME) {
-               state = Step_Driving;
-               drive = MAX_DRIVE;
+               state     = Step_Driving;
+               drive     = MAX_DRIVE;
+               tickCount = 0;
             }
             break;
+
          case Step_Driving:
-            if (tickCount >= INITIAL_TIME+DRIVING_TIME) {
-               state = Step_Cooling;
-               drive = MIN_DRIVE;
+            if (tickCount >= DRIVING_TIME) {
+               state     = Step_Cooling;
+               drive     = MIN_DRIVE;
+               tickCount = 0;
             }
             break;
+
          case Step_Cooling:
-            if (tickCount >= INITIAL_TIME+DRIVING_TIME+COOLING_TIME) {
-               state = Step_Complete;
+            if (tickCount >= COOLING_TIME) {
+               state     = Step_Complete;
+               tickCount = 0;
             }
             break;
+
+         case Step_Complete:
          default:
             state = Step_Complete;
             drive = MIN_DRIVE;
             break;
       }
       channel.setDutyCycle(drive);
-      success = (switchPolling.getEvent().type != ev_QuadHold);
-      display.displayChannels();
-      waitMS(1000);
+      success = (switchPolling.getEvent().type == ev_None) && (currentTemp<400);
+      wait(TICK_INTERVAL);
    }
 
    channel.setDutyCycle(0);

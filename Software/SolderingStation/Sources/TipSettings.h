@@ -138,10 +138,10 @@ public:
       this->coldJunctionTemperature.set(Calib_350, 25*FLOAT_SCALE_FACTOR);
       this->coldJunctionTemperature.set(Calib_400, 25*FLOAT_SCALE_FACTOR);
 
-      this->kp       = 10.0*FLOAT_SCALE_FACTOR;
+      this->kp       =  5.0*FLOAT_SCALE_FACTOR;
       this->ki       =  0.5*FLOAT_SCALE_FACTOR;
       this->kd       =  0.0*FLOAT_SCALE_FACTOR;
-      this->iLimit   = 50.0*FLOAT_SCALE_FACTOR;
+      this->iLimit   = 40.0*FLOAT_SCALE_FACTOR;
       }
 
    /**

@@ -194,7 +194,7 @@ EventType Menus::editTemperature(const SettingsData &data) {
  * @return  false - abort or failed
  * @return  true  - continue to next stage
  */
-bool Menus::calibrateTip(Channel &ch, TipSettings &tipsettings, TipSettings::Calib stage) {
+bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings::Calib stage) {
    static const unsigned targetTemperatures[] = {250, 350, 400};
 
    if (tipsettings.isFree()) {
@@ -256,7 +256,7 @@ bool Menus::calibrateTip(Channel &ch, TipSettings &tipsettings, TipSettings::Cal
  *
  * @return Exiting event
  */
-EventType Menus::calculateTipSettings(const SettingsData &) {
+EventType Menus::calibrateTipTemps(const SettingsData &) {
 
    // For debugging - disable channels
 //   Ch1Drive::setIn();
@@ -271,7 +271,7 @@ EventType Menus::calculateTipSettings(const SettingsData &) {
    int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isTemperatureCalibrated);
 
    int  offset    = 0;
-   BoundedInteger  selection{0, tipsAllocated-1, 0};
+   BoundedInteger  selection{0, tipsAllocated-1, Tips::findTipInMenu(channels[1].getTip(), menuItems, tipsAllocated)};
 
    // This is a dummy settings object that is NOT in nv-storage
    // Made static to avoid warnings about non-initialised object
@@ -312,9 +312,9 @@ EventType Menus::calculateTipSettings(const SettingsData &) {
 
             if (ev.isSelRelease()) {
                settings.tipNameIndex = menuItems[selection].tipSettings->tipNameIndex;
-               bool success = calibrateTip(channel, settings, TipSettings::Calib_250) &&
-                     calibrateTip(channel, settings, TipSettings::Calib_350) &&
-                     calibrateTip(channel, settings, TipSettings::Calib_400);
+               bool success = calibrateTipTemp(channel, settings, TipSettings::Calib_250) &&
+                     calibrateTipTemp(channel, settings, TipSettings::Calib_350) &&
+                     calibrateTipTemp(channel, settings, TipSettings::Calib_400);
 
                if (success) {
                   TipSettings *ts = (TipSettings*)menuItems[selection].tipSettings;
@@ -539,26 +539,11 @@ EventType Menus::editPidSettings(const SettingsData &) {
 }
 
 /**
- * Calculate a non-volatile tip PID setting.
- *
- * @param settings Data describing setting to change
- *
- * @return Exiting event
- */
-bool Menus::calculatePidSetting(TipSettings &tipSettings) {
-   Channel &channel = channels[1];
-   channel.setTip(&tipSettings);
-   StepResponseDriver driver(channels[1]);
-
-   return driver.run() && false;
-}
-
-/**
  * Calculate a non-volatile tip PID settings.
  *
  * @return Exiting event
  */
-EventType Menus::calculatePidSettings(const SettingsData &) {
+EventType Menus::stepResponse(const SettingsData &) {
 
    static constexpr unsigned modifiers = MenuItem::Starred;
 
@@ -569,17 +554,13 @@ EventType Menus::calculatePidSettings(const SettingsData &) {
    int  offset    = 0;
    BoundedInteger  selection{0, tipsAllocated-1, Tips::findTipInMenu(channels[1].getTip(), menuItems, tipsAllocated)};
 
-   // This is a dummy settings object that is NOT in nv-storage
-   // Made static to avoid warnings about non-initialised object
-   static TipSettings settings;
-
    bool refresh  = true;
    enum {working, complete, fail} loopControl = working;
    Event event;
 
    do {
       if (refresh) {
-         display.displayMenuList("PID Calibration", menuItems, modifiers, offset, selection);
+         display.displayMenuList("Step Response", menuItems, modifiers, offset, selection);
          refresh = false;
       }
 
@@ -599,20 +580,17 @@ EventType Menus::calculatePidSettings(const SettingsData &) {
                break;
             }
             Event ev = display.displayMessage(
-                  "Calibrate PID",
-                  "This will take\n"
-                  "a while, please\n"
-                  "be patient\n\n"
-                  "Press'n'hold to abort");
+                  "Step Response",
+                  "This will drive\n"
+                  "the tip at fixed\n"
+                  "power for a period.\n\n"
+                  "Press to start and end");
             if (ev.isSelRelease()) {
-               settings.tipNameIndex = menuItems[selection].tipSettings->tipNameIndex;
-               bool success = calculatePidSetting(settings);
-
-               if (success) {
-                  TipSettings *ts = (TipSettings*)menuItems[selection].tipSettings;
-                  ts->setPidControlValues(settings);
-                  menuItems[selection].modifiers |= MenuItem::Starred;
-               }
+               TipSettings *settings = menuItems[selection].tipSettings;
+               Channel &channel = channels[1];
+               channel.setTip(settings);
+               StepResponseDriver driver(channels[1]);
+               driver.run();
             }
          }
          break;
@@ -818,34 +796,34 @@ EventType Menus::displayChannelStatuses(const SettingsData &) {
 void Menus::settingsMenu() {
 
    static const SettingsData settingsData[] = {
-         {"Channel Status",           displayChannelStatuses                                            },
-         {"Tip Selection",            selectAvailableTips                                               },
-         {"Temp Calibration",         calculateTipSettings                                              },
-         {"PID Calibration",          calculatePidSettings                                              },
-         {"PID Manual",               editPidSettings                                                   },
          {"Channel 1\nSetback temp.", editTemperature,      nvinit.ch1Settings.setbackTemperature, 1    }, // C
          {"Channel 2\nSetback temp.", editTemperature,      nvinit.ch2Settings.setbackTemperature, 1    }, // C
          {"Channel 1\nIdle time",     editTime,             nvinit.ch1Settings.setbackTime,        30   }, // seconds
          {"Channel 2\nIdle time",     editTime,             nvinit.ch2Settings.setbackTime,        30   }, // seconds
          {"Channel 1\nSafety time",   editTime,             nvinit.ch1Settings.safetyOffTime,      30   }, // seconds
          {"Channel 2\nSafety time",   editTime,             nvinit.ch2Settings.safetyOffTime,      30   }, // seconds
+         {"Tip Selection",            selectAvailableTips                                               },
+         {"Temp Calibration",         calibrateTipTemps                                                 },
+         {"Step Response",            stepResponse                                                      },
+         {"PID Manual",               editPidSettings                                                   },
+         {"Channel Status",           displayChannelStatuses                                            },
    };
 
    //   console.write("Size    = ").writeln(sizeof(settingsData));
    //   console.write("Address = ").writeln(&settingsData);
 
    static const MenuItem items[] = {
-         {"Channel Status",     },
-         {"Tip Selection",     },
-         {"Temp Calibration",  },
-         {"Pid Calibration",   },
-         {"Pid Manual set",   },
          {"Ch1 Setback temp.", },
          {"Ch2 Setback temp.", },
          {"Ch1 Idle time",     },
          {"Ch2 Idle time",     },
          {"Ch1 Safety time",   },
          {"Ch1 Safety time",   },
+         {"Tip Selection",     },
+         {"Temp Calibration",  },
+         {"Step Response",     },
+         {"Pid Manual set",    },
+         {"Channel Status",    },
    };
 
    int  offset    = 0;

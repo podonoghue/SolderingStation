@@ -75,7 +75,7 @@ public:
     * @return  false - abort or failed
     * @return  true  - continue to next stage
     */
-   static bool calibrateTip(Channel &ch, TipSettings &tipsettings, TipSettings::Calib stage);
+   static bool calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings::Calib stage);
 
    /**
     * Calculate a non-volatile tip calibration setting.
@@ -84,7 +84,7 @@ public:
     *
     * @return Exiting event
     */
-   static EventType calculateTipSettings(const SettingsData &data);
+   static EventType calibrateTipTemps(const SettingsData &data);
 
    /**
     * Edit a non-volatile tip calibration setting.
@@ -103,20 +103,11 @@ public:
    static EventType editPidSettings(const SettingsData &);
 
    /**
-    * Calculate a non-volatile tip PID setting.
-    *
-    * @param settings Data describing setting to change
-    *
-    * @return Exiting event
-    */
-   static bool calculatePidSetting(TipSettings &settings);
-
-   /**
     * Calculate a non-volatile tip PID settings.
     *
     * @return Exiting event
     */
-   static EventType calculatePidSettings(const SettingsData &);
+   static EventType stepResponse(const SettingsData &);
 
    /**
     * Edit a available tips in non-volatile settings.
