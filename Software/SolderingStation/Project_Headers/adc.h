@@ -808,6 +808,13 @@ public:
       /** Channel number */
       static constexpr int CHANNEL=channel;
 
+      /** GPIO pin associated with this channel (Not all channels have an associated GPIO!) */
+      template<Polarity polarity=ActiveHigh>
+      class GpioPin : public GpioTable_T<Info, channel, polarity> {
+         static_assert((Adc0Info::info[channel].portAddress != 0),
+               "ADC channel does not have corresponding GPIO pin");
+      };
+
       /**
        * Configure the pin associated with this ADC channel.
        * The pin is in analogue mode so no PCR settings are active.
