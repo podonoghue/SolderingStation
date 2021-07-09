@@ -8,13 +8,13 @@
 #ifndef SOURCES_CHANNEL_H_
 #define SOURCES_CHANNEL_H_
 
+#include <BangBangController.h>
 #include <algorithm>
 #include "hardware.h"
 #include "Averaging.h"
 #include "ChannelSettings.h"
 #include "DutyCycleCounter.h"
 #include "Controller.h"
-#include "BangBang.h"
 #include "Tips.h"
 
 class StepResponseDriver;
@@ -47,10 +47,10 @@ public:
    ChannelSettings  &nvSettings;
 
    /// Moving window average for tip temperature (thermocouple)
-   ThermocoupleAverage tipTemperature;
+   TemperatureAverage &tipTemperature;
 
    /// Moving window average for cold junction temperature (NTC resistor)
-   ThermistorAverage coldJunctionTemperature;
+   TemperatureAverage &coldJunctionTemperature;
 
    /// Average power - just for display purposes
    SimpleMovingAverage<5> power;
@@ -79,10 +79,12 @@ public:
     *
     * @param[in] settings  Non-volatile channel settings to associate with this channel
     */
-   Channel(ChannelSettings &settings, Controller *controller) :
+   Channel(ChannelSettings &settings, Controller &controller, TemperatureAverage &tipTemperature, TemperatureAverage &coldJunction) :
       DutyCycleCounter(100),
       nvSettings(settings),
-      controller(*controller) {
+      tipTemperature(tipTemperature),
+      coldJunctionTemperature(coldJunction),
+      controller(controller) {
 
       setUserTemperature(settings.presets[preset]);
       refreshPidParameters();
@@ -315,7 +317,7 @@ public:
     */
    void upDateCurrentTemperature() {
       currentTemperature = tipTemperature.getTemperature()+coldJunctionTemperature.getTemperature();
-      tipPresent = tipTemperature.getAverage() < (ADConverter::getSingleEndedMaximum(ADC_RESOLUTION)-200);
+      tipPresent = currentTemperature < 600;
       // Power average
       power.accumulate(getDutyCycle());
    }
@@ -336,14 +338,14 @@ public:
       }
    }
 
-   /**
-    * Get Thermistor resistance
-    *
-    * @return Resistance in ohms
-    */
-   float getThermisterResistance() {
-      return coldJunctionTemperature.getResistance();
-   }
+//   /**
+//    * Get Thermistor resistance
+//    *
+//    * @return Resistance in ohms
+//    */
+//   float getThermisterResistance() {
+//      return coldJunctionTemperature.getResistance();
+//   }
 
    /**
     * Get Thermistor temperature
@@ -354,14 +356,14 @@ public:
       return coldJunctionTemperature.getTemperature();
    }
 
-   /**
-    * Get thermocouple voltage
-    *
-    * @return Voltage in volts
-    */
-   float getThermocoupleVoltage() {
-      return tipTemperature.getVoltage();
-   }
+//   /**
+//    * Get thermocouple voltage
+//    *
+//    * @return Voltage in volts
+//    */
+//   float getThermocoupleVoltage() {
+//      return tipTemperature.getVoltage();
+//   }
 
    /**
     * Get thermocouple temperature
@@ -433,8 +435,8 @@ public:
     *
     * @param borrowCycle Whether to borrow a cycle for sampling
     */
-   void updateDrive(bool borrowCycle) {
-      advance(borrowCycle);
+   void updateDrive() {
+      advance();
       driveWrite(isOn());
    }
 
@@ -484,23 +486,23 @@ public:
    }
 
    void report() {
-      USBDM::console.setFloatFormat(2, USBDM::Padding_LeadingSpaces, 2);
-      float tipV   = 1000*tipTemperature.getVoltage();
-      float tipT   = tipTemperature.getTemperature();
-      float coldT  = coldJunctionTemperature.getTemperature();
-
-      USBDM::console.
-      write("Tip = ").write(tipT+coldT).
-      write(" (").write(tipT).write("+").write(+coldT).
-      write("),(").write(tipV).write(" mV").
-      write(",").write(coldJunctionTemperature.getResistance()).write(" ohms)").
-      write(" ").write(tipV).write(" ").write(coldT).write(" ").
-      //         write(" C, Ch1 Cold = ").write(ch1ColdJunctionTemperature.getConvertedValue()).
-      //         write(" C, Ch2 Tip  = ").write(ch2TipTemperature.getConvertedValue()+ch2ColdJunctionTemperature.getConvertedValue()).
-      //         write(" C, Ch2 Cold = ").write(ch2ColdJunctionTemperature.getConvertedValue()).
-      //         write(" C, Chip = ").write(chipTemperature.getConvertedValue()).
-      writeln();
-      USBDM::console.resetFormat();
+//      USBDM::console.setFloatFormat(2, USBDM::Padding_LeadingSpaces, 2);
+//      float tipV   = 1000*tipTemperature.getVoltage();
+//      float tipT   = tipTemperature.getTemperature();
+//      float coldT  = coldJunctionTemperature.getTemperature();
+//
+//      USBDM::console.
+//      write("Tip = ").write(tipT+coldT).
+//      write(" (").write(tipT).write("+").write(+coldT).
+//      write("),(").write(tipV).write(" mV").
+//      write(",").write(coldJunctionTemperature.getResistance()).write(" ohms)").
+//      write(" ").write(tipV).write(" ").write(coldT).write(" ").
+//      //         write(" C, Ch1 Cold = ").write(ch1ColdJunctionTemperature.getConvertedValue()).
+//      //         write(" C, Ch2 Tip  = ").write(ch2TipTemperature.getConvertedValue()+ch2ColdJunctionTemperature.getConvertedValue()).
+//      //         write(" C, Ch2 Cold = ").write(ch2ColdJunctionTemperature.getConvertedValue()).
+//      //         write(" C, Chip = ").write(chipTemperature.getConvertedValue()).
+//      writeln();
+//      USBDM::console.resetFormat();
    }
 };
 

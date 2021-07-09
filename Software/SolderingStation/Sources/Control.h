@@ -8,7 +8,7 @@
 #ifndef SOURCES_CONTROL_H_
 #define SOURCES_CONTROL_H_
 
-#include "PidControllerController.h"
+#include <PidController.h>
 #include "Peripherals.h"
 #include "Display.h"
 #include "Channel.h"
@@ -38,7 +38,7 @@ public:
    ///      80% ~ 60W for 8 ohm element
    ///      90% ~ 65W for 8 ohm element
    /// Can't go above 90% as cycles are stolen for sampling
-   static constexpr int      MAX_DUTY     = 100;
+   static constexpr int      MAX_DUTY     = 80;
 
    /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohm element
    static constexpr int      MIN_DUTY     = 0;
@@ -66,6 +66,10 @@ private:
    /// Multiple of zero-crossing interval
    static constexpr unsigned REFRESH_INTERVAL = round(0.5/PID_INTERVAL);
 
+   /// How often to log PID
+   /// Multiple of zero-crossing interval
+   static constexpr unsigned PID_LOG_INTERVAL = round(0.25/PID_INTERVAL);
+
 public:
    /**
     * Constructor
@@ -84,13 +88,6 @@ public:
     * Initialise the control
     */
    void initialise();
-
-   /**
-    * Check if channel is enabled
-    *
-    * @param ch Channel to check
-    */
-   bool isEnabled(unsigned channel);
 
    /**
     * Toggle the enable state of a channel.
@@ -123,16 +120,6 @@ public:
     * @param delta Amount to change by
     */
    void changeTemp(int16_t delta);
-
-   /**
-    * Update the current preset from the current temperature of the currently selected channel
-    */
-   void updatePreset();
-
-   /**
-    * Interrupt handler for over current comparator
-    */
-   void overCurrentHandler();
 
    /**
     * Interrupt handler for mains zero crossing Comparator

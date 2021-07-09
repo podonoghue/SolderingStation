@@ -36,6 +36,7 @@ void Control::initialise() {
    ch1.enable();
    ch2.enable();
 
+   // Configure ADC to use a call-back
    static auto adc_cb = [](uint32_t result, int channel){
       This->adcHandler(result, channel);
    };
@@ -55,44 +56,39 @@ void Control::initialise() {
    ADConverter::setCallback(adc_cb);
    ADConverter::enableNvicInterrupts(NvicPriority_MidHigh);
 
-   static auto zx_cb = [](CmpStatus cmpStatus){
-      if (cmpStatus.event&CmpEvent_Falling) {
-         This->zeroCrossingHandler();
-      }
+   // Configure PIT for use in timing
+   Pit::configureIfNeeded();
+   ControlTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
+
+   // Configure comparator for mains zero-crossing detection
+   // Trigger is actually on the falling edge of rectified waveform near zero
+
+   static auto zero_crossing_cb = [](CmpStatus){
+      This->zeroCrossingHandler();
    };
 
-   static constexpr uint8_t DAC_THRESHOLD = 2.8*(Cmp0::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
-
-   Pit::configureIfNeeded();
-
-   ControlTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
+   static constexpr uint8_t ZERO_CROSSING_DAC_THRESHOLD = 2.8*(ZeroCrossingComparator::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
 
    ZeroCrossingComparator::configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
    ZeroCrossingComparator::setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 255);
    ZeroCrossingComparator::setInputs();
-   ZeroCrossingComparator::configureDac(DAC_THRESHOLD, CmpDacSource_Vdda);
-   ZeroCrossingComparator::selectInputs(Cmp0Input_Ptc7, Cmp0Input_Cmp0Dac);
-   ZeroCrossingComparator::setCallback(zx_cb);
+   ZeroCrossingComparator::configureDac(ZERO_CROSSING_DAC_THRESHOLD, CmpDacSource_Vdda);
+   ZeroCrossingComparator::selectInputs(ZeroCrossingInput, Cmp0Input_Cmp0Dac);
+   ZeroCrossingComparator::setCallback(zero_crossing_cb);
    ZeroCrossingComparator::enableInterrupts(CmpInterrupt_Falling);
    ZeroCrossingComparator::enableNvicInterrupts(NvicPriority_Normal);
 
+   // Over-current detection using external comparator and pin IRQ
    static auto overcurrent_cb = [](uint32_t){
-      This->overCurrentHandler();
-   };
+      // Mark channels as overloaded
+      channels[1].setOverload();
+      channels[2].setOverload();
+      This->setNeedsRefresh();
+};
 
    Overcurrent::setInput(PinPull_None, PinAction_IrqFalling, PinFilter_Passive);
    Overcurrent::setCallback(overcurrent_cb);
    Overcurrent::enableNvicInterrupts(NvicPriority_High);
-}
-
-/**
- * Check if channel is enabled
- *
- * @param ch Channel to check
- */
-bool Control::isEnabled(unsigned ch) {
-   Channel &channel = channels[ch];
-   return (channel.getState() != ch_off);
 }
 
 /**
@@ -114,7 +110,6 @@ void Control::toggleEnable(unsigned ch) {
 
 /**
  * Enable channel.
- * It also becomes selected.
  *
  * @param ch Channel to enable
  */
@@ -148,37 +143,11 @@ void Control::changeTemp(int16_t delta) {
 
    Channel &channel = channels.getSelectedChannel();
 
-   int targetTemperature = channel.getUserTemperature();
+   BoundedInteger targetTemperature(MIN_TEMP, MAX_TEMP, channel.getUserTemperature());
 
    targetTemperature += delta;
-   if (targetTemperature>MAX_TEMP) {
-      targetTemperature = MAX_TEMP;
-   }
-   if (targetTemperature<MIN_TEMP) {
-      targetTemperature = MIN_TEMP;
-   }
+
    channel.setUserTemperature(targetTemperature);
-}
-
-/**
- * Update the current preset from the current temperature of the currently selected channel
- */
-void Control::updatePreset() {
-   Channel &channel = channels.getSelectedChannel();
-
-   channel.updatePresetTemperature();
-}
-
-/**
- * Interrupt handler for over current comparator
- */
-void Control::overCurrentHandler() {
-
-   // Mark channels as overloaded
-   channels[1].setOverload();
-   channels[2].setOverload();
-
-   setNeedsRefresh();
 }
 
 /// Delay between zero crossing and sampling (ADC conversion start) (us)
@@ -218,10 +187,6 @@ void Control::zeroCrossingHandler() {
       setNeedsRefresh();
    }
 
-   /// How often to log PID
-   /// Multiple of zero-crossing interval
-   static constexpr unsigned PID_LOG_INTERVAL = round(0.25/PID_INTERVAL);
-
    // PID reporting
    if (++reportCount >= PID_LOG_INTERVAL) {
       reportCount = 0;
@@ -250,6 +215,11 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
       case ChipTemperature::CHANNEL :
          chipTemperature.accumulate(result);
          Ch1ColdJunctionNtc::startConversion(AdcInterrupt_Enabled);
+         // Set up bias resistors for later tip measurements
+         Ch1BiasResistor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
+         Ch1BiasResistor::write(ch1.tipTemperature.isBiasRequired());
+         Ch2BiasResistor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
+         Ch2BiasResistor::write(ch2.tipTemperature.isBiasRequired());
          break;
 
       case Ch1ColdJunctionNtc::CHANNEL :
@@ -273,7 +243,18 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
          ch2.tipTemperature.accumulate(result);
          Debug::clear();
          usbdm_assert(!ch2.driveReadState(), "Sample while channel 2 busy");
+         // Disable bias while checking IDs
+         Ch1Id::setInput();
+         Ch2Id::setInput();
          pidHandler();
+         Ch1Id::startConversion(AdcInterrupt_Enabled);
+         break;
+
+      case Ch1Id::CHANNEL :
+         Ch2Id::startConversion(AdcInterrupt_Enabled);
+         break;
+
+      case Ch2Id::CHANNEL :
          break;
 
       default:
@@ -284,33 +265,24 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 
 /**
  * Timer interrupt handler for updating PID
+ * This includes the heater drives
  */
 void Control::pidHandler() {
-
-//   Debug::set();
-
-   // Update drive to heaters as needed
-   channels[1].updateDrive(false);
-   channels[2].updateDrive(false);
 
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
 
-//   Debug::toggle();
+   // Update drive to heaters as needed
+   ch1.updateDrive();
+   ch2.updateDrive();
 
+   // Calculate current temperatures
    ch1.upDateCurrentTemperature();
    ch2.upDateCurrentTemperature();
 
-//   Debug::toggle();
-
    // Update averages and run PID
    ch1.upDatePid();
-//   Debug::toggle();
-
-   // Update averages and run PID
    ch2.upDatePid();
-
-//   Debug::clear();
 }
 
 /**
@@ -394,19 +366,6 @@ void Control::eventLoop()  {
             toggleEnable(2);
             break;
 
-         case ev_Ch1Ch2Hold   :
-            if (!isEnabled(1) && !isEnabled(2)) {
-               // Both currently off - turn on both channels
-               enable(2);
-               enable(1); // Active channel
-            }
-            else {
-               // >= 1 channel on - turn both off
-               disable(1);
-               disable(2);
-            }
-            break;
-
          case ev_Ch1Release      :
             channels.setSelectedChannel(1);
             break;
@@ -416,7 +375,7 @@ void Control::eventLoop()  {
             break;
 
          case ev_QuadRelease   :
-            updatePreset();
+            channels.getSelectedChannel().updatePresetTemperature();
             break;
 
          case ev_QuadRotate    :

@@ -165,36 +165,36 @@ EventType SwitchPolling::pollSwitches() {
  * Set-back Polling
  */
 void SwitchPolling::pollSetbacks() {
-
-   // Indicates tool was in use when last polled
-   static bool lastToolBusy[channels.NUM_CHANNELS] = {false};
-
-   // Indicates tool is in use currently
-   bool toolBusy[channels.NUM_CHANNELS];
-
-   // Get current tool rest state
-   unsigned toolPoll = Setbacks::read();
-
-   // Poll tools
-   toolBusy[0] = toolPoll & (1<<(Ch1Stand::BITNUM-Setbacks::RIGHT));
-   toolBusy[1] = toolPoll & (1<<(Ch2Stand::BITNUM-Setbacks::RIGHT));
-
-   for (unsigned tool=0; tool<channels.NUM_CHANNELS; tool++) {
-
-      Channel &channel = channels[tool+1];
-
-      if (lastToolBusy[tool] != toolBusy[tool]) {
-
-         // Tool moved - start over
-         channel.restartIdleTimer();
-         lastToolBusy[tool] = toolBusy[tool];
-      }
-      else if (!toolBusy[tool]) {
-
-         // Tool in holder - increment idle time
-         channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
-      }
-   }
+//
+//   // Indicates tool was in use when last polled
+//   static bool lastToolBusy[channels.NUM_CHANNELS] = {false};
+//
+//   // Indicates tool is in use currently
+//   bool toolBusy[channels.NUM_CHANNELS];
+//
+//   // Get current tool rest state
+//   unsigned toolPoll = Setbacks::read();
+//
+//   // Poll tools
+//   toolBusy[0] = toolPoll & (1<<(Ch1Stand::BITNUM-Setbacks::RIGHT));
+//   toolBusy[1] = toolPoll & (1<<(Ch2Stand::BITNUM-Setbacks::RIGHT));
+//
+//   for (unsigned tool=0; tool<channels.NUM_CHANNELS; tool++) {
+//
+//      Channel &channel = channels[tool+1];
+//
+//      if (lastToolBusy[tool] != toolBusy[tool]) {
+//
+//         // Tool moved - start over
+//         channel.restartIdleTimer();
+//         lastToolBusy[tool] = toolBusy[tool];
+//      }
+//      else if (!toolBusy[tool]) {
+//
+//         // Tool in holder - increment idle time
+//         channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
+//      }
+//   }
 }
 
 /**
@@ -241,7 +241,7 @@ void SwitchPolling::initialise() {
 
    Buttons::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
-   Setbacks::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
+//   Setbacks::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
    /**
     * Call-back handling switch and set-back polling

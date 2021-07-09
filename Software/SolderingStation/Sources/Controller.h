@@ -25,13 +25,13 @@ protected:
    const float fInterval;
 
    /// Current input sample
-   float      fCurrentInput   = 0.0;
+   float       fCurrentInput   = 0.0;
 
    /// Current output
-   float      fCurrentOutput  = 0.0;
+   float       fCurrentOutput  = 0.0;
 
    /// Current error calculation
-   float      fCurrentError   = 0.0;
+   float       fCurrentError   = 0.0;
 
    /// Minimum limit for output
    const float fOutMin;

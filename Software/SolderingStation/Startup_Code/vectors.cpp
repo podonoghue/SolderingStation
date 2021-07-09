@@ -148,7 +148,6 @@ void _HardFault_Handler(
 
       // Stop here for debugger
       __asm__("bkpt");
-
    }
 }
 

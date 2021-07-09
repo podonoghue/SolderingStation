@@ -17,13 +17,13 @@
 
 /// Channel 1 stand sensor
 //using Ch1Stand        = USBDM::GpioB<16, USBDM::ActiveLow>;
-using Ch1Stand        = USBDM::GpioB<17, USBDM::ActiveLow>;
+//using Ch1Stand        = USBDM::GpioB<17, USBDM::ActiveLow>;
 
 /// Channel 2 stand sensor
-using Ch2Stand        = USBDM::GpioB<17, USBDM::ActiveLow>;
+//using Ch2Stand        = USBDM::GpioB<17, USBDM::ActiveLow>;
 
 /// Channel 1 & 2 stand sensors
-using Setbacks        = USBDM::GpioBField<Ch2Stand::BITNUM, Ch1Stand::BITNUM, USBDM::ActiveLow>;
+//using Setbacks        = USBDM::GpioBField<Ch2Stand::BITNUM, Ch1Stand::BITNUM, USBDM::ActiveLow>;
 
 /// Over-current comparator
 using Overcurrent     = USBDM::GpioD<7, USBDM::ActiveHigh>;
@@ -46,19 +46,6 @@ using Ch1ColdJunctionNtc = ADConverter::Channel<15>;  // PTC1/SE15
 /// Channel 2 handle thermocouple (cold junction)
 using Ch2ColdJunctionNtc = ADConverter::Channel<14>;  // PTC0/SE14
 
-/// NTC measurement current
-constexpr float NTC_MEASUREMENT_CURRENT  = 237E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA!
-
-/// Gain of NTC measurement amplifier - voltage follower
-constexpr float NTC_MEASUREMENT_GAIN   = 1.0;
-
-/// NTC measurement ratio ohms/volt i.e. converts ADC voltage to R
-constexpr float NTC_MEASUREMENT_RATIO   = 1/(NTC_MEASUREMENT_CURRENT*NTC_MEASUREMENT_GAIN);
-
-/// Thermocouple measurement ratio V/V i.e. converts ADC voltage to thermocouple voltage in V
-/// Amplifier gain is Rf/Ri = 100K/1K
-constexpr float TC_MEASUREMENT_RATIO   = (1.0/100.0);
-
 /// Internal temperature sensor (25 - (Tvolts-0.719)/.001715)
 using ChipTemperature    = ADConverter::Channel<0b11010>;
 
@@ -67,6 +54,12 @@ using BandGap            = ADConverter::Channel<0b11011>;
 
 /// External voltage reference for ADC (Vrefh)
 constexpr float ADC_REF_VOLTAGE = 3.00;
+
+/// Thermocouple op-amp feedback resistor
+constexpr float Rf = 100000;
+
+/// Thermocouple op-amp input resistor
+constexpr float Ri = 1000;
 
 /// Channel 1 Selected LED
 using Ch1SelectedLed  = USBDM::GpioC<6, USBDM::ActiveHigh>;
@@ -80,11 +73,14 @@ using Ch1Drive        = USBDM::GpioC<3, USBDM::ActiveLow>;
 /// Channel 2 Drive
 using Ch2Drive        = USBDM::GpioC<4, USBDM::ActiveLow>;
 
-/// Channel 1 ID pin
+/// Channel 1 ID pin and bias resistor share a pin
 using Ch1Id           = ADConverter::Channel<4>; // V3 only
+//using Ch1BiasResistor = Ch1Id::GpioPin<USBDM::ActiveHigh>;
+using Ch1BiasResistor = USBDM::GpioB<17, USBDM::ActiveLow>; // hack for V2
 
-/// Channel 2 ID pin
+/// Channel 2 ID pin and bias resistor share a pin
 using Ch2Id           = ADConverter::Channel<5>; // V3 only
+using Ch2BiasResistor = Ch2Id::GpioPin<USBDM::ActiveHigh>;
 
 /// PIT Channel to use for switch polling
 using PollingTimerChannel = USBDM::Pit::Channel<0>;
@@ -114,7 +110,7 @@ using Buttons     = USBDM::GpioDField<SelButton::BITNUM, QuadButton::BITNUM, USB
 using ZeroCrossingComparator = USBDM::Cmp0;
 
 /// Zero Crossing Detector pin
-constexpr USBDM::Cmp0Input ZeroCrossingChannel = USBDM::Cmp0Input_Ptc7;
+constexpr USBDM::Cmp0Input ZeroCrossingInput = USBDM::Cmp0Input_Ptc7;
 
 using GpioSpare1 = USBDM::GpioA<4,USBDM::ActiveHigh>;
 using GpioSpare2 = USBDM::GpioC<2,USBDM::ActiveHigh>; // V2 only

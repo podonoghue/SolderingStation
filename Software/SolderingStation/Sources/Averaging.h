@@ -309,14 +309,22 @@ public:
 using AveragingMethod = MovingAverage<10>; // 10*10ms = declining weights over 100ms average
 //using AveragingMethod = DummyAverage;
 
-/**
- * Class representing a average customised for a thermistor
- *
- * @tparam WindowSize Number of samples to average over
- */
-class ThermistorAverage : public AveragingMethod {
+class TemperatureAverage : public AveragingMethod {
 
 public:
+   virtual float getTemperature() = 0;
+   virtual bool isBiasRequired()  {
+      return false;
+   }
+};
+
+/**
+ * Class representing an average customised for a NTC thermistor
+ * MF58 10k B3950
+ */
+class ThermistorMF58Average : public TemperatureAverage {
+
+protected:
 
    /**
     * Converts thermistor resistance value to temperature
@@ -360,6 +368,14 @@ public:
     * @return Thermistor resistance in ohms
     */
    float getResistance() {
+      /// NTC measurement current
+      constexpr float NTC_MEASUREMENT_CURRENT  = 237E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA!
+
+      /// Gain of NTC measurement amplifier - voltage follower
+      constexpr float NTC_MEASUREMENT_GAIN   = 1.0;
+
+      /// NTC measurement ratio ohms/volt i.e. converts ADC voltage to R
+      constexpr float NTC_MEASUREMENT_RATIO   = 1/(NTC_MEASUREMENT_CURRENT*NTC_MEASUREMENT_GAIN);
 
       // Get ADC value as voltage
       float voltage = getVoltageAverage();
@@ -367,12 +383,13 @@ public:
       return NTC_MEASUREMENT_RATIO * voltage;
    }
 
+public:
    /**
     * Returns the average of the thermistor temperature in Celsius
     *
     * @return  Thermistor temperature in Celsius
     */
-   float getTemperature() {
+   virtual float getTemperature() override {
 
       return resistanceToCelsius(getResistance());
    }
@@ -381,8 +398,9 @@ public:
 /**
  * Class representing an average customised for a thermocouple
  */
-class ThermocoupleAverage : public AveragingMethod {
+class ThermocoupleAverage : public TemperatureAverage {
 
+protected:
    /**
     * Converts a thermocouple voltage to temperature
     *
@@ -404,13 +422,15 @@ class ThermocoupleAverage : public AveragingMethod {
       return temperature;
    }
 
-public:
    /**
     * Returns the average of the thermocouple voltage
     *
     * @return Thermocouple voltage in V
     */
    float getVoltage() {
+      /// Thermocouple measurement ratio V/V i.e. converts ADC voltage to thermocouple voltage in V
+      /// Amplifier gain is Rf/Ri
+      constexpr float TC_MEASUREMENT_RATIO   = (Ri/Rf);
 
       // Get ADC value as voltage
       float voltage = getVoltageAverage();
@@ -418,6 +438,7 @@ public:
       return voltage * TC_MEASUREMENT_RATIO;
    }
 
+public:
    /**
     * Returns the average of the thermocouple temperature relative to the cold reference
     *
@@ -432,7 +453,7 @@ public:
 /**
  * Class representing an average customised for the internal temperature sensor
  */
-class ChipTemperatureAverage : public AveragingMethod {
+class ChipTemperatureAverage : public TemperatureAverage {
 
 private:
 
@@ -454,9 +475,93 @@ public:
     *
     * @return Chip temperature in Celsius
     */
-   virtual float getTemperature() {
+   virtual float getTemperature() override {
 
       return voltageToCelsius(getVoltageAverage());
+   }
+};
+
+/**
+ * Class representing an average customised for a Weller PTC Thermistor
+ *
+ * Conversion formula based on:
+ * https://www.edaboard.com/threads/schematics-from-weller-pu81-power-unit-for-wsp80.90461/
+ */
+class ThermistorWellerAverage : public TemperatureAverage {
+
+private:
+   /**
+    * Converts a thermistor voltage to temperature
+    * The voltage is produced by a voltage divider with Thevenin equivalent Rt and Vt.
+    *
+    * @param voltage PTC Thermistor voltage
+    *
+    * @return Temperature in Celsius
+    */
+   static float voltageToCelsius(float voltage) {
+      // Thevenin equivalent
+      constexpr float Rbias  = 10000.0;
+      constexpr float Ropamp = 100000.0+1000.0;
+      constexpr float Vt = 3.3*(Ropamp)/(Rbias+Ropamp);
+      constexpr float Rt = (Rbias*Ropamp)/(Rbias+Ropamp);
+
+      // Voltage divider
+      float Rptc = Rt/((Vt/voltage)-1);
+
+      // Linear interpolation from R -> T
+      constexpr float Ah_constant = -276.6;
+      constexpr float Bh_constant =   13.710;
+
+      float temperature = Ah_constant + Bh_constant*Rptc;
+
+//      USBDM::console.write("Vptc=").write(1000*voltage).write("mV Rptc=").write(Rptc).write(" T= ").writeln(temperature);
+
+      return temperature;
+   }
+
+   /**
+    * Returns the average of the thermocouple voltage
+    *
+    * @return Thermocouple voltage in V
+    */
+   float getVoltage() {
+      /// Thermocouple measurement ratio V/V i.e. converts ADC voltage to thermocouple voltage in V
+      /// Amplifier gain is Rf/Ri = 100K/1K
+      constexpr float TC_MEASUREMENT_RATIO   = (Ri/Rf);
+
+      // Get ADC value as voltage
+      float voltage = getVoltageAverage();
+
+      return voltage * TC_MEASUREMENT_RATIO;
+   }
+
+public:
+   /**
+    * Returns the average of the thermocouple temperature relative to the cold reference
+    *
+    * @return Thermocouple temperature in Celsius
+    */
+   virtual float getTemperature() override {
+
+      return voltageToCelsius(getVoltage());
+   }
+
+   virtual bool isBiasRequired() override {
+      return true;
+   }
+};
+
+/**
+ * Class representing an average customised for a Weller PTC Thermistor
+ *
+ * Conversion formula based on:
+ * https://www.edaboard.com/threads/schematics-from-weller-pu81-power-unit-for-wsp80.90461/
+ */
+class ZeroAverage : public TemperatureAverage {
+
+public:
+   virtual float getTemperature() override {
+      return 0.0;
    }
 };
 

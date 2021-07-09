@@ -8,6 +8,7 @@
 #include "Channels.h"
 #include "Control.h"
 #include "pmc.h"
+#include "rcm.h"
 
 using namespace USBDM;
 
@@ -31,6 +32,9 @@ Control        control;
 Display        display;
 
 void initialise() {
+   // Turn on filtering of reset pin
+   Rcm::configure(RcmResetPinRunWaitFilter_LowPowerOscillator, RcmResetPinStopFilter_LowPowerOscillator);
+
    display.initialise();
    control.initialise();
    switchPolling.initialise();
@@ -57,19 +61,14 @@ void _exit(int rc __attribute__((unused))) {
 int main() {
    initialise();
 
+//   Ch1Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
 //   for(;;) {
-//      display.enable(true);
-//      waitMS(1000);
-//      display.enable(false);
+//      Ch1Drive::on();
+//      waitMS(10);
+//      Ch1Drive::off();
 //      waitMS(1000);
 //   }
-//   control.testMenu();
-
-//   reportBandgapVoltage();
-//      reportChipTemperature();
-//      testDrive();
-
-      control.eventLoop();
+   control.eventLoop();
 
    return 0;
 }

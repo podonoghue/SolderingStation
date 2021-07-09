@@ -231,7 +231,7 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings:
          case ev_QuadRelease:
             // Save values
             tipsettings.coldJunctionTemperature.set(stage,ch.coldJunctionTemperature.getTemperature());
-            tipsettings.thermocoupleVoltage.set(stage, ch.tipTemperature.getVoltage());
+//            tipsettings.thermocoupleVoltage.set(stage, ch.tipTemperature.getVoltage());
             loopControl = complete;
             break;
 

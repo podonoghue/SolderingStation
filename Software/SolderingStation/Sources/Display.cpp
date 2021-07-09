@@ -27,11 +27,11 @@ void Display::displayChannelStatus(Channel &ch, unsigned offset) {
    float Tt = ch.getThermocoupleTemperature();
 
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.write("Rc ").write(ch.getThermisterResistance()/1000).write("k,");
+//   oled.write("Rc ").write(ch.getThermisterResistance()/1000).write("k,");
    oled.write(Tc).writeln("C");
 
    oled.setFloatFormat(2, Padding_LeadingSpaces, 0);
-   oled.write("Vt ").write(round(ch.getThermocoupleVoltage()*100000)/100).write("mV,");
+//   oled.write("Vt ").write(round(ch.getThermocoupleVoltage()*100000)/100).write("mV,");
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
    oled.write(Tt).writeln("C");
    oled.write("T = ").write(Tc+Tt).writeln("C");
@@ -103,10 +103,25 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
 
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
    oled.moveXY(offset+30,  50).write(power).writeln('W');
-   if (power>0) {
-      int y = 59; //oled.getY();
-      oled.drawRect(offset, y, offset-1+power,  y+4, WriteMode_Xor);
+
+   float percentagePower = ((oled.WIDTH/2)-3)*(ch.power.getAverage()/100);
+#if 0
+   static constexpr int BG_TOP    = 58;
+   static constexpr int BG_BOTTOM = oled.HEIGHT-1;
+   oled.drawHorizontalLine(0, oled.WIDTH, BG_TOP,    WriteMode_Or);
+   oled.drawHorizontalLine(0, oled.WIDTH, BG_BOTTOM, WriteMode_Or);
+   oled.drawVerticalLine(0,            BG_TOP, BG_BOTTOM, WriteMode_Or);
+   oled.drawVerticalLine(oled.WIDTH-1, BG_TOP, BG_BOTTOM, WriteMode_Or);
+   if (percentagePower>1) {
+      oled.drawRect(offset, BG_TOP+1, offset-1+percentagePower,  BG_BOTTOM-1, WriteMode_Xor);
    }
+#else
+   static constexpr int BG_TOP    = 58;
+   static constexpr int BG_BOTTOM = oled.HEIGHT-1;
+   if (percentagePower>1) {
+      oled.drawRect(offset, BG_TOP, offset-1+percentagePower,  BG_BOTTOM, WriteMode_Xor);
+   }
+#endif
 }
 
 /**
@@ -384,7 +399,7 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
    oled.moveXY(0, oled.getY()+5);
 //   oled.write(" Power ").write(ch.getPower());
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.write("Vt ").write(1000*ch.tipTemperature.getVoltage()).write("mV");
+//   oled.write("Vt ").write(1000*ch.tipTemperature.getVoltage()).write("mV");
 
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
    oled.write(", Tc ").write(ch.coldJunctionTemperature.getTemperature()).write("C");

@@ -5,7 +5,7 @@
  *  Created on: 10 Jul 2021
  *      Author: podonoghue
  */
-#include "PidControllerController.h"
+#include "PidController.h"
 #include "hardware.h"
 #include "Channel.h"
 

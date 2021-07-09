@@ -1,34 +1,21 @@
 /**
- * @file    PidController.h
- * @brief   PID Controller class
+ * @file    BangBang.h
+ * @brief   Bang-Bang Controller class
  *
  *  Created on: 10 Jul 2021
  *      Author: podonoghue
  */
-#ifndef SOURCES_PIDCONTROLLER_H_
-#define SOURCES_PIDCONTROLLER_H_
+#ifndef SOURCES_BANGBANG_H_
+#define SOURCES_BANGBANG_H_
 
 #include "Controller.h"
 
 /**
- * PID Controller
+ * BangBang Controller
  */
-class PidController : public Controller {
+class BangBangController : public Controller {
 
-private:
-   float      fKp             = 0.0;
-   float      fKi             = 0.0;
-   float      fKd             = 0.0;
-   float      fILimit         = 0.0;
-
-   /// Integral accumulation term = sum(Ki * error(i)) * interval
-   float      fIntegral       = 0.0;
-
-   /// Differential term          = Kd/interval * (S(i)-S(i-1))
-   float      fDifferential   = 0.0;
-
-   /// Proportional term          = Kp * error(i)
-   float      fProportional   = 0.0;
+   float   fLastInput = 0;
 
 public:
 
@@ -39,13 +26,13 @@ public:
     * @param[in] outMin    Minimum output value
     * @param[in] outMax    Maximum output value
     */
-   PidController(float interval, float outMin, float outMax) : Controller(interval, outMin, outMax) {
+   BangBangController(float interval, float outMin, float outMax) : Controller(interval, outMin, outMax) {
    }
 
    /**
    * Destructor
    */
-   virtual ~PidController() {
+   virtual ~BangBangController() {
    }
 
    /**
@@ -56,7 +43,8 @@ public:
    virtual void setControlParameters(const TipSettings *settings);
 
    /**
-    * Enable controller
+    * Enable controller\n
+    * Note: Controller is re-initialised when enabled
     *
     * @note: Controller is re-initialised when enabled.
     * @note: Output is left unchanged when disabled.
@@ -78,7 +66,6 @@ public:
     * @return Control output
     */
    virtual float newSample(float targetTemperature, float actualTemperature);
-
    /**
     * Report current situation
     */
@@ -90,4 +77,4 @@ public:
    virtual void reportHeading(Channel &ch);
 };
 
-#endif // SOURCES_PIDCONTROLLER_H_
+#endif // SOURCES_BANGBANG_H_

@@ -28,9 +28,6 @@ class DutyCycleCounter {
    /// Indicates if drive is on in the current cycle
    bool     driveOn;
 
-   /// Indicates a cycle has been borrowed (is off) for measurement
-   bool     borrowed;
-
    /// Enables output i.e. isOn() always returns false if false
    bool     enabled;
 
@@ -54,7 +51,7 @@ public:
     * @param resolution Resolution (denominator of duty-cycle)
     */
    DutyCycleCounter(unsigned resolution) :
-      upperLimit(resolution), resolution(resolution), count(0), dutyCycle(0), driveOn(false), borrowed(false), enabled(false) {
+      upperLimit(resolution), resolution(resolution), count(0), dutyCycle(0), driveOn(false), enabled(false) {
    }
 
    /**
@@ -110,27 +107,9 @@ public:
     *
     * @param borrowCycle   Indicates if the next cycle must be off for measurement.
     */
-   void advance(bool borrowCycle) {
+   void advance() {
       count += dutyCycle;
       check();
-      if (driveOn) {
-         if (borrowCycle) {
-            // Need to borrow an off cycle for measurement
-//            if (borrowed) {
-//               // Overdrawn!
-//               USBDM::console.WRITE('O');
-//            }
-            driveOn  = false;
-            borrowed = true;
-//            USBDM::console.WRITE('B');
-         }
-      }
-      else if (borrowed) {
-         // Pay back borrowed on cycle
-         driveOn  = true;
-         borrowed = false;
-//         USBDM::console.WRITE('P');
-      }
    }
 
    /**
