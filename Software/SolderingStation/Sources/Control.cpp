@@ -43,7 +43,7 @@ void Control::initialise() {
    ADConverter::configure(
          ADC_RESOLUTION,
          AdcClockSource_Bus,
-         AdcSample_6,
+         AdcSample_20,
          AdcPower_Normal,
          AdcMuxsel_B,
          AdcClockRange_Normal,
@@ -52,7 +52,7 @@ void Control::initialise() {
    while ((ADConverter::calibrate() != E_NO_ERROR) && (retry-->0)) {
       console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
    }
-   ADConverter::setAveraging(AdcAveraging_off);
+   ADConverter::setAveraging(AdcAveraging_4);
    ADConverter::setCallback(adc_cb);
    ADConverter::enableNvicInterrupts(NvicPriority_MidHigh);
 
@@ -213,6 +213,7 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
    switch (adcChannel) {
 
       case ChipTemperature::CHANNEL :
+         Debug::set();
          chipTemperature.accumulate(result);
          Ch1ColdJunctionNtc::startConversion(AdcInterrupt_Enabled);
          // Set up bias resistors for later tip measurements
@@ -228,7 +229,6 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
          break;
 
       case Ch2ColdJunctionNtc::CHANNEL :
-         Debug::set();
          ch2.coldJunctionTemperature.accumulate(result);
          Ch1TipThermocouple::startConversion(AdcInterrupt_Enabled);
          break;
