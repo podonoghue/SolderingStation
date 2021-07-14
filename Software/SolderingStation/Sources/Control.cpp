@@ -48,6 +48,8 @@ void Control::initialise() {
          AdcMuxsel_B,
          AdcClockRange_Normal,
          AdcAsyncClock_Disabled);
+
+   // Calibrate ADC
    unsigned retry = 10;
    while ((ADConverter::calibrate() != E_NO_ERROR) && (retry-->0)) {
       console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
@@ -67,6 +69,7 @@ void Control::initialise() {
       This->zeroCrossingHandler();
    };
 
+   // Threshold for comparator
    static constexpr uint8_t ZERO_CROSSING_DAC_THRESHOLD = 2.8*(ZeroCrossingComparator::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
 
    ZeroCrossingComparator::configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
@@ -93,8 +96,6 @@ void Control::initialise() {
 
 /**
  * Toggle the enable state of a channel.
- * If becoming enabled it also becomes selected.
- * If becoming disabled the other channel may become selected if enabled.
  *
  * @param ch Channel to modify
  */
@@ -218,32 +219,33 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
          Ch1ColdJunctionNtc::startConversion(AdcInterrupt_Enabled);
          // Set up bias resistors for later tip measurements
          Ch1BiasResistor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
-         Ch1BiasResistor::write(ch1.tipTemperature.isBiasRequired());
+         Ch1BiasResistor::write(ch1.measurement->isBiasRequired());
          Ch2BiasResistor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
-         Ch2BiasResistor::write(ch2.tipTemperature.isBiasRequired());
+         Ch2BiasResistor::write(ch2.measurement->isBiasRequired());
          break;
 
       case Ch1ColdJunctionNtc::CHANNEL :
-         ch1.coldJunctionTemperature.accumulate(result);
+         ch1.measurement->auxliliarySensorAccumulate(result);
          Ch2ColdJunctionNtc::startConversion(AdcInterrupt_Enabled);
          break;
 
       case Ch2ColdJunctionNtc::CHANNEL :
-         ch2.coldJunctionTemperature.accumulate(result);
+         ch2.measurement->auxliliarySensorAccumulate(result);
          Ch1TipThermocouple::startConversion(AdcInterrupt_Enabled);
          break;
 
       case Ch1TipThermocouple::CHANNEL :
-         ch1.tipTemperature.accumulate(result);
+         ch1.measurement->tipSensorAccumulate(result);
          Ch2TipThermocouple::startConversion(AdcInterrupt_Enabled);
          usbdm_assert(!ch1.driveReadState(), "Sample while channel 1 busy");
          break;
 
       case Ch2TipThermocouple::CHANNEL :
-         ch2.tipTemperature.accumulate(result);
+         ch2.measurement->tipSensorAccumulate(result);
          Debug::clear();
          usbdm_assert(!ch2.driveReadState(), "Sample while channel 2 busy");
          // Disable bias while checking IDs
+         Ch1BiasResistor::off();
          Ch1Id::setInput();
          Ch2Id::setInput();
          pidHandler();

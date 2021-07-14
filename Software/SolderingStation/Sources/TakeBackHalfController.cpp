@@ -128,10 +128,10 @@ void TakeBackHalfController::reportHeading(Channel &ch) {
 /**
  * Report current situation
  */
-void TakeBackHalfController::report(Channel &ch) {
+void TakeBackHalfController::report(Channel &) {
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 4);
-   console.write(getElapsedTime()).write(", ").write(fCurrentOutput).write(", ").write(fCurrentInput).write(", ").write(ch.tipTemperature.getLastSample()/50);
+//   console.write(getElapsedTime()).write(", ").write(fCurrentOutput).write(", ").write(fCurrentInput).write(", ").write(ch.tipTemperature.getLastSample()/50);
 
 //   console.setFloatFormat(2, Padding_LeadingSpaces, 5);
 //   console.write(",").write(fCurrentError).write(",").write(fProportional).write(",").write(fIntegral).write(",").write(fDifferential);

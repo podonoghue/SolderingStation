@@ -230,7 +230,7 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings:
          case ev_SelRelease:
          case ev_QuadRelease:
             // Save values
-            tipsettings.coldJunctionTemperature.set(stage,ch.coldJunctionTemperature.getTemperature());
+//            tipsettings.coldJunctionTemperature.set(stage,ch.coldJunctionTemperature.getTemperature());
 //            tipsettings.thermocoupleVoltage.set(stage, ch.tipTemperature.getVoltage());
             loopControl = complete;
             break;
@@ -424,16 +424,16 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
          case ev_QuadRotate:
             switch(selection) {
                case 0:
-                  kp += event.change*100;  // 0.100 steps
+                  kp += event.change*10;  // 0.010 steps
                   break;
                case 1:
-                  ki += event.change*5;  // 0.005 steps
+                  ki += event.change*1;  // 0.001 steps
                   break;
                case 2:
-                  kd += event.change*5;  // 0.005 steps
+                  kd += event.change*1;  // 0.001 steps
                   break;
                case 3:
-                  iLimit += event.change*1000; // 1.000 steps
+                  iLimit += event.change*500; // .500 steps
                   break;
             }
             break;
@@ -532,8 +532,8 @@ EventType Menus::editPidSettings(const SettingsData &) {
       }
    } while (loopControl == working);
 
-   channels[1].refreshPidParameters();
-   channels[2].refreshPidParameters();
+   channels[1].refreshControllerParameters();
+   channels[2].refreshControllerParameters();
 
    return event.type;
 }
@@ -590,7 +590,7 @@ EventType Menus::stepResponse(const SettingsData &) {
                Channel &channel = channels[1];
                channel.setTip(settings);
                StepResponseDriver driver(channels[1]);
-               driver.run();
+               driver.run(30);
             }
          }
          break;
@@ -616,8 +616,8 @@ EventType Menus::stepResponse(const SettingsData &) {
       }
    } while (loopControl == working);
 
-   channels[1].refreshPidParameters();
-   channels[2].refreshPidParameters();
+   channels[1].refreshControllerParameters();
+   channels[2].refreshControllerParameters();
 
    return event.type;
 }

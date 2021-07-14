@@ -17,24 +17,24 @@ using namespace USBDM;
  * @param ch         Channel to display
  * @param offset     Y offset for display
  */
-void Display::displayChannelStatus(Channel &ch, unsigned offset) {
-   using namespace USBDM;
-
-   oled.moveXY(0, offset);
-   oled.setFont(fontMedium);
-
-   float Tc = ch.getThermisterTemperature();
-   float Tt = ch.getThermocoupleTemperature();
-
-   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-//   oled.write("Rc ").write(ch.getThermisterResistance()/1000).write("k,");
-   oled.write(Tc).writeln("C");
-
-   oled.setFloatFormat(2, Padding_LeadingSpaces, 0);
-//   oled.write("Vt ").write(round(ch.getThermocoupleVoltage()*100000)/100).write("mV,");
-   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.write(Tt).writeln("C");
-   oled.write("T = ").write(Tc+Tt).writeln("C");
+void Display::displayChannelStatus(Channel &, unsigned ) {
+//   using namespace USBDM;
+//
+//   oled.moveXY(0, offset);
+//   oled.setFont(fontMedium);
+//
+//   float Tc = ch.getThermisterTemperature();
+//   float Tt = ch.getThermocoupleTemperature();
+//
+//   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+////   oled.write("Rc ").write(ch.getThermisterResistance()/1000).write("k,");
+//   oled.write(Tc).writeln("C");
+//
+//   oled.setFloatFormat(2, Padding_LeadingSpaces, 0);
+////   oled.write("Vt ").write(round(ch.getThermocoupleVoltage()*100000)/100).write("mV,");
+//   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+//   oled.write(Tt).writeln("C");
+//   oled.write("T = ").write(Tc+Tt).writeln("C");
 }
 
 /**
@@ -401,8 +401,8 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
 //   oled.write("Vt ").write(1000*ch.tipTemperature.getVoltage()).write("mV");
 
-   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.write(", Tc ").write(ch.coldJunctionTemperature.getTemperature()).write("C");
+//   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+//   oled.write(", Tc ").write(ch.coldJunctionTemperature.getTemperature()).write("C");
 
    oled.refreshImage();
 

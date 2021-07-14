@@ -37,8 +37,10 @@ public:
    /// Maximum duty cycle for tip drive
    ///      80% ~ 60W for 8 ohm element
    ///      90% ~ 65W for 8 ohm element
-   /// Can't go above 90% as cycles are stolen for sampling
-   static constexpr int      MAX_DUTY     = 80;
+   /// WT-50 11 ohm element 100% ~52 watts
+   /// T12    8 ohm element 100% ~72 watts
+   /// WSP80  7 ohm element 100% ~82 watts
+   static constexpr int      MAX_DUTY     = 100;
 
    /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohm element
    static constexpr int      MIN_DUTY     = 0;
@@ -80,6 +82,11 @@ public:
       This = this;
    }
 
+   /**
+    * Get chip temperature from on-chip sensor
+    *
+    * @return
+    */
    float getChipTemperature() {
       return chipTemperature.getTemperature();
    }
@@ -91,8 +98,6 @@ public:
 
    /**
     * Toggle the enable state of a channel.
-    * If becoming enabled it also becomes selected.
-    * If becoming disabled the other channel may become selected if enabled.
     *
     * @param ch Channel to modify
     */
@@ -100,7 +105,6 @@ public:
 
    /**
     * Enable channel.
-    * It also becomes selected.
     *
     * @param ch Channel to enable
     */
@@ -122,14 +126,15 @@ public:
    void changeTemp(int16_t delta);
 
    /**
-    * Interrupt handler for mains zero crossing Comparator
-    * This uses the timer to schedule the switchOnHandler.
-    * Occurs @100Hz or 120Hz ~ 10ms or 8.3ms
+    * Comparator interrupt handler for controlling the heaters.
+    * This is triggered just prior to the mains zero-crossing.
+    * It also uses the timer to schedule the ADC sampling.
     */
    void zeroCrossingHandler();
 
    /**
     * Timer interrupt handler for updating PID
+    * This includes the heater drives
     */
    void pidHandler();
 
@@ -139,7 +144,7 @@ public:
     * @param[in] result  Conversion result from ADC channel
     * @param[in] channel ADC channel providing the result
     *
-    *   Initial conversion is started from a timer call-back when a channel has an idle cycle.
+    *   Initial conversion is started from zeroCrossingHandler().
     *   Several consecutive conversions are then chained in sequence.
     */
    void adcHandler(uint32_t result, int channel);

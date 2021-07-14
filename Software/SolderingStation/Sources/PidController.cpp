@@ -112,7 +112,7 @@ void PidController::reportHeading(Channel &ch) {
       console.setFloatFormat(3, Padding_LeadingSpaces, 3);
       console.
          write("Time,Drive,").write(ch.getTipName()).
-         write(",Inst. Temp,Error,P,I<").write(ch.getTip()->getILimit()).writeln(",D");
+         write(",Error,P,I<").write(ch.getTip()->getILimit()).writeln(",D");
 
       console.
          write("Kp = ").write(ch.getTip()->getKp()).
@@ -123,7 +123,7 @@ void PidController::reportHeading(Channel &ch) {
 /**
  * Report current situation
  */
-void PidController::report(Channel &ch) {
+void PidController::report(Channel &) {
 
    // Take snapshot
    volatile float currentOutput = fCurrentOutput;
@@ -132,16 +132,20 @@ void PidController::report(Channel &ch) {
    volatile float proportional  = fProportional;
    volatile float differential  = fDifferential;
    volatile float integral      = fIntegral;
-   volatile float rawTipTemp    = ch.tipTemperature.getLastSample()/50; // Approximation!
+//   volatile float rawTipTemp    = ch.tipTemperature.getLastSample()/50; // Approximation!
+//   volatile float resistance    = ch.tipTemperature.getResistance();
 
    console.setFloatFormat(2, Padding_LeadingSpaces, 3);
    console.write(getElapsedTime()).write(", ");
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 4);
-   console.write(currentOutput).write(", ").write(currentInput).write(", ").write(rawTipTemp);
+   console.write(currentOutput).write(", ").write(currentInput);
+//   console.write(", ").write(rawTipTemp);
 
    console.setFloatFormat(2, Padding_LeadingSpaces, 5);
    console.write(",").write(currentError).write(",").write(proportional).write(",").write(integral).write(",").write(differential);
+
+//   console.write(",").write(resistance);
 
    console.writeln();
    console.resetFormat();

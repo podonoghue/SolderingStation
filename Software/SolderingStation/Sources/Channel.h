@@ -8,14 +8,16 @@
 #ifndef SOURCES_CHANNEL_H_
 #define SOURCES_CHANNEL_H_
 
-#include <BangBangController.h>
-#include <algorithm>
+#include "BangBangController.h"
 #include "hardware.h"
 #include "Averaging.h"
+#include "Measurement.h"
 #include "ChannelSettings.h"
 #include "DutyCycleCounter.h"
 #include "Controller.h"
 #include "Tips.h"
+#include "T12.h"
+#include "WellerWT50.h"
 
 class StepResponseDriver;
 
@@ -29,37 +31,17 @@ enum ChannelState {
    ch_active,     ///< Tip is being heated to user target temperature
 };
 
+enum IronType {
+   IronType_Weller,
+   IronType_T12,
+};
+
 /**
  * Class representing a channel
  */
 class Channel : public DutyCycleCounter {
 
    friend StepResponseDriver;
-
-public:
-
-public:
-
-   /// Number of preset temperatures provided
-   static constexpr unsigned NUM_PRESETS  = 3;
-
-   /// Reference to non-volatile settings stored in Flash
-   ChannelSettings  &nvSettings;
-
-   /// Moving window average for tip temperature (thermocouple)
-   TemperatureAverage &tipTemperature;
-
-   /// Moving window average for cold junction temperature (NTC resistor)
-   TemperatureAverage &coldJunctionTemperature;
-
-   /// Average power - just for display purposes
-   SimpleMovingAverage<5> power;
-
-   friend class Control;
-
-   virtual void ledWrite(bool)   = 0;
-   virtual void driveWrite(bool) = 0;
-   virtual bool driveReadState() = 0;
 
 private:
    bool              tipPresent          = false;    ///< Indicates that the tip is present
@@ -70,27 +52,66 @@ private:
    unsigned          preset              = 1;        ///< Currently selected preset for the channel
 
    Controller       &controller;                     ///< Loop controller
-
-   bool              applyPowerCorrection = false;
+   Weller_WT50       wellerMeasurement;
+   T12               t12Measurement;
 
 public:
+
+   /// Number of preset temperatures provided
+   static constexpr unsigned NUM_PRESETS  = 3;
+
+   /// Reference to non-volatile settings stored in Flash
+   ChannelSettings  &nvSettings;
+
+   /// Measurement class
+   Measurement *measurement = nullptr;
+
+   /// Average power - just for display purposes
+   SimpleMovingAverage<5> power;
+
+   friend class Control;
+
+   virtual void ledWrite(bool)   = 0;
+   virtual void driveWrite(bool) = 0;
+   virtual bool driveReadState() = 0;
+
    /**
     * Constructor for channel
     *
-    * @param[in] settings  Non-volatile channel settings to associate with this channel
+    * @param[in] settings        Non-volatile channel settings to associate with this channel
+    * @param[in] controller      Temperature controller e.g. PID
+    * @param[in] tipTemperature  Tip temperature averaging etc.
+    * @param[in] coldJunction    Cold junction averaging etc.
     */
-   Channel(ChannelSettings &settings, Controller &controller, TemperatureAverage &tipTemperature, TemperatureAverage &coldJunction) :
+   Channel(ChannelSettings &settings, Controller &controller) :
       DutyCycleCounter(100),
-      nvSettings(settings),
-      tipTemperature(tipTemperature),
-      coldJunctionTemperature(coldJunction),
-      controller(controller) {
-
+      controller(controller),
+      nvSettings(settings) {
+      setIronType(IronType_Weller);
       setUserTemperature(settings.presets[preset]);
-      refreshPidParameters();
+      refreshControllerParameters();
    }
 
    virtual ~Channel() {}
+
+   /**
+    * Set type of soldering iron being used
+    *
+    * @param ironType
+    */
+   void setIronType(IronType ironType) {
+
+      switch(ironType) {
+         case IronType_T12:
+            measurement = &t12Measurement;
+            break;
+         case IronType_Weller:
+            measurement = &wellerMeasurement;
+            break;
+         default:
+            usbdm_assert(false, "Illegal iron type");
+      }
+   }
 
    /**
     * Check for a valid tip selection and re-assign if necessary
@@ -108,7 +129,10 @@ public:
       }
    }
 
-   void refreshPidParameters() {
+   /**
+    * Update controller parameters from currently selected tip
+    */
+   void refreshControllerParameters() {
       const TipSettings *ts = nvSettings.selectedTip;
 
       controller.setControlParameters(ts);
@@ -121,7 +145,7 @@ public:
     */
    void changeTip(int delta) {
       nvSettings.selectedTip = tips.changeTip(nvSettings.selectedTip, delta);
-      refreshPidParameters();
+      refreshControllerParameters();
    }
 
    /**
@@ -132,7 +156,7 @@ public:
    void setTip(const TipSettings *tipSettings) {
       usbdm_assert(tipSettings != nullptr, "Illegal tip");
       nvSettings.selectedTip = tipSettings;
-      refreshPidParameters();
+      refreshControllerParameters();
    }
 
    /**
@@ -221,7 +245,7 @@ public:
 
       state = newState;
 
-      refreshPidParameters();
+      refreshControllerParameters();
 
       controller.enable(isControlled());
       ledWrite(isRunning());
@@ -232,7 +256,6 @@ public:
          // For safety while debugging immediately turn off drive
          driveWrite(false);
       }
-      applyPowerCorrection = false;
    }
 
    /**
@@ -316,23 +339,17 @@ public:
     * The PID controller is updated
     */
    void upDateCurrentTemperature() {
-      currentTemperature = tipTemperature.getTemperature()+coldJunctionTemperature.getTemperature();
-      tipPresent = currentTemperature < 600;
+      currentTemperature = measurement->getTemperature();
+      setTipPresent(currentTemperature < 600);
       // Power average
       power.accumulate(getDutyCycle());
    }
 
    /**
     * Update current temperature from internal averages
-    * The PID controller is updated
+    * The controller is updated and used to determine drive
     */
    void upDatePid() {
-      //      static int powerCorrection = 0;
-      //      if ((state == ch_active) && (currentTemperature > 150) && (controller.getElapsedTime()>10) &&
-      //          (abs(getTargetTemperature() - currentTemperature) < 10)) {
-      //         powerCorrection = std::min(30,(std::max(getPower()-8, 0))*13);
-      //      }
-
       if (state != ch_fixedPower) {
          setDutyCycle(controller.newSample(getTargetTemperature(), currentTemperature));
       }
@@ -347,14 +364,14 @@ public:
 //      return coldJunctionTemperature.getResistance();
 //   }
 
-   /**
-    * Get Thermistor temperature
-    *
-    * @return Temperature in C
-    */
-   float getThermisterTemperature() {
-      return coldJunctionTemperature.getTemperature();
-   }
+//   /**
+//    * Get Thermistor temperature
+//    *
+//    * @return Temperature in C
+//    */
+//   float getThermisterTemperature() {
+//      return coldJunctionTemperature.getTemperature();
+//   }
 
 //   /**
 //    * Get thermocouple voltage
@@ -365,18 +382,18 @@ public:
 //      return tipTemperature.getVoltage();
 //   }
 
-   /**
-    * Get thermocouple temperature
-    *
-    * @return Temperature in C
-    */
-   float getThermocoupleTemperature() {
-      return tipTemperature.getTemperature();
-   }
+//   /**
+//    * Get thermocouple temperature
+//    *
+//    * @return Temperature in C
+//    */
+//   float getThermocoupleTemperature() {
+//      return tipTemperature.getTemperature();
+//   }
 
    float getPower() const {
-      // Assume 24Vrms, 8.5 ohm element
-      static constexpr float NOMINAL_MAX_POWER = (24 * 24)/8.5;
+      // Assume 24Vrms
+      float NOMINAL_MAX_POWER = (24 * 24)/measurement->getHeaterResistance();
       float pwr = power.getAverage()*NOMINAL_MAX_POWER/100;
       return pwr;
    }

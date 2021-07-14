@@ -27,7 +27,7 @@ StepResponseDriver::StepResponseDriver(Channel &channel) : channel(channel) {
  * @return true  Completed successfully
  * @return false Failed
  */
-bool StepResponseDriver::run() {
+bool StepResponseDriver::run(unsigned maxDrive) {
 
    static constexpr float TICK_INTERVAL    = 100*ms;
 
@@ -39,7 +39,6 @@ bool StepResponseDriver::run() {
    static constexpr unsigned REPORT_TIME   = round(  0.5/TICK_INTERVAL);
 
    static constexpr unsigned MIN_DRIVE = 0;
-   static constexpr unsigned MAX_DRIVE = 10;
 
    channel.setState(ch_fixedPower);
 
@@ -74,7 +73,7 @@ bool StepResponseDriver::run() {
          case Step_Initial:
             if (tickCount >= INITIAL_TIME) {
                state     = Step_Driving;
-               drive     = MAX_DRIVE;
+               drive     = maxDrive;
                tickCount = 0;
             }
             break;

@@ -10,6 +10,7 @@
 #include "TipSettings.h"
 #include "error.h"
 #include "NonvolatileSettings.h"
+#include "T12.h"
 
 using namespace USBDM;
 
@@ -116,3 +117,19 @@ const char *TipSettings::getTipName(TipNameIndex index) {
    }
    return tipNames[index];
 }
+
+/**
+ * Set default calibration values
+ *
+ * @param TipNameIndex  Tip name index for this setting
+ */
+void TipSettings::setDefaultCalibration(TipNameIndex tipNameIndex) {
+   this->tipNameIndex = tipNameIndex;
+   this->flags   = 0;
+
+   T12 dummy;
+
+   dummy.initialiseSettings(this,  tipNameIndex);
+   }
+
+

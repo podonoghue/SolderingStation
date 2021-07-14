@@ -81,19 +81,20 @@ void BangBangController::reportHeading(Channel &ch) {
 /**
  * Report current situation
  */
-void BangBangController::report(Channel &ch) {
+void BangBangController::report(Channel &) {
 
    // Take snapshot
    volatile float currentOutput = fCurrentOutput;
    volatile float currentInput  = fCurrentInput;
    volatile float currentError  = fCurrentError;
-   volatile float rawTipTemp    = ch.tipTemperature.getLastSample()/50; // Approximation!
+//   volatile float rawTipTemp    = ch.tipTemperature.getLastSample()/50; // Approximation!
 
    console.setFloatFormat(2, Padding_LeadingSpaces, 3);
    console.write(getElapsedTime()).write(", ");
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 4);
-   console.write(currentOutput).write(", ").write(currentInput).write(", ").write(rawTipTemp);
+   console.write(currentOutput).write(", ").write(currentInput);
+//   console.write(", ").write(rawTipTemp);
 
    console.setFloatFormat(2, Padding_LeadingSpaces, 5);
    console.write(",").write(currentError);

@@ -12,6 +12,7 @@
 
 class TipSettings {
    friend class Menus;
+   friend class Measurement;
 
 public:
    /// Number of tip settings available
@@ -122,27 +123,11 @@ public:
    }
 
    /**
-    * Set set default calibration values
+    * Set default calibration values
     *
     * @param TipNameIndex  Tip name index for this setting
     */
-   void setDefaultCalibration(TipNameIndex tipNameIndex = DEFAULT_ENTRY) {
-      this->tipNameIndex = tipNameIndex;
-      this->flags   = 0;
-
-      this->thermocoupleVoltage.set(Calib_250, 5.4*FLOAT_SCALE_FACTOR);
-      this->thermocoupleVoltage.set(Calib_350, 8.9*FLOAT_SCALE_FACTOR);
-      this->thermocoupleVoltage.set(Calib_400, 10*FLOAT_SCALE_FACTOR);
-
-      this->coldJunctionTemperature.set(Calib_250, 25*FLOAT_SCALE_FACTOR);
-      this->coldJunctionTemperature.set(Calib_350, 25*FLOAT_SCALE_FACTOR);
-      this->coldJunctionTemperature.set(Calib_400, 25*FLOAT_SCALE_FACTOR);
-
-      this->kp       =  5.0*FLOAT_SCALE_FACTOR;
-      this->ki       =  0.5*FLOAT_SCALE_FACTOR;
-      this->kd       =  0.0*FLOAT_SCALE_FACTOR;
-      this->iLimit   = 40.0*FLOAT_SCALE_FACTOR;
-      }
+   void setDefaultCalibration(TipNameIndex tipNameIndex = DEFAULT_ENTRY);
 
    /**
     * Get PID iLimit value
@@ -202,6 +187,34 @@ public:
       ki     = other.ki;
       kd     = other.kd;
       iLimit = other.iLimit;
+   }
+
+   /**
+    * Set values from measured values
+    *
+    * @param kp
+    * @param ki
+    * @param kd
+    * @param iLimit
+    */
+   void setPidControlValues(float kp, float ki, float kd, float iLimit) {
+      flags  = flags | PID_CALIBRATED;
+      this->kp     = kp * FLOAT_SCALE_FACTOR;
+      this->ki     = ki * FLOAT_SCALE_FACTOR;
+      this->kd     = kd * FLOAT_SCALE_FACTOR;
+      this->iLimit = iLimit * FLOAT_SCALE_FACTOR;
+   }
+
+   /**
+    * Set a temperature calibration point
+    *
+    * @param calibrationIndex Index for the point
+    * @param temperature      Temperature value
+    * @param value            Corresponding measurement value
+    */
+   void setTemperatureValues(Calib calibrationIndex, float temperature, float value) {
+      this->coldJunctionTemperature.set(calibrationIndex, temperature*FLOAT_SCALE_FACTOR);
+      this->thermocoupleVoltage.set(Calib_250, value*FLOAT_SCALE_FACTOR);
    }
 
    /**

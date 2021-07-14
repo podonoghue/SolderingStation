@@ -13,6 +13,8 @@
 #include "Control.h"
 #include "NonvolatileSettings.h"
 #include "TakeBackHalfController.h"
+#include "WellerWT50.h"
+#include "T12.h"
 
 /**
  * Holding class for the channels
@@ -28,8 +30,8 @@ class Channels {
    template<class LedGpio, class DriveGpio>
    class T_Channel : public Channel {
    public:
-      T_Channel(ChannelSettings &settings, Controller &controller, TemperatureAverage &tipTemperature, TemperatureAverage &coldJunction) :
-         Channel(settings, controller, tipTemperature, coldJunction) {}
+      T_Channel(ChannelSettings &settings, Controller &controller) :
+         Channel(settings, controller) {}
       virtual ~T_Channel() {}
 
       void intialise() {
@@ -60,19 +62,11 @@ private:
    TempController ch1Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
    TempController ch2Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
 
-   ThermistorWellerAverage ch1Thermocouple;
-   ZeroAverage ch1Cold;
-//   ThermocoupleAverage ch1Thermocouple;
-//   ThermistorMF58Average ch1Cold;
-
-   ThermocoupleAverage ch2Thermocouple;
-   ThermistorMF58Average ch2Cold;
-
    /// Channel1 state information
-   T_Channel<Ch1SelectedLed, Ch1Drive>  channel1{nvinit.ch1Settings, ch1Controller, ch1Thermocouple, ch1Cold};
+   T_Channel<Ch1SelectedLed, Ch1Drive>  channel1{nvinit.ch1Settings, ch1Controller};
 
    /// Channel2 state information
-   T_Channel<Ch2SelectedLed, Ch2Drive>  channel2{nvinit.ch2Settings, ch2Controller, ch2Thermocouple, ch2Cold};
+   T_Channel<Ch2SelectedLed, Ch2Drive>  channel2{nvinit.ch2Settings, ch2Controller};
 
 public:
 

@@ -32,10 +32,12 @@ public:
    /**
     * Run step sequence
     *
+    * @param maxDrive Drive to apply during step
+    *
     * @return true  Completed successfully
     * @return false Failed
     */
-   bool run();
+   bool run(unsigned maxDrive);
 
 };
 
