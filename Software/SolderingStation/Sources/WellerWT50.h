@@ -75,14 +75,15 @@ public:
     *
     * @param tipNameIndex  Tip name index for this setting
     */
-   virtual void initialiseSettings(TipSettings *settings, TipSettings::TipNameIndex) {
+   static void initialiseSettings(TipSettings *settings, TipSettings::TipNameIndex) {
 
       // Dummy values
       settings->setTemperatureValues(TipSettings::Calib_250, 25, 5.4);
       settings->setTemperatureValues(TipSettings::Calib_250, 25, 5.4);
       settings->setTemperatureValues(TipSettings::Calib_250, 25, 5.4);
 
-      settings->setPidControlValues(5.0,0.5,0.0,40.0);
+      // Small tips - Kp=1.0,Ki=0.03,Kd=0.0,Ilimit=40
+      settings->setPidControlValues(1.0,0.03,0.0,40.0);
    }
 };
 

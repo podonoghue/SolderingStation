@@ -52,12 +52,12 @@ public:
     */
    virtual float getHeaterResistance()  = 0;
 
-   /**
-    * Set set default calibration values
-    *
-    * @param tipNameIndex  Tip name index for this setting
-    */
-   virtual void initialiseSettings(TipSettings *settings, TipSettings::TipNameIndex tipNameIndex) = 0;
+//   /**
+//    * Set set default calibration values
+//    *
+//    * @param tipNameIndex  Tip name index for this setting
+//    */
+//   virtual void initialiseSettings(TipSettings *settings, TipSettings::TipNameIndex tipNameIndex) = 0;
 };
 
 

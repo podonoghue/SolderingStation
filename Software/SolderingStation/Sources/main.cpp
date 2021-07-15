@@ -59,7 +59,6 @@ void _exit(int rc __attribute__((unused))) {
 }
 
 int main() {
-
    initialise();
 
 //   Ch1Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);

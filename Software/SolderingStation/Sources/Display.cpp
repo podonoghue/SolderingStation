@@ -102,7 +102,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    oled.moveXY(offset,  50).write(ch.getTipName());
 
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.moveXY(offset+30,  50).write(power).writeln('W');
+   oled.moveXY(offset+35,  50).write((int)round(power)).writeln('W');
 
    float percentagePower = ((oled.WIDTH/2)-3)*(ch.power.getAverage()/100);
 #if 0

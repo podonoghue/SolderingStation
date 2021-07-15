@@ -19,7 +19,7 @@ public:
    static constexpr unsigned NUM_TIP_SETTINGS = 20;
 
    /// Total number of tips available for selection
-   static constexpr unsigned NUMBER_OF_TIPS   = 67;
+   static constexpr unsigned NUMBER_OF_TIPS   = 70;
 
    /// Names of all tips
    static const char *const tipNames[NUMBER_OF_TIPS];

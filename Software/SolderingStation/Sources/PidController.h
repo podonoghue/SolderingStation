@@ -56,6 +56,42 @@ public:
    virtual void setControlParameters(const TipSettings *settings);
 
    /**
+    * Get current Kp
+    *
+    * @return Value as float
+    */
+   float getKp() {
+      return fKp;
+   }
+
+   /**
+    * Get current Ki
+    *
+    * @return Value as float
+    */
+   float getKi() {
+      return fKi / fInterval;
+   }
+
+   /**
+    * Get current Kd
+    *
+    * @return Value as float
+    */
+   float getKd() {
+      return fKd * fInterval;
+   }
+
+   /**
+    * Get current integration limit
+    *
+    * @return Value as float
+    */
+   float getIlimit() {
+      return fILimit;
+   }
+
+   /**
     * Enable controller\n
     * Note: Controller is re-initialised when enabled
     *

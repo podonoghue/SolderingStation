@@ -82,6 +82,9 @@ const char * const TipSettings::tipNames[NUMBER_OF_TIPS] = {
       "N1-20",
       "N1-23",
       "N1-L1",
+      "WT50S",
+      "WT50M",
+      "WT50L",
 };
 
 /**
@@ -127,9 +130,7 @@ void TipSettings::setDefaultCalibration(TipNameIndex tipNameIndex) {
    this->tipNameIndex = tipNameIndex;
    this->flags   = 0;
 
-   T12 dummy;
-
-   dummy.initialiseSettings(this,  tipNameIndex);
-   }
+   T12::initialiseSettings(this,  tipNameIndex);
+}
 
 

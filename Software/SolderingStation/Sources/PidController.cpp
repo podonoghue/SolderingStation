@@ -71,22 +71,22 @@ float PidController::newSample(float targetTemperature, float actualTemperature)
    // Update input samples & error
    fCurrentError = targetTemperature - fCurrentInput;
 
-   if (fCurrentError<-3) {
-      // Above target temperature - discharge integral term faster
-      fIntegral += (fKi * 5 * fCurrentError);
+   fIntegral += (fKi * fCurrentError);
+   if (fCurrentError>60) {
+      // Limit integral term during startup when error is large
+      if(fIntegral > fILimit/2) {
+         fIntegral = fILimit/2;
+      }
    }
    else {
-      fIntegral += (fKi * fCurrentError);
+      // Limit integral term after startup
+      if(fIntegral > fILimit) {
+         fIntegral = fILimit;
+      }
+      else if(fIntegral < -fILimit) {
+         fIntegral = -fILimit;
+      }
    }
-
-   // Limit integral term
-   if(fIntegral > fILimit) {
-      fIntegral = fILimit;
-   }
-   else if(fIntegral < -fILimit) {
-      fIntegral = -fILimit;
-   }
-
    fDifferential = fKd * (fCurrentInput - lastInput);
 
    fProportional = fKp * fCurrentError;
@@ -109,15 +109,22 @@ float PidController::newSample(float targetTemperature, float actualTemperature)
  */
 void PidController::reportHeading(Channel &ch) {
 
-      console.setFloatFormat(3, Padding_LeadingSpaces, 3);
-      console.
+      console.setFloatFormat(1, Padding_None).
          write("Time,Drive,").write(ch.getTipName()).
-         write(",Error,P,I<").write(ch.getTip()->getILimit()).writeln(",D");
+         write(",Error,P=").write(getKp());
+      console.setFloatFormat(3, Padding_None).
+         write(",I=").write(getKi());
+      console.setFloatFormat(1, Padding_None).
+         write(" <").write(fILimit/2).write("/").write(fILimit).writeln(",D");
 
-      console.
-         write("Kp = ").write(ch.getTip()->getKp()).
-         write(",Ki = ").write(ch.getTip()->getKi()).
-         write(",Kd = ").writeln(ch.getTip()->getKd());
+      console.setFloatFormat(3, Padding_None).
+         write("\"Kp=").write(getKp()).
+         write(",Ki=").write(getKi());
+      console.setFloatFormat(3, Padding_None, 3).
+         write(",Kd=").write(getKd());
+      console.setFloatFormat(1, Padding_None).write(",I<").write(getIlimit()/2).write("/").write(getIlimit());
+      console.write(",Pmax=").write((int)round(fOutMax)).write("%\"");
+      console.writeln();
 }
 
 /**
@@ -138,11 +145,11 @@ void PidController::report(Channel &) {
    console.setFloatFormat(2, Padding_LeadingSpaces, 3);
    console.write(getElapsedTime()).write(", ");
 
-   console.setFloatFormat(1, Padding_LeadingSpaces, 4);
+   console.setFloatFormat(1, Padding_LeadingSpaces, 3);
    console.write(currentOutput).write(", ").write(currentInput);
 //   console.write(", ").write(rawTipTemp);
 
-   console.setFloatFormat(2, Padding_LeadingSpaces, 5);
+   console.setFloatFormat(1, Padding_LeadingSpaces, 3);
    console.write(",").write(currentError).write(",").write(proportional).write(",").write(integral).write(",").write(differential);
 
 //   console.write(",").write(resistance);

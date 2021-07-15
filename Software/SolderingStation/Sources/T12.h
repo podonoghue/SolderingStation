@@ -63,7 +63,7 @@ public:
     *
     * @param tipNameIndex  Tip name index for this setting
     */
-   virtual void initialiseSettings(TipSettings *settings, TipSettings::TipNameIndex) {
+   static void initialiseSettings(TipSettings *settings, TipSettings::TipNameIndex) {
 
       // Dummy values
       settings->setTemperatureValues(TipSettings::Calib_250, 25, 5.4);

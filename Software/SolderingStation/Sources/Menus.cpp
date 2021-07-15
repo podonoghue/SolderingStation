@@ -421,22 +421,39 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
             }
             break;
 
-         case ev_QuadRotate:
-            switch(selection) {
-               case 0:
-                  kp += event.change*10;  // 0.010 steps
+            case ev_QuadRotate:
+               switch(selection) {
+                  case 0:
+                     kp += event.change*10;  // 0.010 steps
+                     break;
+                  case 1:
+                     ki += event.change*1;  // 0.001 steps
+                     break;
+                  case 2:
+                     kd += event.change*1;  // 0.001 steps
+                     break;
+                  case 3:
+                     iLimit += event.change*500; // .500 steps
+                     break;
+               }
+               break;
+
+               case ev_QuadRotatePressed:
+                  switch(selection) {
+                     case 0:
+                        kp += event.change*100;  // 0.100 steps
+                        break;
+                     case 1:
+                        ki += event.change*10;  // 0.01 steps
+                        break;
+                     case 2:
+                        kd += event.change*10;  // 0.01 steps
+                        break;
+                     case 3:
+                        iLimit += event.change*50; // 5.00 steps
+                        break;
+                  }
                   break;
-               case 1:
-                  ki += event.change*1;  // 0.001 steps
-                  break;
-               case 2:
-                  kd += event.change*1;  // 0.001 steps
-                  break;
-               case 3:
-                  iLimit += event.change*500; // .500 steps
-                  break;
-            }
-            break;
 
          case ev_Ch1Release:
             selection--;
