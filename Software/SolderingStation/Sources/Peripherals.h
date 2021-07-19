@@ -61,6 +61,10 @@ constexpr float Rf = 100000;
 /// Thermocouple op-amp input resistor
 constexpr float Ri = 1000;
 
+/// Thermocouple measurement ratio V/V i.e. converts ADC voltage to thermocouple voltage in V
+/// Amplifier gain is Rf/Ri
+constexpr float TC_MEASUREMENT_RATIO   = (Ri/Rf);
+
 /// Channel 1 Selected LED
 using Ch1SelectedLed  = USBDM::GpioC<6, USBDM::ActiveHigh>;
 

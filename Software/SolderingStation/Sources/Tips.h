@@ -131,7 +131,7 @@ public:
       if (tipSettings == nullptr) {
          tipSettings = findFreeTipSettings();
          if (tipSettings != nullptr) {
-            tipSettings->setDefaultCalibration(tipNameIndex);
+            tipSettings->loadDefaultCalibration(tipNameIndex);
          }
       }
       return tipSettings;

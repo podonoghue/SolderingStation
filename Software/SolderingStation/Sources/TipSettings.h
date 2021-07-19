@@ -10,11 +10,46 @@
 
 #include "flash.h"
 
+enum IronType : uint8_t {
+   IronType_Unknown,
+   IronType_Weller,
+   IronType_T12,
+};
+
+class InitialTipInfo {
+public:
+   const char    *name;
+   const IronType type;
+
+   constexpr InitialTipInfo(const char *name, IronType type) : name(name), type(type) {}
+};
+
+enum CalibrationIndex {
+   CalibrationIndex_250      = 0,  ///< Calibration value for 250 C
+   CalibrationIndex_325      = 1,  ///< Calibration value for 325 C
+   CalibrationIndex_400      = 2,  ///< Calibration value for 400 C
+   CalibrationIndex_Number   = 3,  ///< Number of calibration values
+};
+
+/**
+ * Nonvolatile data describing a tip
+ * Unnecessary changes to data should be avoided to reduce EEPROM wear
+ */
 class TipSettings {
-   friend class Menus;
-   friend class Measurement;
 
 public:
+   /**
+    * Get the temperature for calibration at the given calibration point
+    *
+    * @param index Which calibration point is needed
+    */
+   static unsigned getCalibrationTemperature(CalibrationIndex index) {
+      /// Temperatures for the three calibration points
+      static const unsigned calibrationTemperatures[3] = {250, 325, 400};
+
+      return calibrationTemperatures[index];
+   }
+
    /// Number of tip settings available
    static constexpr unsigned NUM_TIP_SETTINGS = 20;
 
@@ -22,14 +57,7 @@ public:
    static constexpr unsigned NUMBER_OF_TIPS   = 70;
 
    /// Names of all tips
-   static const char *const tipNames[NUMBER_OF_TIPS];
-
-   enum Calib {
-      Calib_250      = 0,  ///< Calibration value for 250 C
-      Calib_350      = 1,  ///< Calibration value for 350 C
-      Calib_400      = 2,  ///< Calibration value for 400 C
-      Calib_Number   = 3,  ///< Number of calibration values
-   };
+   static const InitialTipInfo initialTipInfo[NUMBER_OF_TIPS];
 
    /// Index into tipNames table
    using TipNameIndex = uint8_t;
@@ -47,18 +75,18 @@ public:
    /// Indicates tip PID values have been calibrated
    static constexpr uint16_t PID_CALIBRATED = 1<<1;
 
-   /// Scale factor for storing non-volatile float values as 16-bit number
+   /// Scale factor for storing non-volatile float values as 16-bit integer
    static constexpr int   FLOAT_SCALE_FACTOR   = 1000;
 
-   /// Scale factor for storing non-volatile float values as 16-bit number
+   /// Scale factor for storing non-volatile float values as 16-bit integer
    static constexpr float FLOAT_SCALE_FACTOR_F = FLOAT_SCALE_FACTOR;
 
 private:
-   /// Thermocouple voltages at three temperatures
-   USBDM::NonvolatileArray<uint16_t, Calib_Number>thermocoupleVoltage;
+   /// First calibration value for each calibration point
+   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>calibrationValue1;
 
-   /// Cold junction temperature values at three temperatures
-   USBDM::NonvolatileArray<uint16_t, Calib_Number>coldJunctionTemperature;
+   /// Second calibration value for each calibration point
+   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>calibrationValue2;
 
    /// PID parameter - proportional constant
    USBDM::Nonvolatile<uint16_t> kp;
@@ -80,13 +108,21 @@ private:
 
    TipSettings(const TipSettings &other) = delete;
    TipSettings(TipSettings &&other) = delete;
-   TipSettings& operator=(const TipSettings &other) = delete;
    TipSettings& operator=(TipSettings &&other) = delete;
 
 public:
    TipSettings() {}
 
    ~TipSettings() {}
+
+   TipSettings& operator=(const TipSettings &other) {
+      this->kp = other.kp;
+      this->ki = other.ki;
+      this->kd = other.kd;
+      this->flags = other.flags;
+      this->tipNameIndex = other.tipNameIndex;
+      return *this;
+   }
 
    /**
     * Get TipNameIndex for given tip name
@@ -123,20 +159,11 @@ public:
    }
 
    /**
-    * Set default calibration values
+    * Load default calibration values for given tip
     *
     * @param TipNameIndex  Tip name index for this setting
     */
-   void setDefaultCalibration(TipNameIndex tipNameIndex = DEFAULT_ENTRY);
-
-   /**
-    * Get PID iLimit value
-    *
-    * @return I limit value
-    */
-   float getILimit() const {
-      return iLimit/FLOAT_SCALE_FACTOR_F;
-   }
+   void loadDefaultCalibration(TipNameIndex tipNameIndex = DEFAULT_ENTRY);
 
    /**
     * Get PID Kp value
@@ -166,20 +193,81 @@ public:
    }
 
    /**
-    * Set values from measured values
+    * Get PID iLimit value
     *
-    * @param other Dummy Tipsettings containing measurements
+    * @return I limit value
     */
-   void setThermisterCalibration(TipSettings &other) {
-      flags = flags | TEMP_CALIBRATED;
-      thermocoupleVoltage     = other.thermocoupleVoltage;
-      coldJunctionTemperature = other.coldJunctionTemperature;
+   float getILimit() const {
+      return iLimit/FLOAT_SCALE_FACTOR_F;
+   }
+
+   /**
+    * Get PID Kp value
+    *
+    * @return Scaled Kp value (internal format)
+    */
+   float getRawKp() const {
+      return kp;
+   }
+
+   /**
+    * Get PID Ki value
+    *
+    * @return Scaled Ki value (internal format)
+    */
+   float getRawKi() const {
+      return ki;
+   }
+
+   /**
+    * Get PID Kd value
+    *
+    * @return Scaled Kd value (internal format)
+    */
+   float getRawKd() const {
+      return kd;
+   }
+
+   /**
+    * Get PID iLimit value
+    *
+    * @return Scaled I limit value (internal format)
+    */
+   float getRawILimit() const {
+      return iLimit;
+   }
+
+   /**
+    * Set modified raw PID control values (custom)
+    *
+    * @param kp      Scaled Kp value (internal format)
+    * @param ki      Scaled Ki value (internal format)
+    * @param kd      Scaled Ki value (internal format)
+    * @param iLimit  Scaled ILimit value (internal format)
+    */
+   void setRawPidControlValues(int kp, int ki, int kd, int iLimit) {
+      flags = flags | PID_CALIBRATED;
+      this->kp     = kp;
+      this->ki     = ki;
+      this->kd     = kd;
+      this->iLimit = iLimit;
    }
 
    /**
     * Set values from measured values
     *
-    * @param other Dummy Tipsettings containing measurements
+    * @param other Dummy Tips-ettings containing measurements
+    */
+   void setThermisterCalibration(TipSettings &other) {
+      flags = flags | TEMP_CALIBRATED;
+      calibrationValue1 = other.calibrationValue1;
+      calibrationValue2 = other.calibrationValue2;
+   }
+
+   /**
+    * Set values from measured values
+    *
+    * @param other Dummy Tip-settings containing measurements
     */
    void setPidControlValues(TipSettings &other) {
       flags  = flags | PID_CALIBRATED;
@@ -190,15 +278,14 @@ public:
    }
 
    /**
-    * Set values from measured values
+    * Set initial PID control values (non-custom)
     *
     * @param kp
     * @param ki
     * @param kd
     * @param iLimit
     */
-   void setPidControlValues(float kp, float ki, float kd, float iLimit) {
-      flags  = flags | PID_CALIBRATED;
+   void setInitialPidControlValues(float kp, float ki, float kd, float iLimit) {
       this->kp     = kp * FLOAT_SCALE_FACTOR;
       this->ki     = ki * FLOAT_SCALE_FACTOR;
       this->kd     = kd * FLOAT_SCALE_FACTOR;
@@ -209,44 +296,65 @@ public:
     * Set a temperature calibration point
     *
     * @param calibrationIndex Index for the point
-    * @param temperature      Temperature value
-    * @param value            Corresponding measurement value
+    * @param value1      Calibration value 1
+    * @param value2      Calibration value 2
     */
-   void setTemperatureValues(Calib calibrationIndex, float temperature, float value) {
-      this->coldJunctionTemperature.set(calibrationIndex, temperature*FLOAT_SCALE_FACTOR);
-      this->thermocoupleVoltage.set(Calib_250, value*FLOAT_SCALE_FACTOR);
+   void setCalibrationPoint(CalibrationIndex calibrationIndex, float value1, float value2) {
+      this->calibrationValue1.set(calibrationIndex, value1*FLOAT_SCALE_FACTOR);
+      this->calibrationValue2.set(calibrationIndex, value2*FLOAT_SCALE_FACTOR);
    }
 
    /**
-    * Get TipIndex which this entry is associated with
+    * Get TipNameIndex which this entry is associated with
     *
-    * @return TipIndex
+    * @return TipNameIndex
     */
    TipNameIndex getTipNameIndex() const {
       return tipNameIndex;
    }
 
    /**
+    * Set TipNameIndex which this entry is associated with
+    *
+    * @param tipNameIndex
+    */
+   void setTipNameIndex(TipNameIndex tipNameIndex) {
+      this->tipNameIndex = tipNameIndex;
+   }
+
+   /**
     * Get name of Tool which this entry is associated with
     *
-    * @return TipIndex
+    * @return Pointer to tip name as static object
     */
    const char *getTipName() const {
       if (tipNameIndex == FREE_ENTRY) {
          return "Unallocated";
       }
-      return tipNames[tipNameIndex];
+      return initialTipInfo[tipNameIndex].name;
    }
 
    /**
-    * Get thermocouple voltage
+    * Get name of Tool which this entry is associated with
+    *
+    * @return Pointer to tip name as static object
+    */
+   IronType getIronType() const {
+      if (tipNameIndex == FREE_ENTRY) {
+         return IronType_T12;
+      }
+      return initialTipInfo[tipNameIndex].type;
+   }
+
+   /**
+    * Get getCalibrationValue1 voltage
     *
     * @param index
     *
     * @return thermocouple voltage
     */
-   float thermocouple(Calib index) const {
-      return thermocoupleVoltage[index]*FLOAT_SCALE_FACTOR_F;
+   float getCalibrationValue1(CalibrationIndex index) const {
+      return calibrationValue1[index]*FLOAT_SCALE_FACTOR_F;
    }
 
    /**
@@ -256,8 +364,8 @@ public:
     *
     * @return cold reference temperature
     */
-   float coldJunction(Calib index) const {
-      return coldJunctionTemperature[index]*FLOAT_SCALE_FACTOR_F;
+   float getCalibrationValue2(CalibrationIndex index) const {
+      return calibrationValue2[index]*FLOAT_SCALE_FACTOR_F;
    }
 
    /**

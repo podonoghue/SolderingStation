@@ -54,7 +54,7 @@ void Control::initialise() {
    while ((ADConverter::calibrate() != E_NO_ERROR) && (retry-->0)) {
       console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
    }
-   ADConverter::setAveraging(AdcAveraging_4);
+   ADConverter::setAveraging(AdcAveraging_off);
    ADConverter::setCallback(adc_cb);
    ADConverter::enableNvicInterrupts(NvicPriority_MidHigh);
 
@@ -152,7 +152,7 @@ void Control::changeTemp(int16_t delta) {
 }
 
 /// Delay between zero crossing and sampling (ADC conversion start) (us)
-static constexpr unsigned SAMPLE_DELAY  = 500;
+static constexpr unsigned SAMPLE_DELAY  = 1000;
 
 /**
  * Comparator interrupt handler for controlling the heaters.
@@ -170,6 +170,12 @@ void Control::zeroCrossingHandler() {
       ChipTemperature::startConversion(AdcInterrupt_Enabled);
    };
    ControlTimerChannel::oneShotInMicroseconds(cb, SAMPLE_DELAY);
+
+   // Set up bias resistors for later tip measurements
+   Ch1BiasResistor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
+   Ch1BiasResistor::write(channels[1].measurement->isBiasRequired());
+   Ch2BiasResistor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
+   Ch2BiasResistor::write(channels[2].measurement->isBiasRequired());
 
 //   Debug::set();
 
@@ -217,11 +223,7 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
          Debug::set();
          chipTemperature.accumulate(result);
          Ch1ColdJunctionNtc::startConversion(AdcInterrupt_Enabled);
-         // Set up bias resistors for later tip measurements
-         Ch1BiasResistor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
-         Ch1BiasResistor::write(ch1.measurement->isBiasRequired());
-         Ch2BiasResistor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
-         Ch2BiasResistor::write(ch2.measurement->isBiasRequired());
+         Debug::clear();
          break;
 
       case Ch1ColdJunctionNtc::CHANNEL :
@@ -230,6 +232,7 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
          break;
 
       case Ch2ColdJunctionNtc::CHANNEL :
+         Debug::set();
          ch2.measurement->auxliliarySensorAccumulate(result);
          Ch1TipThermocouple::startConversion(AdcInterrupt_Enabled);
          break;

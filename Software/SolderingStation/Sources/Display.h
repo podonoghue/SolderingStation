@@ -203,10 +203,8 @@ public:
     * @param ki         PID Ki value
     * @param kd         PID Kd value
     * @param iLimit     PID I limit value
-    *
-    * @return
     */
-   EventType displayPidSettings(const char *tipname, unsigned selection, char stars[4], int kp, int ki, int kd, int iLimit);
+   void displayPidSettings(const char *tipname, unsigned selection, char stars[4], int kp, int ki, int kd, int iLimit);
 
    /**
     * Display calibration information for tip during calibration sequence
@@ -216,6 +214,8 @@ public:
     * @param targetTemperature   Target temperature for this calibration stage
     */
    void displayCalibration(const char *title, Channel &ch, unsigned targetTemperature);
+
+   void displayHeater(Channel &ch, unsigned dutyCycle);
 };
 
 extern Display display;

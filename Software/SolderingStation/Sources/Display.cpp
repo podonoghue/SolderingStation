@@ -93,9 +93,14 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    }
 
    oled.setFont(fontLarge);
-   oled.moveXY(offset,  35).write("P").setWidth(1).write(ch.getPreset()).
-         write(ch.isTempModified()?"*:":" :").setWidth(3).write(ch.getUserTemperature());
-
+   if (ch.getState()==ch_setback) {
+      // If in setback mode display target temperature instead of active preset
+      oled.moveXY(offset,  35).write("SB :").setWidth(3).write(ch.getTargetTemperature());
+   }
+   else {
+      oled.moveXY(offset,  35).write("P").setWidth(1).write(ch.getPreset()).
+            write(ch.isTempModified()?"*:":" :").setWidth(3).write(ch.getUserTemperature());
+   }
    float power = ch.getPower();
 
    oled.setFont(fontSmall);
@@ -104,7 +109,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
    oled.moveXY(offset+35,  50).write((int)round(power)).writeln('W');
 
-   float percentagePower = ((oled.WIDTH/2)-3)*(ch.power.getAverage()/100);
+   float percentagePower = ((oled.WIDTH/2)-3)*(ch.power.getAveragedAdcSamples()/100);
 #if 0
    static constexpr int BG_TOP    = 58;
    static constexpr int BG_BOTTOM = oled.HEIGHT-1;
@@ -382,23 +387,26 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
 
    oled.clearDisplay();
    oled.setFont(fontMedium);
+   oled.setFloatFormat(1, Padding_LeadingSpaces, 3);
    oled.moveXY(0, 0);
    oled.writeln(title);
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY());
 
    oled.moveXY(0, oled.getY()+4);
    oled.setFont(fontSmall);
-   oled.write("Target       ").write(targetTemperature).writeln(" C");
+   oled.write("Target ----> ").write(targetTemperature).writeln(" C");
 
    oled.moveXY(0, oled.getY()+2);
-   oled.write("Measured     ").write(round(ch.getCurrentTemperature())).writeln(" C");
+   oled.write("Measured     ").write((int)round(ch.getCurrentTemperature())).writeln(" C");
 
    oled.moveXY(0, oled.getY()+2);
    oled.write("Controlled   ").write(ch.getUserTemperature()).writeln(" C");
 
    oled.moveXY(0, oled.getY()+5);
+   oled.write(ch.measurement->reportCalibrationValues());
+
 //   oled.write(" Power ").write(ch.getPower());
-   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+//   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
 //   oled.write("Vt ").write(1000*ch.tipTemperature.getVoltage()).write("mV");
 
 //   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
@@ -422,7 +430,7 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
  *
  * @return
  */
-EventType Display::displayPidSettings(const char *tipname, unsigned selection, char stars[4], int kp, int ki, int kd, int iLimit) {
+void Display::displayPidSettings(const char *tipname, unsigned selection, char stars[4], int kp, int ki, int kd, int iLimit) {
    static constexpr float SCALE_FACTOR = TipSettings::FLOAT_SCALE_FACTOR;
 
    oled.clearDisplay();
@@ -466,6 +474,21 @@ EventType Display::displayPidSettings(const char *tipname, unsigned selection, c
    oled.refreshImage();
 
    oled.resetFormat();
-
-   return ev_None;
 }
+
+void Display::displayHeater(Channel &ch, unsigned dutyCycle) {
+   float value = ch.measurement->getMeasurement();
+
+   oled.clearDisplay();
+   oled.setFont(fontMedium);
+   oled.moveXY(0, 0);
+   oled.writeln(" Heater");
+   oled.moveXY(0, oled.getY()+2);
+   oled.drawHorizontalLine(0, oled.WIDTH, oled.getY()+1);
+   oled.moveXY(0, oled.getY()+3);
+   oled.write("DutyCyle = ").writeln(dutyCycle);
+   oled.write("Value = ").writeln(value);
+   oled.refreshImage();
+   oled.resetFormat();
+}
+

@@ -11,80 +11,81 @@
 #include "error.h"
 #include "NonvolatileSettings.h"
 #include "T12.h"
+#include "WellerWT50.h"
 
 using namespace USBDM;
 
-const char * const TipSettings::tipNames[NUMBER_OF_TIPS] = {
-      "B0",
-      "B1",
-      "B2",
-      "B3",
-      "B4",
-      "B2Z",
-      "BC1",
-      "BC1.5",
-      "BC2",
-      "BC3",
-      "BC1Z",
-      "BC2Z",
-      "BC4Z",
-      "BCF1",
-      "BCF2",
-      "BCF3",
-      "BCF4",
-      "BCF1Z",
-      "BCF2Z",
-      "BCF3Z",
-      "BCM2",
-      "BCM3",
-      "BL",
-      "BZ",
-      "C1",
-      "C2",
-      "C3",
-      "C4",
-      "D08",
-      "D12",
-      "D16",
-      "D24",
-      "D52",
-      "D4",
-      "DL12",
-      "DL32",
-      "DL52",
-      "D12Z",
-      "D24Z",
-      "D4Z",
-      "I",
-      "IL",
-      "ILS",
-      "J02",
-      "JL02",
-      "JS02",
-      "K",
-      "KF",
-      "KL",
-      "KR",
-      "KFZ",
-      "KRZ",
-      "KU",
-      "WB2",
-      "WD08",
-      "WD12",
-      "WD16",
-      "WD52",
-      "WI",
-      "N1-06",
-      "N1-08",
-      "N1-10",
-      "N1-13",
-      "N1-16",
-      "N1-20",
-      "N1-23",
-      "N1-L1",
-      "WT50S",
-      "WT50M",
-      "WT50L",
+const InitialTipInfo TipSettings::initialTipInfo[NUMBER_OF_TIPS] = {
+      {"B0",    IronType_T12 },
+      {"B1",    IronType_T12 },
+      {"B2",    IronType_T12 },
+      {"B3",    IronType_T12 },
+      {"B4",    IronType_T12 },
+      {"B2Z",   IronType_T12 },
+      {"BC1",   IronType_T12 },
+      {"BC1.5", IronType_T12 },
+      {"BC2",   IronType_T12 },
+      {"BC3",   IronType_T12 },
+      {"BC1Z",  IronType_T12 },
+      {"BC2Z",  IronType_T12 },
+      {"BC4Z",  IronType_T12 },
+      {"BCF1",  IronType_T12 },
+      {"BCF2",  IronType_T12 },
+      {"BCF3",  IronType_T12 },
+      {"BCF4",  IronType_T12 },
+      {"BCF1Z", IronType_T12 },
+      {"BCF2Z", IronType_T12 },
+      {"BCF3Z", IronType_T12 },
+      {"BCM2",  IronType_T12 },
+      {"BCM3",  IronType_T12 },
+      {"BL",    IronType_T12 },
+      {"BZ",    IronType_T12 },
+      {"C1",    IronType_T12 },
+      {"C2",    IronType_T12 },
+      {"C3",    IronType_T12 },
+      {"C4",    IronType_T12 },
+      {"D08",   IronType_T12 },
+      {"D12",   IronType_T12 },
+      {"D16",   IronType_T12 },
+      {"D24",   IronType_T12 },
+      {"D52",   IronType_T12 },
+      {"D4",    IronType_T12 },
+      {"DL12",  IronType_T12 },
+      {"DL32",  IronType_T12 },
+      {"DL52",  IronType_T12 },
+      {"D12Z",  IronType_T12 },
+      {"D24Z",  IronType_T12 },
+      {"D4Z",   IronType_T12 },
+      {"I",     IronType_T12 },
+      {"IL",    IronType_T12 },
+      {"ILS",   IronType_T12 },
+      {"J02",   IronType_T12 },
+      {"JL02",  IronType_T12 },
+      {"JS02",  IronType_T12 },
+      {"K",     IronType_T12 },
+      {"KF",    IronType_T12 },
+      {"KL",    IronType_T12 },
+      {"KR",    IronType_T12 },
+      {"KFZ",   IronType_T12 },
+      {"KRZ",   IronType_T12 },
+      {"KU",    IronType_T12 },
+      {"WB2",   IronType_T12 },
+      {"WD08",  IronType_T12 },
+      {"WD12",  IronType_T12 },
+      {"WD16",  IronType_T12 },
+      {"WD52",  IronType_T12 },
+      {"WI",    IronType_T12 },
+      {"N1-06", IronType_T12 },
+      {"N1-08", IronType_T12 },
+      {"N1-10", IronType_T12 },
+      {"N1-13", IronType_T12 },
+      {"N1-16", IronType_T12 },
+      {"N1-20", IronType_T12 },
+      {"N1-23", IronType_T12 },
+      {"N1-L1", IronType_T12 },
+      {"WT50S", IronType_Weller },
+      {"WT50M", IronType_Weller },
+      {"WT50L", IronType_Weller },
 };
 
 /**
@@ -95,11 +96,11 @@ const char * const TipSettings::tipNames[NUMBER_OF_TIPS] = {
  * @return TipNameIndex (index into tip name table)
  */
 TipSettings::TipNameIndex TipSettings::getTipNameIndex(const char *tipName) {
-   static_assert(NUMBER_OF_TIPS == (sizeof(tipNames)/sizeof(tipNames[0])), "");
+   static_assert(NUMBER_OF_TIPS == (sizeof(initialTipInfo)/sizeof(initialTipInfo[0])), "");
 
    TipNameIndex index;
    for(index=0; index<NUMBER_OF_TIPS; index++) {
-      if (strcmp(tipNames[index], tipName) == 0) {
+      if (strcmp(initialTipInfo[index].name, tipName) == 0) {
          return index;
       }
    }
@@ -118,7 +119,7 @@ const char *TipSettings::getTipName(TipNameIndex index) {
    if (index >= NUMBER_OF_TIPS) {
       return "----";
    }
-   return tipNames[index];
+   return initialTipInfo[index].name;
 }
 
 /**
@@ -126,11 +127,20 @@ const char *TipSettings::getTipName(TipNameIndex index) {
  *
  * @param TipNameIndex  Tip name index for this setting
  */
-void TipSettings::setDefaultCalibration(TipNameIndex tipNameIndex) {
+void TipSettings::loadDefaultCalibration(TipNameIndex tipNameIndex) {
    this->tipNameIndex = tipNameIndex;
    this->flags   = 0;
 
-   T12::initialiseSettings(this,  tipNameIndex);
+   const InitialTipInfo &initInfo = initialTipInfo[tipNameIndex];
+   switch(initInfo.type) {
+      case IronType_T12:
+         T12::initialiseSettings(this,  initInfo);
+         break;
+      case IronType_Weller:
+         Weller_WT50::initialiseSettings(this,  initInfo);
+         break;
+      default:
+         usbdm_assert(false, "Illegal iron type");
+         break;
+   }
 }
-
-

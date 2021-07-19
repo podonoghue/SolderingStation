@@ -75,7 +75,7 @@ public:
     * @return  false - abort or failed
     * @return  true  - continue to next stage
     */
-   static bool calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings::Calib stage);
+   static bool calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationIndex stage);
 
    /**
     * Calculate a non-volatile tip calibration setting.
@@ -117,6 +117,8 @@ public:
    static EventType selectAvailableTips(const SettingsData &);
 
    static EventType displayChannelStatuses(const SettingsData &);
+   static EventType runHeater(const SettingsData &);
+
 };
 
 #endif /* SOURCES_MENUS_H_ */

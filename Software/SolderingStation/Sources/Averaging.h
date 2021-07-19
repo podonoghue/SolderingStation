@@ -11,24 +11,66 @@
 #include "hardware.h"
 #include "Peripherals.h"
 
+class AdcAverage {
+private:
+   AdcAverage(const AdcAverage &other) = delete;
+   AdcAverage(AdcAverage &&other) = delete;
+   AdcAverage& operator=(const AdcAverage &other) = delete;
+   AdcAverage& operator=(AdcAverage &&other) = delete;
+
+protected:
+   /// Last sample added
+   int lastSample = 0;
+
+public:
+   AdcAverage() {}
+
+   /**
+    * Convert ADC value to ADC input voltage
+    *
+    * @return Value calculated in volts
+    */
+   static constexpr float convertToAdcVoltage(float adcValue) {
+      // Convert ADC value to voltage
+      return adcValue * (ADC_REF_VOLTAGE/ADConverter::getSingleEndedMaximum(ADC_RESOLUTION));
+   }
+
+   /**
+    * Get the value of the last sample added
+    *
+    * @return Sample as integer
+    */
+   int getLastAdcSample() {
+      return lastSample;
+   }
+
+   /**
+    * Get the voltage of the last sample added
+    *
+    * @return Sample as integer
+    */
+   float getLastAdcVoltage() {
+      return convertToAdcVoltage(getLastAdcSample());
+   }
+
+};
+
 /**
  * Class representing a simple moving average for ADC values.
  *
  * @tparam WindowSize Number of samples to average over
  */
 template<unsigned WindowSize>
-class SimpleMovingAverage {
+class SimpleMovingAverage : protected AdcAverage {
 
 private:
    /// Samples over entire window (circular buffer)
    int samples[WindowSize] = {0};
 
-   /// Last sample added
-   int lastSample = 0;
-
-   /// Index into samples
+   /// Index into samples FIFO
    unsigned index = 0;
 
+   /// Count of valid values in FIFO
    unsigned count = 0;
 
    /// Summation of samples
@@ -54,15 +96,15 @@ public:
     * Reset average
     */
    void reset() {
-      count = 0;
       sum   = 0;
+      count = 0;
       index = 0;
    }
 
    /**
-    * Add ADC value to window
+    * Add ADC sample to window
     *
-    * @param value to add - replaces oldest value
+    * @param value Sample to add - replaces oldest value
     */
    void accumulate(int value) {
 
@@ -73,7 +115,7 @@ public:
 
       // Count values in buffer with limit
       if (count < WindowSize) {
-         // Buffer not full just count
+         // Buffer not full just count sample
          count++;
       }
       else {
@@ -91,11 +133,11 @@ public:
    }
 
    /**
-    * Return raw ADC value averaged over window
+    * Return ADC samples averaged over window
     *
-    * @return value calculated over window
+    * @return Sample average
     */
-   float getAverage() const {
+   float getAveragedAdcSamples() const {
       if (count == 0) {
          return 0;
       }
@@ -104,30 +146,12 @@ public:
    }
 
    /**
-    * Get the value of the last sample added
-    *
-    * @return Sample as integer
-    */
-   int getLastSample() {
-      return lastSample;
-   }
-
-   /**
     * Return ADC voltage averaged over window
     *
-    * @return value calculated over window
+    * @return Voltage average
     */
-   float getVoltageAverage() const {
-
-      float voltage;
-
-      // Calculate average over window
-      voltage = getAverage();
-
-      // Convert ADC value to voltage
-      voltage  *= (ADC_REF_VOLTAGE/ADConverter::getSingleEndedMaximum(ADC_RESOLUTION));
-
-      return voltage;
+   float getAveragedAdcVoltage() const {
+      return convertToAdcVoltage(getAveragedAdcSamples());
    }
 };
 
@@ -139,14 +163,11 @@ public:
  * @tparam N is the weighting in above equation.
  */
 template<unsigned N=2>
-class MovingAverage {
+class MovingAverage : protected AdcAverage {
 
 private:
    /// Sample accumulator
    float accumulator = 0;
-
-   /// Last sample added
-   int lastSample = 0;
 
    bool initial = true;
 
@@ -175,7 +196,7 @@ public:
    }
 
    /**
-    * Add ADC value to weighted average
+    * Add ADC sample to weighted average
     *
     * @param value to add
     */
@@ -193,39 +214,22 @@ public:
    }
 
    /**
-    * Get the value of the last sample added
+    * Calculate the weighted average of the ADC samples
     *
-    * @return Sample as integer
+    * @return Sample average
     */
-   int getLastSample() {
-      return lastSample;
-   }
-
-   /**
-    * Return raw ADC value as weighted average
-    *
-    * @return value calculated
-    */
-   float getAverage() const {
+   float getAveragedAdcSamples() const {
       return accumulator;
    }
 
    /**
-    * Return ADC voltage as weighted averaged
+    * Calculate the weighted average of the ADC sample voltages
     *
-    * @return value calculated
+    * @return Voltage average
     */
-   float getVoltageAverage() const {
-
-      float voltage;
-
-      // Calculate average over window
-      voltage = getAverage();
-
-      // Convert ADC value to voltage
-      voltage  *= (ADC_REF_VOLTAGE/ADConverter::getSingleEndedMaximum(ADC_RESOLUTION));
-
-      return voltage;
+   float getAveragedAdcVoltage() const {
+      // Convert ADC samples averaged over window to voltage
+      return convertToAdcVoltage(getAveragedAdcSamples());
    }
 };
 
@@ -234,12 +238,9 @@ public:
  *
  * Dummy A(i) = S(i)
  */
-class DummyAverage {
+class DummyAverage : protected AdcAverage {
 
 private:
-   /// Samples
-   int accumulator = 0;
-
    DummyAverage(const DummyAverage &other) = delete;
    DummyAverage(DummyAverage &&other) = delete;
    DummyAverage& operator=(const DummyAverage &other) = delete;
@@ -268,54 +269,50 @@ public:
     * @param value to add
     */
    void accumulate(int value) {
-      accumulator = value;
+      lastSample = value;
    }
 
    /**
-    * Get the value of the last sample added
-    *
-    * @return Sample as integer
-    */
-   int getLastSample() {
-      return accumulator;
-   }
-
-   /**
-    * Return raw ADC value as weighted average
+    * Calculate the average of the ADC samples
     *
     * @return value calculated
     */
-   int getAverage() const {
-      return accumulator;
+   int getAveragedAdcSamples() const {
+      return lastSample;
    }
+
    /**
-    * Return ADC voltage as weighted averaged
+    * Calculate the average of the ADC sample voltages
     *
-    * @return value calculated
+    * @return Voltage average
     */
-   float getVoltageAverage() const {
-
-      float voltage;
-
-      // Calculate average over window
-      voltage = getAverage();
-
-      // Convert ADC value to voltage
-      voltage  *= (ADC_REF_VOLTAGE/ADConverter::getSingleEndedMaximum(ADC_RESOLUTION));
-
-      return voltage;
+   float getAveragedAdcVoltage() const {
+      // Convert averaged ADC value to voltage
+      return convertToAdcVoltage(getAveragedAdcSamples());
    }
 };
 
 // Three methods for averaging
 //using AveragingMethod = SimpleMovingAverage<10>; // 10*10ms = even weights over 100ms average
-using AveragingMethod = MovingAverage<10>; // 10*10ms = declining weights over 100ms average
+using AveragingMethod = MovingAverage<20>; // 10*10ms = declining weights over 100ms average
 //using AveragingMethod = DummyAverage;
 
 class TemperatureAverage : public AveragingMethod {
 
 public:
+   /**
+    * Returns the averaged temperature
+    *
+    * @return Temperature in Celsius
+    */
    virtual float getTemperature() = 0;
+
+   /**
+    * Returns the temperature from the last sample
+    *
+    * @return Temperature in Celsius
+    */
+   virtual float getInstantTemperature() = 0;
 
    /**
     * Indicates if the measurement requires a bias current.
@@ -326,13 +323,24 @@ public:
    virtual bool isBiasRequired()  {
       return false;
    }
+
    /**
-    * Calculates resistance of sensor.
-    * Only applicable to a sensor that is resistance based (PTC,NTC device).
+    * Gets average resistance of sensor.
+    * Only applicable to a sensor that is resistance based (PTC, NTC device).
     *
-    * @return
+    * @return Resistance in ohms
     */
    virtual float getResistance() {
+      return 0.0;
+   }
+
+   /**
+    * Gets average thermocouple voltage
+    * Only applicable to a sensor that is thermocouple based.
+    *
+    * @return Thermocouple voltage
+    */
+   virtual float getThermocoupleVoltage() {
       return 0.0;
    }
 
@@ -344,16 +352,39 @@ public:
  */
 class ThermistorMF58Average : public TemperatureAverage {
 
-protected:
+private:
 
    /**
-    * Converts thermistor resistance value to temperature
+    * Converts ADC voltage to thermistor resistance
+    *
+    * @param voltage ADC voltage
+    *
+    * @return Thermistor resistance in ohms
+    */
+   static float convertAdcVoltageToNtcResistance(float voltage) {
+      /// NTC measurement current
+      constexpr float NTC_MEASUREMENT_CURRENT  = 237E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA!
+
+      /// Gain of NTC measurement amplifier - voltage follower
+      constexpr float NTC_MEASUREMENT_GAIN   = 1.0;
+
+      /// NTC measurement ratio ohms/volt i.e. converts ADC voltage to R
+      constexpr float NTC_MEASUREMENT_RATIO   = 1/(NTC_MEASUREMENT_CURRENT*NTC_MEASUREMENT_GAIN);
+
+      return NTC_MEASUREMENT_RATIO * voltage;
+   }
+
+   /**
+    * Converts ADC voltage to temperature
     *
     * @param resistance Thermistor resistance in ohms
     *
     * @return Corresponding temperature in Celsius
     */
-   static float resistanceToCelsius(float resistance) {
+   static float convertAdcVoltageToCelsius(float voltage) {
+
+      // Convert ADC voltage to thermistor resistance
+      float resistance = convertAdcVoltageToNtcResistance(voltage);
 
       // Value from curve fitting see spreadsheet
       // Thermistor (ntc_mf58, 10k B3950) curve fit.ods
@@ -382,53 +413,52 @@ protected:
       return temperatureInKelvin + KelvinToCelsius;
    }
 
-   /**
-    * Returns the average of the thermistor resistance
-    *
-    * @return Thermistor resistance in ohms
-    */
-   float getResistance() {
-      /// NTC measurement current
-      constexpr float NTC_MEASUREMENT_CURRENT  = 237E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA!
-
-      /// Gain of NTC measurement amplifier - voltage follower
-      constexpr float NTC_MEASUREMENT_GAIN   = 1.0;
-
-      /// NTC measurement ratio ohms/volt i.e. converts ADC voltage to R
-      constexpr float NTC_MEASUREMENT_RATIO   = 1/(NTC_MEASUREMENT_CURRENT*NTC_MEASUREMENT_GAIN);
-
-      // Get ADC value as voltage
-      float voltage = getVoltageAverage();
-
-      return NTC_MEASUREMENT_RATIO * voltage;
-   }
-
 public:
    /**
-    * Returns the average of the thermistor temperature in Celsius
+    * Returns the averaged thermistor temperature
     *
     * @return  Thermistor temperature in Celsius
     */
    virtual float getTemperature() override {
+      return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
+   }
 
-      return resistanceToCelsius(getResistance());
+   /**
+    * Returns the thermistor temperature from the last sample
+    *
+    * @return  Thermistor temperature in Celsius
+    */
+   virtual float getInstantTemperature() override {
+      return convertAdcVoltageToCelsius(getLastAdcVoltage());
+   }
+
+   /**
+    * Returns the average resistance of the thermistor.
+    *
+    * @return
+    */
+   virtual float getResistance() override {
+      return convertAdcVoltageToNtcResistance(getAveragedAdcVoltage());
    }
 };
 
 /**
- * Class representing an average customised for a thermocouple
+ * Class representing an average customised for a T12 thermocouple
  */
-class ThermocoupleAverage : public TemperatureAverage {
+class ThermocoupleT12Average : public TemperatureAverage {
 
-protected:
+private:
    /**
-    * Converts a thermocouple voltage to temperature
+    * Converts ADC voltage to thermocouple temperature
     *
-    * @param voltage Thermocouple voltage
+    * @param voltage ADC voltage
     *
     * @return Temperature in Celsius
     */
-   static float voltageToCelsius(float voltage) {
+   static float convertAdcVoltageToCelsius(float voltage) {
+
+      // Convert ADC voltage to TC voltage
+      voltage *= TC_MEASUREMENT_RATIO;
 
       // Curve fitting was done using mV
       voltage *= 1000;
@@ -442,31 +472,32 @@ protected:
       return temperature;
    }
 
-   /**
-    * Returns the average of the thermocouple voltage
-    *
-    * @return Thermocouple voltage in V
-    */
-   float getVoltage() {
-      /// Thermocouple measurement ratio V/V i.e. converts ADC voltage to thermocouple voltage in V
-      /// Amplifier gain is Rf/Ri
-      constexpr float TC_MEASUREMENT_RATIO   = (Ri/Rf);
-
-      // Get ADC value as voltage
-      float voltage = getVoltageAverage();
-
-      return voltage * TC_MEASUREMENT_RATIO;
-   }
-
 public:
    /**
-    * Returns the average of the thermocouple temperature relative to the cold reference
+    * Returns the averaged thermocouple temperature relative to the cold reference
     *
     * @return Thermocouple temperature in Celsius
     */
-   virtual float getTemperature() {
+   virtual float getTemperature() override {
+      return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
+   }
 
-      return voltageToCelsius(getVoltage());
+   /**
+    * Returns the thermocouple temperature relative to the cold reference for the last sample
+    *
+    * @return Thermocouple temperature in Celsius
+    */
+   virtual float getInstantTemperature() {
+      return convertAdcVoltageToCelsius(getLastAdcVoltage());
+   }
+
+   /**
+    * Gets average thermocouple voltage
+    *
+    * @return Thermocouple voltage
+    */
+   virtual float getThermocoupleVoltage() override {
+      return getAveragedAdcVoltage() * TC_MEASUREMENT_RATIO;
    }
 };
 
@@ -484,20 +515,30 @@ private:
     *
     * @return Chip temperature in Celsius
     */
-   static float voltageToCelsius(float voltage) {
+   static float convertAdcVoltageToCelsius(float voltage) {
       return 25 - (voltage-0.719)/.001715;
    }
 
 public:
 
    /**
-    * Returns the average of the internal chip temperature
+    * Returns the averaged internal chip temperature
     *
     * @return Chip temperature in Celsius
     */
    virtual float getTemperature() override {
 
-      return voltageToCelsius(getVoltageAverage());
+      return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
+   }
+
+   /**
+    * Returns the temperature from the last sample
+    *
+    * @return Temperature in Celsius
+    */
+   virtual float getInstantTemperature() override {
+
+      return convertAdcVoltageToCelsius(getLastAdcVoltage());
    }
 };
 
@@ -511,6 +552,7 @@ public:
       return 0.0;
    }
 };
+
 /**
  * Class representing an average customised for a Weller PTC Thermistor
  */
@@ -518,13 +560,19 @@ class WellerThermistorAverage : public TemperatureAverage {
 
 private:
    /**
-    * Convert PTC thermistor voltage measurement to PTC resistance
+    * Converts a ADC voltage to thermistor resistance
+    * The ADC voltage is from the thermocouple amplifier with 1/TC_MEASUREMENT_RATIO gain measuring
+    * the thermistor voltage produced from a Thevenin equivalent Rt and Vt i.e. voltage divider.
     *
     * @param voltage  PTC voltage
     *
     * @return PTC resistance
     */
-   static float getPtcResistance(float voltage) {
+   static float convertAdcVoltageToPtcResistance(float voltage) {
+
+      // Convert ADC voltage to thermistor voltage
+      voltage *= TC_MEASUREMENT_RATIO;
+
       // Thevenin equivalent supplying the PTC
       constexpr float Rbias  = 10000.0;
       constexpr float Ropamp = 100000.0+1000.0;
@@ -536,18 +584,20 @@ private:
    }
 
    /**
-    * Converts a PTC thermistor voltage to temperature
-    * The voltage is produced by a voltage divider with Thevenin equivalent Rt and Vt.
+    * Converts a ADC voltage to thermistor temperature
+    * The ADC voltage is from the thermocouple amplifier with 1/TC_MEASUREMENT_RATIO gain measuring
+    * the thermistor voltage produced from a Thevenin equivalent Rt and Vt i.e. voltage divider.
     *
-    * @param voltage PTC voltage
+    * @param ADC voltage
     *
     * @return Temperature in Celsius
     */
-   static float voltageToCelsius(float voltage) {
+   static float convertAdcVoltageToCelsius(float voltage) {
 
-      float Rptc = getPtcResistance(voltage);
+      // Convert ADC voltage to resistance
+      float Rptc = convertAdcVoltageToPtcResistance(voltage);
 
-      // Linear interpolation from R -> T
+      // Curve fit from PTC resistance -> Temperature
       constexpr float A_constant =  -79.560;
       constexpr float B_constant =   -0.994;
       constexpr float C_constant =    0.243;
@@ -563,41 +613,33 @@ private:
       return temperature;
    }
 
-   /**
-    * Returns the average of the thermistor voltage
-    *
-    * @return thermistor voltage in V
-    */
-   float getVoltage() {
-      // Sensor measurement ratio V/V i.e. converts ADC voltage to sensor voltage in V
-      // Amplifier gain is Rf/Ri = 100K/1K
-      constexpr float TC_MEASUREMENT_RATIO   = (Ri/Rf);
-
-      // Get ADC value as voltage
-      float voltage = getVoltageAverage();
-
-      return voltage * TC_MEASUREMENT_RATIO;
-   }
-
 public:
    /**
-    * Returns the average of the thermistor temperature
+    * Returns the averaged thermistor temperature
     *
     * @return Thermistor temperature in Celsius
     */
    virtual float getTemperature() override {
-      return voltageToCelsius(getVoltage());
+      return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
    }
 
    /**
-    * Returns the average resistance of thermistor.
+    * Returns the thermistor temperature from the last sample
+    *
+    * @return Thermistor temperature in Celsius
+    */
+   virtual float getInstantTemperature() override {
+      return convertAdcVoltageToCelsius(getLastAdcVoltage());
+   }
+
+   /**
+    * Returns the averaged resistance of the thermistor.
     *
     * @return
     */
    virtual float getResistance() {
-      return getPtcResistance(getVoltage());
+      return convertAdcVoltageToPtcResistance(getAveragedAdcVoltage());
    }
 };
-
 
 #endif /* SOURCES_AVERAGING_H_ */

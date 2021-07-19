@@ -16,6 +16,7 @@ Tips::Tips() : tipSettings(nvinit.tipSettings) {
 /**
  * Fill menu array with tips currently selected.
  * The array is sorted.
+ * The array contains pointers to non-volatile data so unnecessary modification should be avoided to reduce EEPROM wear
  *
  * @param[in/out] menuItems      Array to populate with data
  * @param[in]     checkModifier  Class function to check for set attributes
@@ -73,7 +74,7 @@ int Tips::findTipInMenu(const TipSettings *tip, MenuItem menuItems[], int tipsAl
 void Tips::populateTips(MenuItem tipMenuItems[TipSettings::NUMBER_OF_TIPS]) {
    // Copy tip information to menu settings
    for(TipSettings::TipNameIndex index=0; index<TipSettings::NUMBER_OF_TIPS; index++) {
-      tipMenuItems[index].name      = TipSettings::tipNames[index];
+      tipMenuItems[index].name      = TipSettings::initialTipInfo[index].name;
       tipMenuItems[index].modifiers = 0;
       tipMenuItems[index].object    = nullptr;
 

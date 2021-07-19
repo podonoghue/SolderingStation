@@ -43,7 +43,7 @@ void NonvolatileSettings::initialiseChannelSettings() {
  * All entries except 1st are cleared.
  */
 void NonvolatileSettings::initialiseTipSettings() {
-   tipSettings[0].setDefaultCalibration();
+   tipSettings[0].loadDefaultCalibration();
 }
 
 /**

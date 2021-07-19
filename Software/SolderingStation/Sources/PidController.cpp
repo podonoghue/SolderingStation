@@ -71,21 +71,21 @@ float PidController::newSample(float targetTemperature, float actualTemperature)
    // Update input samples & error
    fCurrentError = targetTemperature - fCurrentInput;
 
-   fIntegral += (fKi * fCurrentError);
-   if (fCurrentError>60) {
-      // Limit integral term during startup when error is large
-      if(fIntegral > fILimit/2) {
-         fIntegral = fILimit/2;
-      }
+   if ((fCurrentOutput<fOutMin+1)){
+      // Hit bottom drive limit - de-integrate slower
+      fIntegral += (fKi/2 * fCurrentError);
    }
    else {
-      // Limit integral term after startup
-      if(fIntegral > fILimit) {
-         fIntegral = fILimit;
-      }
-      else if(fIntegral < -fILimit) {
-         fIntegral = -fILimit;
-      }
+      fIntegral += (fKi * fCurrentError);
+   }
+
+   if ((fCurrentOutput>=fOutMax) && (fCurrentError>0) && (fIntegral > fILimit)) {
+      // Limit positive integral term when at 100% power and rising
+      fIntegral = fILimit;
+   }
+   if (fIntegral < -fILimit) {
+      // Limit negative integral term in general
+      fIntegral = -fILimit;
    }
    fDifferential = fKd * (fCurrentInput - lastInput);
 
@@ -110,29 +110,23 @@ float PidController::newSample(float targetTemperature, float actualTemperature)
 void PidController::reportHeading(Channel &ch) {
 
       console.setFloatFormat(1, Padding_None).
-         write("Time,Drive,").write(ch.getTipName()).
+         write("Time,SetTemp,Drive,").write(ch.getTipName()).
          write(",Error,P=").write(getKp());
       console.setFloatFormat(3, Padding_None).
          write(",I=").write(getKi());
       console.setFloatFormat(1, Padding_None).
-         write(" <").write(fILimit/2).write("/").write(fILimit).writeln(",D");
-
-      console.setFloatFormat(3, Padding_None).
-         write("\"Kp=").write(getKp()).
-         write(",Ki=").write(getKi());
-      console.setFloatFormat(3, Padding_None, 3).
-         write(",Kd=").write(getKd());
-      console.setFloatFormat(1, Padding_None).write(",I<").write(getIlimit()/2).write("/").write(getIlimit());
-      console.write(",Pmax=").write((int)round(fOutMax)).write("%\"");
+         write("<").write(fILimit).write("@").write((int)round(fOutMax)).write("%,D,Instant. T");
       console.writeln();
 }
 
 /**
  * Report current situation
  */
-void PidController::report(Channel &) {
+void PidController::report(Channel &ch) {
 
    // Take snapshot
+   volatile float targetTemp    = ch.getTargetTemperature();
+   volatile float instantTemp   = ch.measurement->getInstantTemperature();
    volatile float currentOutput = fCurrentOutput;
    volatile float currentInput  = fCurrentInput;
    volatile float currentError  = fCurrentError;
@@ -143,14 +137,19 @@ void PidController::report(Channel &) {
 //   volatile float resistance    = ch.tipTemperature.getResistance();
 
    console.setFloatFormat(2, Padding_LeadingSpaces, 3);
-   console.write(getElapsedTime()).write(", ");
+   console.write(getElapsedTime());
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 3);
-   console.write(currentOutput).write(", ").write(currentInput);
-//   console.write(", ").write(rawTipTemp);
+   console.write(", ").write(targetTemp);
+   console.write(", ").write(currentOutput); // Drive
+   console.write(", ").write(currentInput);  // Averaged temperature
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 3);
-   console.write(",").write(currentError).write(",").write(proportional).write(",").write(integral).write(",").write(differential);
+   console.write(",").write(currentError); // Error
+   console.write(",").write(proportional); // P
+   console.write(",").write(integral);     // I
+   console.write(",").write(differential); // D
+   console.write(",").write(instantTemp);  // Instantaneous temperature
 
 //   console.write(",").write(resistance);
 

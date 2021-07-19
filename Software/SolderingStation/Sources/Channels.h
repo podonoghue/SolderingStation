@@ -8,7 +8,7 @@
 #ifndef SOURCES_CHANNELS_H_
 #define SOURCES_CHANNELS_H_
 
-#include <PidController.h>
+#include "PidController.h"
 #include "Channel.h"
 #include "Control.h"
 #include "NonvolatileSettings.h"

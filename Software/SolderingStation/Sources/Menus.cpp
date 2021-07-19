@@ -57,6 +57,12 @@ EventType Menus::editTime(const SettingsData &data) {
             doRefresh = true;
             break;
 
+         case ev_QuadRotatePressed:
+            scratch += event.change * 6*data.increment;
+            scratch -= scratch % data.increment;
+            doRefresh = true;
+            break;
+
          case ev_QuadHold:
          case ev_SelRelease:
          case ev_SelHold:
@@ -108,6 +114,12 @@ EventType Menus::editFloat(const SettingsData &data) {
 
          case ev_QuadRotate:
             scratch += event.change * data.increment;
+            scratch -= scratch % data.increment;
+            doRefresh = true;
+            break;
+
+         case ev_QuadRotatePressed:
+            scratch += event.change * 10 * data.increment;
             scratch -= scratch % data.increment;
             doRefresh = true;
             break;
@@ -168,6 +180,13 @@ EventType Menus::editTemperature(const SettingsData &data) {
             doRefresh = true;
             break;
 
+         case ev_QuadRotatePressed:
+            // Increment by multiple of scale with forced rounding
+            scratch += event.change * 10 * data.increment;
+            scratch -= scratch % data.increment;
+            doRefresh = true;
+            break;
+
          case ev_QuadHold:
          case ev_SelRelease:
          case ev_SelHold:
@@ -188,14 +207,13 @@ EventType Menus::editTemperature(const SettingsData &data) {
  * Calibrate a tip
  *
  * @param[in]     ch            Channel being used
- * @param[in/out] tipsettings   Tipsettings being determined
+ * @param[in/out] tipsettings   Tip settings being determined
  * @param[in]     stage         Stage is calibration sequence
  *
  * @return  false - abort or failed
  * @return  true  - continue to next stage
  */
-bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings::Calib stage) {
-   static const unsigned targetTemperatures[] = {250, 350, 400};
+bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationIndex stage) {
 
    if (tipsettings.isFree()) {
       return false;
@@ -205,23 +223,33 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings:
 
    bool doUpdate = true;
 
-   BoundedInteger controlledTemperature{Control::MIN_TEMP, Control::MAX_TEMP, (int)targetTemperatures[stage]};
+   // Temperature being calibrated to
+   const int targetTemperature = TipSettings::getCalibrationTemperature(stage);
 
-   ch.setState(ch_active);
+   // User temperature value used to allow temperature adjustment to obtain targetTemperature
+   // Start at target-50 as much faster to heat than cool i.e. approach from below is more convenient
+   BoundedInteger controlledTemperature{Control::MIN_TEMP, Control::MAX_TEMP, (int)targetTemperature-50};
+
+   // Set up channel for this tip
+   ch.setTip(&tipsettings);
    ch.setUserTemperature(controlledTemperature);
+   ch.setState(ch_active);
 
    StringFormatter_T<16> title;
+
    title.write("Stage ").write(stage+1).write(" - ").write(tipsettings.getTipName());
 
    enum {working, complete, fail} loopControl = working;
-   do {
-      if (doUpdate || control.needsRefresh()) {
 
-         display.displayCalibration(title.toString(), ch, targetTemperatures[stage]);
+   do {
+//      control.reportPid(ch);
+      if (doUpdate || control.needsRefresh()) {
+         display.displayCalibration(title.toString(), ch, targetTemperature);
       }
       Event event = switchPolling.getEvent();
       switch(event.type) {
          case ev_QuadRotate:
+            // Adjust user temperature
             controlledTemperature += event.change;
             ch.setUserTemperature(controlledTemperature);
             doUpdate = true;
@@ -229,14 +257,14 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings:
 
          case ev_SelRelease:
          case ev_QuadRelease:
-            // Save values
-//            tipsettings.coldJunctionTemperature.set(stage,ch.coldJunctionTemperature.getTemperature());
-//            tipsettings.thermocoupleVoltage.set(stage, ch.tipTemperature.getVoltage());
+            // Save calibration point values to tip-settings
+            ch.measurement->setCalibrationPoint(stage, tipsettings);
             loopControl = complete;
             break;
 
          case ev_SelHold:
          case ev_QuadHold:
+            // Abort
             loopControl = fail;
             break;
 
@@ -258,7 +286,7 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, TipSettings:
  */
 EventType Menus::calibrateTipTemps(const SettingsData &) {
 
-   // For debugging - disable channels
+   // For debugging - hack to disable channels
 //   Ch1Drive::setIn();
 //   Ch2Drive::setIn();
 
@@ -275,7 +303,7 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
 
    // This is a dummy settings object that is NOT in nv-storage
    // Made static to avoid warnings about non-initialised object
-   static TipSettings settings;
+   static TipSettings tipSettings;
 
    bool refresh  = true;
    enum {working, complete, fail} loopControl = working;
@@ -311,14 +339,16 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
                   "Press'n'hold to abort");
 
             if (ev.isSelRelease()) {
-               settings.tipNameIndex = menuItems[selection].tipSettings->tipNameIndex;
-               bool success = calibrateTipTemp(channel, settings, TipSettings::Calib_250) &&
-                     calibrateTipTemp(channel, settings, TipSettings::Calib_350) &&
-                     calibrateTipTemp(channel, settings, TipSettings::Calib_400);
+               tipSettings = *menuItems[selection].tipSettings;
+//               tipSettings.setTipNameIndex(menuItems[selection].tipSettings->getTipNameIndex());
+               bool success =
+                     calibrateTipTemp(channel, tipSettings, CalibrationIndex_250) &&
+                     calibrateTipTemp(channel, tipSettings, CalibrationIndex_325) &&
+                     calibrateTipTemp(channel, tipSettings, CalibrationIndex_400);
 
                if (success) {
                   TipSettings *ts = (TipSettings*)menuItems[selection].tipSettings;
-                  ts->setThermisterCalibration(settings);
+                  ts->setThermisterCalibration(tipSettings);
                   menuItems[selection].modifiers |= MenuItem::Starred;
                }
             }
@@ -361,10 +391,11 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
    // Max value truncated to nearest 100 (0.1 as float)
    static constexpr int MAX_VALUE = UINT16_MAX-UINT16_MAX%100;
 
-   BoundedInteger kp(    0, MAX_VALUE,    tipSettings.kp);
-   BoundedInteger ki(    0, MAX_VALUE,    tipSettings.ki);
-   BoundedInteger kd(    0, MAX_VALUE,    tipSettings.kd);
-   BoundedInteger iLimit(0, MAX_VALUE,    tipSettings.iLimit);
+   // Work with raw integer values  (internal format)
+   BoundedInteger kp(    0, MAX_VALUE,    tipSettings.getRawKp());
+   BoundedInteger ki(    0, MAX_VALUE,    tipSettings.getRawKi());
+   BoundedInteger kd(    0, MAX_VALUE,    tipSettings.getRawKd());
+   BoundedInteger iLimit(0, MAX_VALUE,    tipSettings.getRawILimit());
 
    int scratchKp     = kp;
    int scratchKi     = ki;
@@ -399,22 +430,18 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
          case ev_QuadRelease:
             switch(selection) {
                case 0:
-                  tipSettings.kp = kp;
                   scratchKp = kp;
                   modified = true;
                   break;
                case 1:
-                  tipSettings.ki = ki;
                   scratchKi = ki;
                   modified = true;
                   break;
                case 2:
-                  tipSettings.kd = kd;
                   scratchKd = kd;
                   modified = true;
                   break;
                case 3:
-                  tipSettings.iLimit = iLimit;
                   scratchILimit = iLimit;
                   modified = true;
                   break;
@@ -433,7 +460,7 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
                      kd += event.change*1;  // 0.001 steps
                      break;
                   case 3:
-                     iLimit += event.change*500; // .500 steps
+                     iLimit += event.change*100; // .100 steps
                      break;
                }
                break;
@@ -450,7 +477,7 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
                         kd += event.change*10;  // 0.01 steps
                         break;
                      case 3:
-                        iLimit += event.change*50; // 5.00 steps
+                        iLimit += event.change*1000; // 1.00 steps
                         break;
                   }
                   break;
@@ -475,6 +502,10 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
       }
    } while (loopControl == working);
 
+   if (modified) {
+      // Only update nonvolatile data as needed
+      tipSettings.setRawPidControlValues(scratchKp, scratchKi, scratchKd, scratchILimit);
+   }
    return modified;
 }
 
@@ -720,25 +751,28 @@ EventType Menus::selectAvailableTips(const SettingsData &) {
       // Create or delete non-volatile tip settings as needed
       anyTipsSelected = false;
       for(unsigned index=0; index<TipSettings::NUMBER_OF_TIPS; index++) {
+         TipSettings *tip = nullptr;
          if ((tipMenuItems[index].modifiers & MenuItem::CheckBoxSelected) != 0) {
-            // Make sure setting has been allocated
-            TipSettings *tip = tips.findOrAllocateTipSettings(tipMenuItems[index].name);
-            if (!anyTipsSelected) {
-               defaultTip = tip;
-               anyTipsSelected = true;
-            }
+            // Make sure setting has been allocated for this tip
+            tip = tips.findOrAllocateTipSettings(tipMenuItems[index].name);
          }
          else {
             // Delete existing setting if necessary
-            TipSettings *tip = tips.findTipSettings(tipMenuItems[index].name);
+            tip = tips.findTipSettings(tipMenuItems[index].name);
             if (tip != nullptr) {
                StringFormatter_T<40> prompt;
                prompt.write("Delete calibration\ndata for ").write(tip->getTipName()).write(" ?");
 
                if (!(tip->isTemperatureCalibrated() || tip->isPidCalibrated()) || confirmAction(prompt.toString())) {
+                  // Deleting this tip
                   tip->freeEntry();
+                  tip = nullptr;
                }
             }
+         }
+         if ((tip != nullptr) && !anyTipsSelected) {
+            defaultTip = tip;
+            anyTipsSelected = true;
          }
       }
       if (!anyTipsSelected) {
@@ -807,18 +841,72 @@ EventType Menus::displayChannelStatuses(const SettingsData &) {
    } while(true);
 }
 
+EventType Menus::runHeater(const SettingsData &) {
+
+   Channel &ch = channels[1];
+
+   BoundedInteger  dutyCycle{0, 100, 10};
+
+   bool refresh  = true;
+   enum {working, complete, fail} loopControl = working;
+   Event event;
+
+   ch.setDutyCycle(dutyCycle);
+   ch.setState(ch_fixedPower);
+
+   do {
+//      if (refresh) {
+         display.displayHeater(ch, dutyCycle);
+//         refresh = false;
+//      }
+
+      event = switchPolling.getEvent();
+      if (event.type == ev_None) {
+         continue;
+      }
+
+      // Assume refresh required
+      refresh = true;
+
+      switch (event.type) {
+
+         case ev_QuadRotate:
+            dutyCycle += event.change;
+            ch.setDutyCycle(dutyCycle);
+            ch.restartIdleTimer();
+            break;
+
+         case ev_None:
+            refresh = false;
+            break;
+
+         default:
+            // Exit on anything else
+            event.type  = ev_None;
+            loopControl = complete;
+            break;
+      }
+   } while (loopControl == working);
+
+   ch.setDutyCycle(0);
+   ch.setState(ch_off);
+
+   return ev_None;
+}
+
 /**
  * Display and execute top-level menu
  */
 void Menus::settingsMenu() {
 
    static const SettingsData settingsData[] = {
+         {"Heater",                   runHeater,                                                        },
          {"Channel 1\nSetback temp.", editTemperature,      nvinit.ch1Settings.setbackTemperature, 1    }, // C
          {"Channel 2\nSetback temp.", editTemperature,      nvinit.ch2Settings.setbackTemperature, 1    }, // C
-         {"Channel 1\nIdle time",     editTime,             nvinit.ch1Settings.setbackTime,        30   }, // seconds
-         {"Channel 2\nIdle time",     editTime,             nvinit.ch2Settings.setbackTime,        30   }, // seconds
-         {"Channel 1\nSafety time",   editTime,             nvinit.ch1Settings.safetyOffTime,      30   }, // seconds
-         {"Channel 2\nSafety time",   editTime,             nvinit.ch2Settings.safetyOffTime,      30   }, // seconds
+         {"Channel 1\nIdle time",     editTime,             nvinit.ch1Settings.setbackTime,        10   }, // seconds
+         {"Channel 2\nIdle time",     editTime,             nvinit.ch2Settings.setbackTime,        10   }, // seconds
+         {"Channel 1\nSafety time",   editTime,             nvinit.ch1Settings.safetyOffTime,      10   }, // seconds
+         {"Channel 2\nSafety time",   editTime,             nvinit.ch2Settings.safetyOffTime,      10   }, // seconds
          {"Tip Selection",            selectAvailableTips                                               },
          {"Temp Calibration",         calibrateTipTemps                                                 },
          {"Step Response",            stepResponse                                                      },
@@ -830,6 +918,7 @@ void Menus::settingsMenu() {
    //   console.write("Address = ").writeln(&settingsData);
 
    static const MenuItem items[] = {
+         {"Heater", },
          {"Ch1 Setback temp.", },
          {"Ch2 Setback temp.", },
          {"Ch1 Idle time",     },

@@ -31,11 +31,6 @@ enum ChannelState {
    ch_active,     ///< Tip is being heated to user target temperature
 };
 
-enum IronType {
-   IronType_Weller,
-   IronType_T12,
-};
-
 /**
  * Class representing a channel
  */
@@ -54,6 +49,7 @@ private:
    Controller       &controller;                     ///< Loop controller
    Weller_WT50       wellerMeasurement;
    T12               t12Measurement;
+   DummyMeasurement  dummyMeasurement;
 
 public:
 
@@ -87,9 +83,9 @@ public:
       DutyCycleCounter(100),
       controller(controller),
       nvSettings(settings) {
-      setIronType(IronType_Weller);
       setUserTemperature(settings.presets[preset]);
       refreshControllerParameters();
+      setTip(nvSettings.selectedTip);
    }
 
    virtual ~Channel() {}
@@ -109,7 +105,8 @@ public:
             measurement = &wellerMeasurement;
             break;
          default:
-            usbdm_assert(false, "Illegal iron type");
+            measurement = &dummyMeasurement;
+//            usbdm_assert(false, "Illegal iron type");
       }
    }
 
@@ -143,9 +140,11 @@ public:
     *
     * @param index Index into tip settings table
     */
-   void changeTip(int delta) {
-      nvSettings.selectedTip = tips.changeTip(nvSettings.selectedTip, delta);
+   void setTip(const TipSettings *tipSettings) {
+      usbdm_assert(tipSettings != nullptr, "Illegal tip");
+      nvSettings.selectedTip = tipSettings;
       refreshControllerParameters();
+      setIronType(tipSettings->getIronType());
    }
 
    /**
@@ -153,10 +152,8 @@ public:
     *
     * @param index Index into tip settings table
     */
-   void setTip(const TipSettings *tipSettings) {
-      usbdm_assert(tipSettings != nullptr, "Illegal tip");
-      nvSettings.selectedTip = tipSettings;
-      refreshControllerParameters();
+   void changeTip(int delta) {
+      setTip(tips.changeTip(nvSettings.selectedTip, delta));
    }
 
    /**
@@ -250,6 +247,8 @@ public:
       controller.enable(isControlled());
       ledWrite(isRunning());
 
+      restartIdleTimer();
+
       if (!isRunning()) {
          controller.setOutput(0);
 
@@ -268,6 +267,7 @@ public:
 
       // Disable drive
       DutyCycleCounter::disable();
+      driveWrite(false);
    }
 
    /**
@@ -394,17 +394,19 @@ public:
    float getPower() const {
       // Assume 24Vrms
       float NOMINAL_MAX_POWER = (24 * 24)/measurement->getHeaterResistance();
-      float pwr = power.getAverage()*NOMINAL_MAX_POWER/100;
+      float pwr = power.getAveragedAdcSamples()*NOMINAL_MAX_POWER/100;
       return pwr;
    }
 
    /**
     * Sets the user target temperature.
+    * Restart timer is cleared
     *
     * @param targetTemp The temperature to set.
     */
    void setUserTemperature(int targetTemp) {
       targetTemperature = targetTemp;
+      restartIdleTimer();
    }
 
    /**
