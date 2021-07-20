@@ -388,9 +388,9 @@ private:
 
       // Value from curve fitting see spreadsheet
       // Thermistor (ntc_mf58, 10k B3950) curve fit.ods
-      constexpr float A_constant =  1.29869E-03;
-      constexpr float B_constant =  1.89836E-04;
-      constexpr float C_constant =  3.45639E-06;
+      constexpr float A_constant = 1.80554E-03; //1.29869E-03;
+      constexpr float B_constant = 8.15458E-05; //1.89836E-04;
+      constexpr float C_constant = 9.43826E-06; //3.45639E-06;
 
       constexpr float KelvinToCelsius = -274.15;
 

@@ -478,6 +478,7 @@ void Display::displayPidSettings(const char *tipname, unsigned selection, char s
 
 void Display::displayHeater(Channel &ch, unsigned dutyCycle) {
    float value = ch.measurement->getMeasurement();
+   const char *calReport = ch.measurement->reportCalibrationValues();
 
    oled.clearDisplay();
    oled.setFont(fontMedium);
@@ -486,8 +487,10 @@ void Display::displayHeater(Channel &ch, unsigned dutyCycle) {
    oled.moveXY(0, oled.getY()+2);
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY()+1);
    oled.moveXY(0, oled.getY()+3);
+   oled.setFont(fontSmall);
    oled.write("DutyCyle = ").writeln(dutyCycle);
    oled.write("Value = ").writeln(value);
+   oled.writeln(calReport);
    oled.refreshImage();
    oled.resetFormat();
 }

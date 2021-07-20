@@ -845,7 +845,7 @@ EventType Menus::runHeater(const SettingsData &) {
 
    Channel &ch = channels[1];
 
-   BoundedInteger  dutyCycle{0, 100, 10};
+   BoundedInteger  dutyCycle{0, 100, 0};
 
    bool refresh  = true;
    enum {working, complete, fail} loopControl = working;
@@ -855,10 +855,10 @@ EventType Menus::runHeater(const SettingsData &) {
    ch.setState(ch_fixedPower);
 
    do {
-//      if (refresh) {
+      if (refresh || control.needsRefresh()) {
          display.displayHeater(ch, dutyCycle);
-//         refresh = false;
-//      }
+         refresh = false;
+      }
 
       event = switchPolling.getEvent();
       if (event.type == ev_None) {
