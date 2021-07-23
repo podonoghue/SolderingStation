@@ -40,7 +40,7 @@ public:
     *
     * @return Sample as integer
     */
-   int getLastAdcSample() {
+   int getLastAdcSample() const {
       return lastSample;
    }
 
@@ -49,7 +49,7 @@ public:
     *
     * @return Sample as integer
     */
-   float getLastAdcVoltage() {
+   float getLastAdcVoltage() const {
       return convertToAdcVoltage(getLastAdcSample());
    }
 
@@ -305,14 +305,14 @@ public:
     *
     * @return Temperature in Celsius
     */
-   virtual float getTemperature() = 0;
+   virtual float getTemperature() const = 0;
 
    /**
     * Returns the temperature from the last sample
     *
     * @return Temperature in Celsius
     */
-   virtual float getInstantTemperature() = 0;
+   virtual float getInstantTemperature() const = 0;
 
    /**
     * Indicates if the measurement requires a bias current.
@@ -320,7 +320,7 @@ public:
     *
     * @return
     */
-   virtual bool isBiasRequired()  {
+   virtual bool isBiasRequired() const {
       return false;
    }
 
@@ -330,7 +330,7 @@ public:
     *
     * @return Resistance in ohms
     */
-   virtual float getResistance() {
+   virtual float getResistance() const {
       return 0.0;
    }
 
@@ -340,7 +340,7 @@ public:
     *
     * @return Thermocouple voltage
     */
-   virtual float getThermocoupleVoltage() {
+   virtual float getThermocoupleVoltage() const {
       return 0.0;
    }
 
@@ -361,7 +361,7 @@ private:
     *
     * @return Thermistor resistance in ohms
     */
-   static float convertAdcVoltageToNtcResistance(float voltage) {
+   float convertAdcVoltageToNtcResistance(float voltage) const {
       /// NTC measurement current
       constexpr float NTC_MEASUREMENT_CURRENT  = 237E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA!
 
@@ -381,13 +381,13 @@ private:
     *
     * @return Corresponding temperature in Celsius
     */
-   static float convertAdcVoltageToCelsius(float voltage) {
+   float convertAdcVoltageToCelsius(float voltage) const {
 
       // Convert ADC voltage to thermistor resistance
       float resistance = convertAdcVoltageToNtcResistance(voltage);
 
       // Value from curve fitting see spreadsheet
-      // Thermistor (ntc_mf58, 10k B3950) curve fit.ods
+      // Sensor curve fitting.ods
       constexpr float A_constant = 1.80554E-03; //1.29869E-03;
       constexpr float B_constant = 8.15458E-05; //1.89836E-04;
       constexpr float C_constant = 9.43826E-06; //3.45639E-06;
@@ -419,7 +419,7 @@ public:
     *
     * @return  Thermistor temperature in Celsius
     */
-   virtual float getTemperature() override {
+   virtual float getTemperature() const override {
       return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
    }
 
@@ -428,7 +428,7 @@ public:
     *
     * @return  Thermistor temperature in Celsius
     */
-   virtual float getInstantTemperature() override {
+   virtual float getInstantTemperature() const override {
       return convertAdcVoltageToCelsius(getLastAdcVoltage());
    }
 
@@ -437,25 +437,32 @@ public:
     *
     * @return
     */
-   virtual float getResistance() override {
+   virtual float getResistance() const override {
       return convertAdcVoltageToNtcResistance(getAveragedAdcVoltage());
    }
 };
 
 /**
- * Class representing an average customised for a T12 thermocouple
+ * Class representing an average customised for a thermocouple
  */
-class ThermocoupleT12Average : public TemperatureAverage {
-
+class ThermocoupleAverage : public TemperatureAverage {
 private:
+   // Temperature calibration values
+   float calibrationTemperatures[3];
+
+   // Thermocouple voltage calibration values
+   float calibrationVoltages[3];
+
+public:
+
    /**
-    * Converts ADC voltage to thermocouple temperature
+    * Converts ADC voltage to thermocouple relative temperature
     *
     * @param voltage ADC voltage
     *
     * @return Temperature in Celsius
     */
-   static float convertAdcVoltageToCelsius(float voltage) {
+   float convertAdcVoltageToCelsius(float voltage) const {
 
       // Convert ADC voltage to TC voltage
       voltage *= TC_MEASUREMENT_RATIO;
@@ -463,11 +470,24 @@ private:
       // Curve fitting was done using mV
       voltage *= 1000;
 
-      // Value from linear curve fitting see spreadsheet 250 to 455 range
-      constexpr float Ah_constant = -17.75;
-      constexpr float Bh_constant = 41.59;
+      // Simple linear interpolation with three calibration points
+      float lastV = 0.0;
+      float lastT = 0.0;
+      unsigned index;
+      for (index=0; index<2; index++) {
+         if (voltage < calibrationVoltages[index]) {
+            break;
+         }
+         lastV = calibrationVoltages[index];
+         lastT = calibrationTemperatures[index];
+      }
+      float temperature = lastT + ((calibrationTemperatures[index]-lastT)*(voltage-lastV)/(calibrationVoltages[index]-lastV));
 
-      float temperature = Ah_constant + Bh_constant*voltage;
+//      // Value from linear curve fitting see spreadsheet 250 to 455 range
+//      constexpr float Ah_constant = -17.75;
+//      constexpr float Bh_constant = 41.59;
+//
+//      float temperature = Ah_constant + Bh_constant*voltage;
 
       return temperature;
    }
@@ -478,7 +498,7 @@ public:
     *
     * @return Thermocouple temperature in Celsius
     */
-   virtual float getTemperature() override {
+   virtual float getTemperature() const override {
       return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
    }
 
@@ -487,7 +507,7 @@ public:
     *
     * @return Thermocouple temperature in Celsius
     */
-   virtual float getInstantTemperature() {
+   virtual float getInstantTemperature() const override {
       return convertAdcVoltageToCelsius(getLastAdcVoltage());
    }
 
@@ -496,9 +516,22 @@ public:
     *
     * @return Thermocouple voltage
     */
-   virtual float getThermocoupleVoltage() override {
+   virtual float getThermocoupleVoltage() const override {
       return getAveragedAdcVoltage() * TC_MEASUREMENT_RATIO;
    }
+
+   /**
+    * Set calibration values for thermocouple
+    *
+    * @param tipSettings value1 = Vt, value2 = Tt
+    */
+   void setCalibrationValues(const TipSettings *tipSettings) {
+      for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
+         calibrationTemperatures[index]    = tipSettings->getCalibrationTempValue(index);
+         calibrationVoltages[index] = tipSettings->getCalibrationMeasurementValue(index);
+      }
+   }
+
 };
 
 /**
@@ -526,7 +559,7 @@ public:
     *
     * @return Chip temperature in Celsius
     */
-   virtual float getTemperature() override {
+   virtual float getTemperature() const override {
 
       return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
    }
@@ -536,7 +569,7 @@ public:
     *
     * @return Temperature in Celsius
     */
-   virtual float getInstantTemperature() override {
+   virtual float getInstantTemperature() const override {
 
       return convertAdcVoltageToCelsius(getLastAdcVoltage());
    }
@@ -548,7 +581,7 @@ public:
 class ZeroAverage : public TemperatureAverage {
 
 public:
-   virtual float getTemperature() override {
+   virtual float getTemperature() const override {
       return 0.0;
    }
 };
@@ -557,6 +590,13 @@ public:
  * Class representing an average customised for a Weller PTC Thermistor
  */
 class WellerThermistorAverage : public TemperatureAverage {
+
+private:
+   // Temperature calibration values
+   float calibrationTemperatures[3];
+
+   // Thermistor resistance calibration values
+   float calibrationResistances[3];
 
 private:
    /**
@@ -592,7 +632,7 @@ private:
     *
     * @return Temperature in Celsius
     */
-   static float convertAdcVoltageToCelsius(float voltage) {
+   float convertAdcVoltageToCelsius(float voltage) const {
 
       // Convert ADC voltage to resistance
       float Rptc = convertAdcVoltageToPtcResistance(voltage);
@@ -619,7 +659,7 @@ public:
     *
     * @return Thermistor temperature in Celsius
     */
-   virtual float getTemperature() override {
+   virtual float getTemperature() const override {
       return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
    }
 
@@ -628,7 +668,7 @@ public:
     *
     * @return Thermistor temperature in Celsius
     */
-   virtual float getInstantTemperature() override {
+   virtual float getInstantTemperature() const override {
       return convertAdcVoltageToCelsius(getLastAdcVoltage());
    }
 
@@ -637,8 +677,20 @@ public:
     *
     * @return
     */
-   virtual float getResistance() {
+   virtual float getResistance() const {
       return convertAdcVoltageToPtcResistance(getAveragedAdcVoltage());
+   }
+
+   /**
+    * Set calibration values for thermistor
+    *
+    * @param tipsettings
+    */
+   void setCalibrationValues(const TipSettings *tipsettings) {
+      for (CalibrationIndex index = CalibrationIndex_250; index <= CalibrationIndex_400; ++index) {
+         calibrationResistances[index]  =  tipsettings->getCalibrationMeasurementValue(index);
+         calibrationTemperatures[index] = tipsettings->getCalibrationTempValue(index);
+      }
    }
 };
 

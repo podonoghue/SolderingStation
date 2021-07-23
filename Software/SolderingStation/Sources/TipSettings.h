@@ -31,6 +31,11 @@ enum CalibrationIndex {
    CalibrationIndex_Number   = 3,  ///< Number of calibration values
 };
 
+
+inline CalibrationIndex operator++(CalibrationIndex &ci) {
+   ci = CalibrationIndex(static_cast<unsigned>(ci) + 1);
+   return ci;
+}
 /**
  * Nonvolatile data describing a tip
  * Unnecessary changes to data should be avoided to reduce EEPROM wear
@@ -78,15 +83,21 @@ public:
    /// Scale factor for storing non-volatile float values as 16-bit integer
    static constexpr int   FLOAT_SCALE_FACTOR   = 1000;
 
-   /// Scale factor for storing non-volatile float values as 16-bit integer
+   /// Scale factor for storing non-volatile float values as A 16-bit integer
    static constexpr float FLOAT_SCALE_FACTOR_F = FLOAT_SCALE_FACTOR;
+
+   /// Scale factor for storing non-volatile temperature values as a 16-bit integer
+   static constexpr int TEMP_SCALE_FACTOR = 10;
+
+   /// Scale factor for storing non-volatile temperature values as a 16-bit integer
+   static constexpr float TEMP_SCALE_FACTOR_F = TEMP_SCALE_FACTOR;
 
 private:
    /// First calibration value for each calibration point
-   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>calibrationValue1;
+   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>calibrationMeasurementValue;
 
    /// Second calibration value for each calibration point
-   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>calibrationValue2;
+   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>calibrationTemperatureValue;
 
    /// PID parameter - proportional constant
    USBDM::Nonvolatile<uint16_t> kp;
@@ -121,6 +132,10 @@ public:
       this->kd = other.kd;
       this->flags = other.flags;
       this->tipNameIndex = other.tipNameIndex;
+      for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
+         calibrationMeasurementValue[index] = other.calibrationMeasurementValue[index];
+         calibrationTemperatureValue[index] = other.calibrationTemperatureValue[index];
+      }
       return *this;
    }
 
@@ -260,8 +275,8 @@ public:
     */
    void setThermisterCalibration(TipSettings &other) {
       flags = flags | TEMP_CALIBRATED;
-      calibrationValue1 = other.calibrationValue1;
-      calibrationValue2 = other.calibrationValue2;
+      calibrationMeasurementValue = other.calibrationMeasurementValue;
+      calibrationTemperatureValue = other.calibrationTemperatureValue;
    }
 
    /**
@@ -286,22 +301,44 @@ public:
     * @param iLimit
     */
    void setInitialPidControlValues(float kp, float ki, float kd, float iLimit) {
-      this->kp     = kp * FLOAT_SCALE_FACTOR;
-      this->ki     = ki * FLOAT_SCALE_FACTOR;
-      this->kd     = kd * FLOAT_SCALE_FACTOR;
-      this->iLimit = iLimit * FLOAT_SCALE_FACTOR;
+      this->kp     = round(kp * FLOAT_SCALE_FACTOR);
+      this->ki     = round(ki * FLOAT_SCALE_FACTOR);
+      this->kd     = round(kd * FLOAT_SCALE_FACTOR);
+      this->iLimit = round(iLimit * FLOAT_SCALE_FACTOR);
    }
 
    /**
     * Set a temperature calibration point
     *
     * @param calibrationIndex Index for the point
-    * @param value1      Calibration value 1
-    * @param value2      Calibration value 2
+    * @param temperature      Temperature measurement value
+    * @param measurement      Measurement value e.g. thermocouple voltage or PTC resistance
     */
-   void setCalibrationPoint(CalibrationIndex calibrationIndex, float value1, float value2) {
-      this->calibrationValue1.set(calibrationIndex, value1*FLOAT_SCALE_FACTOR);
-      this->calibrationValue2.set(calibrationIndex, value2*FLOAT_SCALE_FACTOR);
+   void setCalibrationPoint(CalibrationIndex calibrationIndex, float temperature, float measurement) {
+      this->calibrationTemperatureValue.set(calibrationIndex, round(temperature*TEMP_SCALE_FACTOR));
+      this->calibrationMeasurementValue.set(calibrationIndex, round(measurement*FLOAT_SCALE_FACTOR));
+   }
+
+   /**
+    * Get calibration measurement voltage
+    *
+    * @param index
+    *
+    * @return Measurement value e.g. thermocouple voltage or PTC resistance
+    */
+   float getCalibrationMeasurementValue(CalibrationIndex index) const {
+      return calibrationMeasurementValue[index]/FLOAT_SCALE_FACTOR_F;
+   }
+
+   /**
+    * Get calibration measurement temperature
+    *
+    * @param index
+    *
+    * @return Measurement temperature
+    */
+   float getCalibrationTempValue(CalibrationIndex index) const {
+      return calibrationTemperatureValue[index]/TEMP_SCALE_FACTOR_F;
    }
 
    /**
@@ -344,28 +381,6 @@ public:
          return IronType_T12;
       }
       return initialTipInfo[tipNameIndex].type;
-   }
-
-   /**
-    * Get getCalibrationValue1 voltage
-    *
-    * @param index
-    *
-    * @return thermocouple voltage
-    */
-   float getCalibrationValue1(CalibrationIndex index) const {
-      return calibrationValue1[index]*FLOAT_SCALE_FACTOR_F;
-   }
-
-   /**
-    * Get cold reference temperature
-    *
-    * @param index
-    *
-    * @return cold reference temperature
-    */
-   float getCalibrationValue2(CalibrationIndex index) const {
-      return calibrationValue2[index]*FLOAT_SCALE_FACTOR_F;
    }
 
    /**

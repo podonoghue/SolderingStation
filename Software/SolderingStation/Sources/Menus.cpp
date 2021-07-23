@@ -258,7 +258,7 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationI
          case ev_SelRelease:
          case ev_QuadRelease:
             // Save calibration point values to tip-settings
-            ch.measurement->setCalibrationPoint(stage, tipsettings);
+            ch.measurement->saveCalibrationPoint(stage, tipsettings);
             loopControl = complete;
             break;
 
@@ -335,8 +335,9 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
                   "Using an external\n"
                   "tip thermometer,\n"
                   "adjust tip temp.\n"
-                  "to Target value.\n\n"
-                  "Press'n'hold to abort");
+                  "to Target value.\n"
+                  "- Press to accept.\n"
+                  "- Long press to abort");
 
             if (ev.isSelRelease()) {
                tipSettings = *menuItems[selection].tipSettings;

@@ -153,6 +153,8 @@ void Display::displayChannels() {
    oled.refreshImage();
 
    oled.resetFormat();
+
+   oled.enable(true);
 }
 
 /**
@@ -387,7 +389,6 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
 
    oled.clearDisplay();
    oled.setFont(fontMedium);
-   oled.setFloatFormat(1, Padding_LeadingSpaces, 3);
    oled.moveXY(0, 0);
    oled.writeln(title);
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY());

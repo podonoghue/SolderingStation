@@ -61,22 +61,22 @@ public:
     * @return True  => Bias required
     * @return False => Bias not required
     */
-   virtual bool isBiasRequired() { return false; }
+   virtual bool isBiasRequired() const { return false; }
 
    /**
     * Get value for resistance of heating element (for power calculations)
     *
     * @return Resistance in ohms
     */
-   virtual float getHeaterResistance()  = 0;
+   virtual float getHeaterResistance() const = 0;
 
    /**
     * Set calibration data from current measurements
     *
-    * @param calibrationIndex Index for the calibration
-    * @param tipSettings      Tip-settings to update
+    * @param[in]  calibrationIndex Index for the calibration
+    * @param[out] tipSettings      Tip-settings to update with calibratin point
     */
-   virtual void setCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) = 0;
+   virtual void saveCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) = 0;
 
    /**
     * Get a report of the calibration values for the current operating point.
@@ -88,7 +88,19 @@ public:
     */
    virtual const char *reportCalibrationValues() = 0;
 
-   virtual float getMeasurement() = 0;
+   /**
+    * Set calibration data
+    *
+    * @param[in] tipsettings Settings object with calibration data
+    */
+   virtual void setCalibrationValues(const TipSettings *tipsettings) = 0;
+
+   /**
+    * Get 'measurement' value for debug when calibrating
+    *
+    * @return
+    */
+   virtual float getMeasurement() const = 0;
 
 };
 
@@ -96,12 +108,13 @@ class DummyMeasurement : public Measurement {
 public:
    virtual void  tipSensorAccumulate(int) override {};
    virtual void  auxliliarySensorAccumulate(int) override {};
-   virtual float getHeaterResistance() override { return 8.0; };
+   virtual float getHeaterResistance() const override { return 8.0; };
    virtual float getTemperature() override { return 1.0;};
    virtual float getInstantTemperature() override { return 1.0; };
-   virtual void  setCalibrationPoint(CalibrationIndex, TipSettings &) override {};
+   virtual void  saveCalibrationPoint(CalibrationIndex, TipSettings &) override {};
    virtual const char *reportCalibrationValues() override { return ""; };
-   virtual float getMeasurement() override { return 0.0; };
+   virtual float getMeasurement() const override { return 0.0; };
+   virtual void setCalibrationValues(const TipSettings *) override { }
 };
 
 #endif /* SOURCES_MEASUREMENT_H_ */

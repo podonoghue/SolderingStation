@@ -61,6 +61,18 @@ void _exit(int rc __attribute__((unused))) {
 int main() {
    initialise();
 
+//   float v[] = {
+//         5.758,
+//         6,
+//         7.546,
+//         8,
+//         8.974,
+//         9
+//   };
+//   for (unsigned index=0; index<(sizeof(v)/sizeof(v[0])); index++) {
+//      console.write(v[index]).write("=>").writeln(ThermocoupleT12Average::convertAdcVoltageToCelsius(v[index]/1000.0/TC_MEASUREMENT_RATIO));
+//   }
+
 //   Ch1Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
 //   for(;;) {
 //      Ch1Drive::on();

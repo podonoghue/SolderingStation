@@ -67,7 +67,7 @@ public:
     * @return True  => Bias required
     * @return False => Bias not required
     */
-   virtual bool isBiasRequired() override {
+   virtual bool isBiasRequired() const override {
       return true;
    }
 
@@ -76,7 +76,7 @@ public:
     *
     * @return Resistance in ohms
     */
-   virtual float getHeaterResistance() override {
+   virtual float getHeaterResistance() const override {
       return 11.0;
    }
 
@@ -86,7 +86,7 @@ public:
     * @param calibrationIndex Index for the calibration
     * @param tipSettings      Tip-settings to update
     */
-   virtual void setCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) override {
+   virtual void saveCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) override {
       tipSettings.setCalibrationPoint(calibrationIndex, thermister.getResistance(), 0.0);
    }
 
@@ -131,7 +131,21 @@ public:
       }
    }
 
-   virtual float getMeasurement() override {
+   /**
+    * Set calibration data
+    *
+    * @param[in] tipsettings Settings object with calibration data
+    */
+   virtual void setCalibrationValues(const TipSettings *tipsettings) override {
+      thermister.setCalibrationValues(tipsettings);
+   }
+
+   /**
+    * Get 'measurement' value for debug when calibrating
+    *
+    * @return
+    */
+   virtual float getMeasurement() const override {
       return thermister.getResistance();
    };
 

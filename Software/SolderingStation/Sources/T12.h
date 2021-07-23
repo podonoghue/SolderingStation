@@ -19,7 +19,7 @@ private:
    ThermistorMF58Average coldJunctionThermistor;
 
    /// Thermocouple in cartridge
-   ThermocoupleT12Average   thermocouple;
+   ThermocoupleAverage   thermocouple;
 
 public:
    T12() {}
@@ -46,7 +46,7 @@ public:
     *
     * @return Resistance in ohms
     */
-   virtual float getHeaterResistance() override {
+   virtual float getHeaterResistance() const override {
       return 8.5;
    }
 
@@ -74,13 +74,15 @@ public:
     * @param calibrationIndex Index for the calibration
     * @param tipSettings      Tip-settings to update
     */
-   virtual void setCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) override {
+   virtual void saveCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) override {
       float thermocoupleVoltage  = thermocouple.getThermocoupleVoltage();
       float coldJunctionTemp     = coldJunctionThermistor.getTemperature();
       USBDM::console.write(calibrationIndex);
       USBDM::console.write(" : TC = ").write(1000*thermocoupleVoltage);
       USBDM::console.write("mV, Cold = ").writeln(coldJunctionTemp);
-      tipSettings.setCalibrationPoint(calibrationIndex, thermocoupleVoltage, coldJunctionTemp);
+
+      float thermocoupleTemperature = TipSettings::getCalibrationTemperature(calibrationIndex) - coldJunctionTemp;
+      tipSettings.setCalibrationPoint(calibrationIndex, thermocoupleTemperature, 1000*thermocoupleVoltage);
    }
 
    /**
@@ -95,8 +97,9 @@ public:
       getStringFormatter().clear();
       float thermocoupleVoltage  = thermocouple.getThermocoupleVoltage();
       float coldJunctionTemp     = coldJunctionThermistor.getTemperature();
-      getStringFormatter().setFloatFormat(1);
+      getStringFormatter().setFloatFormat(2);
       getStringFormatter().write("Vtc=").write(1000*thermocoupleVoltage);
+      getStringFormatter().setFloatFormat(1);
       getStringFormatter().write("mV Tcj=").write(coldJunctionTemp).write('C');
       return getStringFormatter().toString();
    }
@@ -108,15 +111,29 @@ public:
     */
    static void initialiseSettings(TipSettings *settings, const InitialTipInfo &) {
 
-      // Dummy values
-      settings->setCalibrationPoint(CalibrationIndex_250, 25, 5.4);
-      settings->setCalibrationPoint(CalibrationIndex_250, 25, 5.4);
-      settings->setCalibrationPoint(CalibrationIndex_250, 25, 5.4);
+      // Dummy values                                      Tt(C)    Vt(mV)
+      settings->setCalibrationPoint(CalibrationIndex_250,  221.77,  5.758);
+      settings->setCalibrationPoint(CalibrationIndex_325,  296.06,  7.546);
+      settings->setCalibrationPoint(CalibrationIndex_400,  369.61,  8.974);
 
       settings->setInitialPidControlValues(10.0,0.2,0.0,20.0);
    }
 
-   virtual float getMeasurement() override {
+   /**
+    * Set calibration data
+    *
+    * @param[in] tipsettings Settings object with calibration data
+    */
+   virtual void setCalibrationValues(const TipSettings *tipsettings) override {
+      thermocouple.setCalibrationValues(tipsettings);
+   }
+
+   /**
+    * Get 'measurement' value for debug when calibrating
+    *
+    * @return
+    */
+   virtual float getMeasurement() const override {
       return coldJunctionThermistor.getResistance();
    };
 

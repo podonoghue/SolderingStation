@@ -80,7 +80,7 @@ public:
     * @param[in] coldJunction    Cold junction averaging etc.
     */
    Channel(ChannelSettings &settings, Controller &controller) :
-      DutyCycleCounter(100),
+      DutyCycleCounter(101), // 101 chosen as prime near 100. Ensures balanced mains cycles.
       controller(controller),
       nvSettings(settings) {
       setUserTemperature(settings.presets[preset]);
@@ -145,6 +145,7 @@ public:
       nvSettings.selectedTip = tipSettings;
       refreshControllerParameters();
       setIronType(tipSettings->getIronType());
+      measurement->setCalibrationValues(tipSettings);
    }
 
    /**
