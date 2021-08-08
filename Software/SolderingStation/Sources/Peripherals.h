@@ -92,28 +92,28 @@ using PollingTimerChannel = USBDM::Pit::Channel<0>;
 /// PIT Channel to use for sample and control timing
 using ControlTimerChannel = USBDM::Pit::Channel<1>;
 
-/// Quadrature Encoder shaft button
-using QuadButton  = USBDM::GpioD<2, USBDM::ActiveLow>;
-
 /// Quadrature Encoder pins as a GPIO field
 using QuadPhases = USBDM::GpioBField<1, 0, USBDM::ActiveLow>;
 
-/// Channel 1 Button
-using Ch1Button   = USBDM::GpioD<4, USBDM::ActiveLow>;
-
-/// Channel 1 Button
-using Ch2Button   = USBDM::GpioD<3, USBDM::ActiveLow>;
-
-/// Channel Select Button
-using SelButton   = USBDM::GpioD<5, USBDM::ActiveLow>;
-
 /// All buttons
-using Buttons     = USBDM::GpioDField<SelButton::BITNUM, QuadButton::BITNUM, USBDM::ActiveLow>;
+using Buttons     = USBDM::GpioDField<5, 2, USBDM::ActiveLow>;
 
-/// Zero Crossing Detector
+/// Quadrature Encoder shaft button
+using QuadButton  = Buttons::Bit<0>;
+
+/// Channel 2 Button
+using Ch2Button   = Buttons::Bit<1>;
+
+/// Channel 1 Button
+using Ch1Button   = Buttons::Bit<2>;
+
+/// Menu Button
+using MenuButton   = Buttons::Bit<3>;
+
+/// Zero Crossing Comparator
 using ZeroCrossingComparator = USBDM::Cmp0;
 
-/// Zero Crossing Detector pin
+/// Zero Crossing Detector Comparator input
 constexpr USBDM::Cmp0Input ZeroCrossingInput = USBDM::Cmp0Input_Ptc7;
 
 using GpioSpare1 = USBDM::GpioA<4,USBDM::ActiveHigh>;

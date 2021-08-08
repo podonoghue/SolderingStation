@@ -62,10 +62,10 @@ private:
    TempController ch1Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
    TempController ch2Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
 
-   /// Channel1 state information
+   /// Channel1
    T_Channel<Ch1SelectedLed, Ch1Drive>  channel1{nvinit.ch1Settings, ch1Controller};
 
-   /// Channel2 state information
+   /// Channel2
    T_Channel<Ch2SelectedLed, Ch2Drive>  channel2{nvinit.ch2Settings, ch2Controller};
 
 public:

@@ -54,7 +54,7 @@ void Control::initialise() {
    while ((ADConverter::calibrate() != E_NO_ERROR) && (retry-->0)) {
       console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
    }
-   ADConverter::setAveraging(AdcAveraging_off);
+   ADConverter::setAveraging(AdcAveraging_4);
    ADConverter::setCallback(adc_cb);
    ADConverter::enableNvicInterrupts(NvicPriority_MidHigh);
 
@@ -69,7 +69,7 @@ void Control::initialise() {
       This->zeroCrossingHandler();
    };
 
-   // Threshold for comparator
+   // Threshold for zero-crossing comparator
    static constexpr uint8_t ZERO_CROSSING_DAC_THRESHOLD = 2.8*(ZeroCrossingComparator::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
 
    ZeroCrossingComparator::configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
@@ -82,7 +82,7 @@ void Control::initialise() {
    ZeroCrossingComparator::enableNvicInterrupts(NvicPriority_Normal);
 
    // Over-current detection using external comparator and pin IRQ
-   static auto overcurrent_cb = [](uint32_t){
+   static auto overcurrent_cb = [](uint32_t) {
       // Mark channels as overloaded
       channels[1].setOverload();
       channels[2].setOverload();

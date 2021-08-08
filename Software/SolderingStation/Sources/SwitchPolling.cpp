@@ -122,7 +122,7 @@ EventType SwitchPolling::pollSwitches() {
       switch(currentButtonValue) {
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch1Release;    break;
          case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch2Release;    break;
-         case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_SelRelease;    break;
+         case (1<<(MenuButton::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_SelRelease;    break;
          case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : pendingEvent = ev_QuadRelease;   quadState = QuadState_Pressed; break;
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
                (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch1Ch2Release; break;
@@ -145,7 +145,7 @@ EventType SwitchPolling::pollSwitches() {
       switch(currentButtonValue) {
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch1Hold;    break;
          case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch2Hold;    break;
-         case (1<<(SelButton::BITNUM-Buttons::RIGHT))  : event = ev_SelHold;    break;
+         case (1<<(MenuButton::BITNUM-Buttons::RIGHT))  : event = ev_SelHold;    break;
          case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) :
             // Swallow QuadHold when rotating
             if (quadState != QuadState_Pressed_Rotate) {
