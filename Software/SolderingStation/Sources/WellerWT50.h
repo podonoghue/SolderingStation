@@ -19,7 +19,7 @@ class Weller_WT50 : public Measurement {
 
 private:
 
-   WellerThermistorAverage thermister;
+   WellerThermistorAverage thermistor;
 
 public:
    Weller_WT50() {}
@@ -32,7 +32,7 @@ public:
     * @param value
     */
    virtual void tipSensorAccumulate(int value) override {
-      thermister.accumulate(value);
+      thermistor.accumulate(value);
    }
 
    /**
@@ -48,7 +48,7 @@ public:
     * @return Tip temperature in Celsius
     */
    virtual float getTemperature() override {
-      return thermister.getTemperature();
+      return thermistor.getTemperature();
    }
 
    /**
@@ -57,7 +57,7 @@ public:
     * @return Tip temperature in Celsius
     */
    virtual float getInstantTemperature() override {
-      return thermister.getInstantTemperature();
+      return thermistor.getInstantTemperature();
    }
 
    /**
@@ -87,7 +87,7 @@ public:
     * @param tipSettings      Tip-settings to update
     */
    virtual void saveCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) override {
-      tipSettings.setCalibrationPoint(calibrationIndex, thermister.getResistance(), 0.0);
+      tipSettings.setCalibrationPoint(calibrationIndex, thermistor.getResistance(), 0.0);
    }
 
    /**
@@ -101,7 +101,7 @@ public:
    virtual const char *reportCalibrationValues() {
       getStringFormatter().clear();
       getStringFormatter().setFloatFormat(1);
-      getStringFormatter().write("R = ").write(thermister.getResistance()).writeln(" ohms");
+      getStringFormatter().write("R = ").write(thermistor.getResistance()).writeln(" ohms");
       return getStringFormatter().toString();
    }
 
@@ -137,7 +137,7 @@ public:
     * @param[in] tipsettings Settings object with calibration data
     */
    virtual void setCalibrationValues(const TipSettings *tipsettings) override {
-      thermister.setCalibrationValues(tipsettings);
+      thermistor.setCalibrationValues(tipsettings);
    }
 
    /**
@@ -146,7 +146,7 @@ public:
     * @return
     */
    virtual float getMeasurement() const override {
-      return thermister.getResistance();
+      return thermistor.getResistance();
    };
 
 };
