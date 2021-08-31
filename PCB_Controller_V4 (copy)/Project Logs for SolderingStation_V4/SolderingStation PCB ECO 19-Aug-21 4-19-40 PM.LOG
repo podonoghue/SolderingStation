@@ -1,0 +1,89 @@
+Removed Pin From Net: NetName=V24 Pin=Q18-1
+Removed Pin From Net: NetName=NetQ18_2 Pin=Q18-2
+Removed Member From Class: ClassName=SolderingStation_Power Member=D16
+Removed Member From Class: ClassName=SolderingStation_Power Member=D17
+Change Component Footprint: Designator=Q14 Old Footprint=SO-8_M New Footprint=SO-8_N
+Change Component Footprint: Designator=Q15 Old Footprint=SO-8_M New Footprint=SO-8_N
+Change Component Footprint: Designator=Q16 Old Footprint=SO-8_M New Footprint=SO-8_N
+Change Component Footprint: Designator=Q17 Old Footprint=SO-8_M New Footprint=SO-8_N
+Change Component Footprint: Designator=Q18 Old Footprint=SO-8_M New Footprint=SO-8_N
+Change Component Comment : Designator=Q18 Old Comment=DMP4025LSD-13 New Comment=FDS4675
+Change Component Comment : Designator=Q16 Old Comment=FDS4672 New Comment=FDS4672A
+Change Component Comment : Designator=Q17 Old Comment=FDS4672 New Comment=FDS4672A
+Change Component Designator: OldDesignator=Vpp NewDesignator=V24
+Change component parameters: Designator = "Q14" ("Q14"); Footprint = "SO-8_M"; UniqueID = "\OKHEQJNP" ("\OKHEQJNP")
+Change component parameters (AddParameter): Name = "Channel Type"; Value = "P-Channel"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Datasheet URL"; Value = "https://www.fairchildsemi.com/datasheets/FD/FDS4675.pdf"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Datasheet Version"; Value = "Rev. C(W), 02/2001"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Drain-Source On Resistance-Max"; Value = "13mO"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Drain-to-Source Voltage [Vdss]"; Value = "40V"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Manufacturer"; Value = "Fairchild Semiconductor"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Manufacturer URL"; Value = "https://www.fairchildsemi.com/"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Mounting Technology"; Value = "SurfaceMount"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Description"; Value = "8-Pin Small Outline Integrated Circuit, Body 4.9 x 3.9 mm, Pitch 1.27 mm"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Reference"; Value = "SO-8"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package URL"; Value = "https://www.fairchildsemi.com/package-drawings/M0/M08A.pdf"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Version"; Value = "Rev. 16, 08/2015"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Qg Gate Charge"; Value = "56nC"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Rated Power Dissipation"; Value = "2.4W"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Temperature"; Value = "25"; VariantName = "[No Variations]"
+Change component parameters: Designator = "Q15" ("Q15"); Footprint = "SO-8_M"; UniqueID = "\PYWFIDMP" ("\PYWFIDMP")
+Change component parameters (AddParameter): Name = "Channel Type"; Value = "P-Channel"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Datasheet URL"; Value = "https://www.fairchildsemi.com/datasheets/FD/FDS4675.pdf"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Datasheet Version"; Value = "Rev. C(W), 02/2001"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Drain-Source On Resistance-Max"; Value = "13mO"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Drain-to-Source Voltage [Vdss]"; Value = "40V"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Manufacturer"; Value = "Fairchild Semiconductor"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Manufacturer URL"; Value = "https://www.fairchildsemi.com/"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Mounting Technology"; Value = "SurfaceMount"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Description"; Value = "8-Pin Small Outline Integrated Circuit, Body 4.9 x 3.9 mm, Pitch 1.27 mm"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Reference"; Value = "SO-8"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package URL"; Value = "https://www.fairchildsemi.com/package-drawings/M0/M08A.pdf"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Version"; Value = "Rev. 16, 08/2015"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Qg Gate Charge"; Value = "56nC"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Rated Power Dissipation"; Value = "2.4W"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Temperature"; Value = "25"; VariantName = "[No Variations]"
+Change component parameters: Designator = "Q18" ("Q18"); Footprint = "SO-8_M"; UniqueID = "\KROAUCCI" ("\KROAUCCI")
+Change component parameters (AddParameter): Name = "Channel Type"; Value = "P-Channel"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Datasheet URL"; Value = "https://www.fairchildsemi.com/datasheets/FD/FDS4675.pdf"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Datasheet Version"; Value = "Rev. C(W), 02/2001"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Drain-Source On Resistance-Max"; Value = "13mO"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Drain-to-Source Voltage [Vdss]"; Value = "40V"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Manufacturer"; Value = "Fairchild Semiconductor"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Manufacturer URL"; Value = "https://www.fairchildsemi.com/"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Mounting Technology"; Value = "SurfaceMount"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Description"; Value = "8-Pin Small Outline Integrated Circuit, Body 4.9 x 3.9 mm, Pitch 1.27 mm"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Reference"; Value = "SO-8"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package URL"; Value = "https://www.fairchildsemi.com/package-drawings/M0/M08A.pdf"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Package Version"; Value = "Rev. 16, 08/2015"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Qg Gate Charge"; Value = "56nC"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Rated Power Dissipation"; Value = "2.4W"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Temperature"; Value = "25"; VariantName = "[No Variations]"
+Added Component: Designator=Q21(SO-8_N)
+Add component (AddParameter): Name = "Channel Type"; Value = "P-Channel"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Datasheet URL"; Value = "https://www.fairchildsemi.com/datasheets/FD/FDS4675.pdf"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Datasheet Version"; Value = "Rev. C(W), 02/2001"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Drain-Source On Resistance-Max"; Value = "13mO"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Drain-to-Source Voltage [Vdss]"; Value = "40V"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer"; Value = "Fairchild Semiconductor"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer URL"; Value = "https://www.fairchildsemi.com/"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Mounting Technology"; Value = "SurfaceMount"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package Description"; Value = "8-Pin Small Outline Integrated Circuit, Body 4.9 x 3.9 mm, Pitch 1.27 mm"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package Reference"; Value = "SO-8"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package URL"; Value = "https://www.fairchildsemi.com/package-drawings/M0/M08A.pdf"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package Version"; Value = "Rev. 16, 08/2015"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Qg Gate Charge"; Value = "56nC"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Rated Power Dissipation"; Value = "2.4W"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Temperature"; Value = "25"; VariantName = "[No Variations]"
+Added Pin To Net: NetName=V12 Pin=Q18-1
+Added Pin To Net: NetName=V12 Pin=Q18-2
+Added Pin To Net: NetName=V24 Pin=Q21-1
+Added Pin To Net: NetName=V24 Pin=Q21-2
+Added Pin To Net: NetName=V24 Pin=Q21-3
+Added Pin To Net: NetName=NetQ18_2 Pin=Q21-4
+Added Pin To Net: NetName=VpCh1 Pin=Q21-5
+Added Pin To Net: NetName=VpCh1 Pin=Q21-6
+Added Pin To Net: NetName=VpCh1 Pin=Q21-7
+Added Pin To Net: NetName=VpCh1 Pin=Q21-8
+Change Net Name : Old Net Name=NetQ18_2 New Net Name=NetQ21_4
+Added Member To Class: ClassName=SolderingStation_Power Member=Component Q21 FDS4675

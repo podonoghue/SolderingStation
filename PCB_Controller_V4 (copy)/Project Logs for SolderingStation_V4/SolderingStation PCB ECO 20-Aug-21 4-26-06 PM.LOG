@@ -1,0 +1,5 @@
+Added Component: Designator=RLY?(Relay - ORWH-SH)
+Add component (AddParameter): Name = "Farnell PN"; Value = "1181034"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = ""; VariantName = "[No Variations]"
+Added Pin To Net: NetName=+3V3_I Pin=Q24-3
+Added Member To Class: ClassName=SolderingStation_Power Member=Component RLY? ORWH-SH-112D1F,000

@@ -1,0 +1,28 @@
+Removed Pin From Net: NetName=NetQ18_4 Pin=Z9-A
+Removed Pin From Net: NetName=V12 Pin=Z9-K
+Removed Pin From Net: NetName=NetQ21_4 Pin=Z10-A
+Removed Pin From Net: NetName=V24 Pin=Z10-K
+Removed Pin From Net: NetName=NetQ22_4 Pin=Z11-A
+Removed Pin From Net: NetName=V12 Pin=Z11-K
+Removed Pin From Net: NetName=NetQ23_4 Pin=Z12-A
+Removed Pin From Net: NetName=V24 Pin=Z12-K
+Removed Member From Class: ClassName=SolderingStation_Power Member=Z11
+Removed Member From Class: ClassName=SolderingStation_Power Member=Z12
+Change Component Footprint: Designator=Z9 Old Footprint=SOD-323 New Footprint=SOT23_M
+Change Component Footprint: Designator=Z10 Old Footprint=SOD-323 New Footprint=SOT23_M
+Change Component Comment : Designator=Z9 Old Comment=BZT52C12S-7-F New Comment=DZ23C12
+Change Component Comment : Designator=Z10 Old Comment=BZT52C12S-7-F New Comment=DZ23C12
+Change component parameters: Designator = "Z9" ("Z9"); Footprint = "SOD-323"; UniqueID = "\ZYXJLOOB" ("\ZYXJLOOB")
+Change component parameters (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "LCSC"; Value = ""; VariantName = "[No Variations]"
+Change component parameters: Designator = "Z10" ("Z10"); Footprint = "SOD-323"; UniqueID = "\OIRNLVPC" ("\OIRNLVPC")
+Change component parameters (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "LCSC"; Value = ""; VariantName = "[No Variations]"
+Added Pin To Net: NetName=NetQ23_4 Pin=Z9-1
+Added Pin To Net: NetName=NetQ21_4 Pin=Z9-2
+Added Pin To Net: NetName=V12 Pin=Z9-3
+Added Pin To Net: NetName=NetQ22_4 Pin=Z10-1
+Added Pin To Net: NetName=NetQ18_4 Pin=Z10-2
+Added Pin To Net: NetName=V12 Pin=Z10-3

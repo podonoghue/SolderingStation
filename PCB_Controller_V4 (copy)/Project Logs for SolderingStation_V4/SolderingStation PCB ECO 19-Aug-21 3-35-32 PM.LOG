@@ -1,0 +1,165 @@
+Removed Pin From Net: NetName=V24 Pin=Q1-1
+Removed Pin From Net: NetName=V24 Pin=Q1-3
+Removed Pin From Net: NetName=V24 Pin=Q2-1
+Removed Pin From Net: NetName=V24 Pin=Q2-3
+Removed Pin From Net: NetName=V24 Pin=R1-2
+Removed Pin From Net: NetName=V24 Pin=R2-2
+Removed Pin From Net: NetName=V24 Pin=R3-2
+Removed Pin From Net: NetName=V24 Pin=R4-2
+Removed Pin From Net: NetName=V24 Pin=Z1-K
+Removed Pin From Net: NetName=V24 Pin=Z2-K
+Removed Pin From Net: NetName=V24 Pin=Z3-K
+Removed Pin From Net: NetName=V24 Pin=Z4-K
+Added Component: Designator=C37(CCNP1608-0603)
+Add component (AddParameter): Name = "Class"; Value = "Passive"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = "C14663"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer"; Value = "Generic Components"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Published"; Value = "08/06/2000"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Publisher"; Value = "Altium Hobart Technology Centre"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SubClass"; Value = "Capacitor"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "100nF"; VariantName = "[No Variations]"
+Added Component: Designator=C40(CCNP1608-0603)
+Add component (AddParameter): Name = "Class"; Value = "Passive"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = "C14663"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer"; Value = "Generic Components"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Published"; Value = "08/06/2000"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Publisher"; Value = "Altium Hobart Technology Centre"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SubClass"; Value = "Capacitor"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "100nF"; VariantName = "[No Variations]"
+Added Component: Designator=D16(PCBPIN - 0.7mm)
+Add component (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = ""; VariantName = "[No Variations]"
+Added Component: Designator=D17(PCBPIN - 0.7mm)
+Add component (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = ""; VariantName = "[No Variations]"
+Added Component: Designator=Q18(SO-8_M)
+Add component (AddParameter): Name = "Farnell"; Value = "2543521"; VariantName = "[No Variations]"
+Added Component: Designator=Q19(SOT457_N)
+Add component (AddParameter): Name = "Farnell PN"; Value = "1680329"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = ""; VariantName = "[No Variations]"
+Added Component: Designator=Q20(SOT457_N)
+Add component (AddParameter): Name = "Farnell PN"; Value = "1680329"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = ""; VariantName = "[No Variations]"
+Added Component: Designator=R68(CR1608-0603_N)
+Add component (AddParameter): Name = "Class"; Value = "Passive"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = "C23162"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer"; Value = "Generic Components"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Published"; Value = "08/06/2000"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Publisher"; Value = "Altium Hobart Technology Centre"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SubClass"; Value = "Resistor"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "4k7"; VariantName = "[No Variations]"
+Added Component: Designator=R69(CR1608-0603_N)
+Add component (AddParameter): Name = "Class"; Value = "Passive"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = "C23162"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer"; Value = "Generic Components"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Published"; Value = "08/06/2000"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Publisher"; Value = "Altium Hobart Technology Centre"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SubClass"; Value = "Resistor"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "4k7"; VariantName = "[No Variations]"
+Added Component: Designator=R70(CR1608-0603_N)
+Add component (AddParameter): Name = "Class"; Value = "Passive"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = "C23162"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer"; Value = "Generic Components"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Published"; Value = "08/06/2000"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Publisher"; Value = "Altium Hobart Technology Centre"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SubClass"; Value = "Resistor"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "4k7"; VariantName = "[No Variations]"
+Added Component: Designator=R71(CR1608-0603_N)
+Add component (AddParameter): Name = "Class"; Value = "Passive"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Digikey"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Farnell PN"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LCSC"; Value = "C23162"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer"; Value = "Generic Components"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Published"; Value = "08/06/2000"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Publisher"; Value = "Altium Hobart Technology Centre"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SubClass"; Value = "Resistor"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "4k7"; VariantName = "[No Variations]"
+Added Component: Designator=Z9(SOD-323)
+Add component (AddParameter): Name = "LCSC"; Value = "C124208"; VariantName = "[No Variations]"
+Added Component: Designator=Z10(SOD-323)
+Add component (AddParameter): Name = "LCSC"; Value = "C124208"; VariantName = "[No Variations]"
+Added Pin To Net: NetName=+3V3_I Pin=C37-1
+Added Pin To Net: NetName=GND Pin=C37-2
+Added Pin To Net: NetName=-5V Pin=C40-1
+Added Pin To Net: NetName=GND Pin=C40-2
+Added Pin To Net: NetName=V24 Pin=Q18-1
+Added Pin To Net: NetName=V12 Pin=Q18-3
+Added Pin To Net: NetName=+3V3_I Pin=Q19-3
+Added Pin To Net: NetName=-5V Pin=Q19-6
+Added Pin To Net: NetName=+3V3_I Pin=Q20-3
+Added Pin To Net: NetName=-5V Pin=Q20-6
+Added Pin To Net: NetName=V12 Pin=R68-2
+Added Pin To Net: NetName=V24 Pin=R69-2
+Added Pin To Net: NetName=V12 Pin=Z9-K
+Added Pin To Net: NetName=V24 Pin=Z10-K
+Added Pin To Net: NetName=NetD16_1 Pin=D16-1
+Added Pin To Net: NetName=NetD16_1 Pin=Q19-2
+Added Net: Name=NetD16_1
+Added Pin To Net: NetName=NetD17_1 Pin=D17-1
+Added Pin To Net: NetName=NetD17_1 Pin=Q20-2
+Added Net: Name=NetD17_1
+Added Pin To Net: NetName=NetQ18_2 Pin=Q18-2
+Added Pin To Net: NetName=NetQ18_2 Pin=R69-1
+Added Pin To Net: NetName=NetQ18_2 Pin=R71-2
+Added Pin To Net: NetName=NetQ18_2 Pin=Z10-A
+Added Net: Name=NetQ18_2
+Added Pin To Net: NetName=NetQ18_4 Pin=Q18-4
+Added Pin To Net: NetName=NetQ18_4 Pin=R68-1
+Added Pin To Net: NetName=NetQ18_4 Pin=R70-2
+Added Pin To Net: NetName=NetQ18_4 Pin=Z9-A
+Added Net: Name=NetQ18_4
+Added Pin To Net: NetName=NetQ19_1 Pin=Q19-1
+Added Pin To Net: NetName=NetQ19_1 Pin=R70-1
+Added Net: Name=NetQ19_1
+Added Pin To Net: NetName=NetQ19_4 Pin=Q19-4
+Added Pin To Net: NetName=NetQ19_4 Pin=Q19-5
+Added Net: Name=NetQ19_4
+Added Pin To Net: NetName=NetQ20_1 Pin=Q20-1
+Added Pin To Net: NetName=NetQ20_1 Pin=R71-1
+Added Net: Name=NetQ20_1
+Added Pin To Net: NetName=NetQ20_4 Pin=Q20-4
+Added Pin To Net: NetName=NetQ20_4 Pin=Q20-5
+Added Net: Name=NetQ20_4
+Added Pin To Net: NetName=VpCh1 Pin=Q2-1
+Added Pin To Net: NetName=VpCh1 Pin=Q2-3
+Added Pin To Net: NetName=VpCh1 Pin=Q18-5
+Added Pin To Net: NetName=VpCh1 Pin=Q18-6
+Added Pin To Net: NetName=VpCh1 Pin=Q18-7
+Added Pin To Net: NetName=VpCh1 Pin=Q18-8
+Added Pin To Net: NetName=VpCh1 Pin=R3-2
+Added Pin To Net: NetName=VpCh1 Pin=R4-2
+Added Pin To Net: NetName=VpCh1 Pin=Z3-K
+Added Pin To Net: NetName=VpCh1 Pin=Z4-K
+Added Net: Name=VpCh1
+Added Pin To Net: NetName=VpCh2 Pin=Q1-1
+Added Pin To Net: NetName=VpCh2 Pin=Q1-3
+Added Pin To Net: NetName=VpCh2 Pin=R1-2
+Added Pin To Net: NetName=VpCh2 Pin=R2-2
+Added Pin To Net: NetName=VpCh2 Pin=Z1-K
+Added Pin To Net: NetName=VpCh2 Pin=Z2-K
+Added Net: Name=VpCh2
+Added Member To Class: ClassName=SolderingStation_Power Member=Component C37 100nF
+Added Member To Class: ClassName=SolderingStation_Power Member=Component C40 100nF
+Added Member To Class: ClassName=SolderingStation_Power Member=Component D16 Drive2
+Added Member To Class: ClassName=SolderingStation_Power Member=Component D17 Drive2
+Added Member To Class: ClassName=SolderingStation_Power Member=Component Q18 DMP4025LSD-13
+Added Member To Class: ClassName=SolderingStation_Power Member=Component Q19 IMD2AT108
+Added Member To Class: ClassName=SolderingStation_Power Member=Component Q20 IMD2AT108
+Added Member To Class: ClassName=SolderingStation_Power Member=Component R68 4k7
+Added Member To Class: ClassName=SolderingStation_Power Member=Component R69 4k7
+Added Member To Class: ClassName=SolderingStation_Power Member=Component R70 4k7
+Added Member To Class: ClassName=SolderingStation_Power Member=Component R71 4k7
+Added Member To Class: ClassName=SolderingStation_Power Member=Component Z9 BZT52C12S-7-F
+Added Member To Class: ClassName=SolderingStation_Power Member=Component Z10 BZT52C12S-7-F
