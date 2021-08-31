@@ -178,7 +178,7 @@ enum LlwuResetFilter {
 /**
  * Type definition for LLWU interrupt call back
  */
-typedef void (*LLWUCallbackFunction)();
+typedef void (*LlwuCallbackFunction)();
 
 /**
  * Template class providing interface to Low Leakage Wake-up Unit
@@ -208,7 +208,7 @@ protected:
    };
 
    /** Callback function for ISR */
-   static LLWUCallbackFunction sCallback;
+   static LlwuCallbackFunction sCallback;
 
    /** Callback to catch unhandled interrupt */
    static void unhandledCallback() {
@@ -224,12 +224,91 @@ public:
    }
 
    /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note Only usable with static objects.
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    int y;
+    *
+    *    // Member function used as callback
+    *    // This function must match LlwuCallbackFunction
+    *    void callback(uint32_t status) {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * static AClass aClass;
+    * ...
+    * // Wrap member function
+    * auto fn = Llwu::wrapCallback<AClass, &AClass::callback, aClass>();
+    * // Use as callback
+    * Llwu::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)(), T &object>
+   static LlwuCallbackFunction wrapCallback() {
+      static LlwuCallbackFunction fn = []() {
+         (object.*callback)();
+      };
+      return fn;
+   }
+
+   /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note There is a considerable space and time overhead to using this method
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    int y;
+    *
+    *    // Member function used as callback
+    *    // This function must match LlwuCallbackFunction
+    *    void callback(uint32_t status) {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * AClass aClass;
+    * ...
+    * // Wrap member function
+    * auto fn = Llwu::wrapCallback<AClass, &AClass::callback>(aClass);
+    * // Use as callback
+    * Llwu::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)()>
+   static LlwuCallbackFunction wrapCallback(T &object) {
+      static T &obj = object;
+      static LlwuCallbackFunction fn = []() {
+         (obj.*callback)();
+      };
+      return fn;
+   }
+
+   /**
     * Set Callback function
     *
     *   @param[in]  callback Callback function to be executed on interrupt\n
     *                        Use nullptr to remove callback.
     */
-   static void setCallback(LLWUCallbackFunction callback) {
+   static void setCallback(LlwuCallbackFunction callback) {
       static_assert(Info::irqHandlerInstalled, "LLWU not configured for interrupts");
       if (callback == nullptr) {
          callback = unhandledCallback;
@@ -595,6 +674,85 @@ public:
       }
 
       /**
+       * Wrapper to allow the use of a class member as a callback function
+       * @note Only usable with static objects.
+       *
+       * @tparam T         Type of the object containing the callback member function
+       * @tparam callback  Member function pointer
+       * @tparam object    Object containing the member function
+       *
+       * @return  Pointer to a function suitable for the use as a callback
+       *
+       * @code
+       * class AClass {
+       * public:
+       *    int y;
+       *
+       *    // Member function used as callback
+       *    // This function must match LlwuCallbackFunction
+       *    void callback(uint8_t status) {
+       *       ...;
+       *    }
+       * };
+       * ...
+       * // Instance of class containing callback member function
+       * static AClass aClass;
+       * ...
+       * // Wrap member function
+       * auto fn = Llwu::Pin<LlwuPin_0>::wrapCallback<AClass, &AClass::callback, aClass>();
+       * // Use as callback
+       * Llwu::Pin<LlwuPin_0>::setCallback(fn);
+       * @endcode
+       */
+      template<class T, void(T::*callback)(uint32_t), T &object>
+      static PinCallbackFunction wrapCallback() {
+         static PinCallbackFunction fn = [](uint32_t status) {
+            (object.*callback)(status);
+         };
+         return fn;
+      }
+
+      /**
+       * Wrapper to allow the use of a class member as a callback function
+       * @note There is a considerable space and time overhead to using this method
+       *
+       * @tparam T         Type of the object containing the callback member function
+       * @tparam callback  Member function pointer
+       * @tparam object    Object containing the member function
+       *
+       * @return  Pointer to a function suitable for the use as a callback
+       *
+       * @code
+       * class AClass {
+       * public:
+       *    int y;
+       *
+       *    // Member function used as callback
+       *    // This function must match LlwuCallbackFunction
+       *    void callback(uint8_t status) {
+       *       ...;
+       *    }
+       * };
+       * ...
+       * // Instance of class containing callback member function
+       * AClass aClass;
+       * ...
+       * // Wrap member function
+       * auto fn = Llwu::Pin<LlwuPin_0>::wrapCallback<AClass, &AClass::callback>(aClass);
+       * // Use as callback
+       * Llwu::Pin<LlwuPin_0>::setCallback(fn);
+       * @endcode
+       */
+      template<class T, void(T::*callback)(uint32_t)>
+      static PinCallbackFunction wrapCallback(T &object) {
+         static T &obj = object;
+         static PinCallbackFunction fn = [](uint32_t status) {
+            (obj.*callback)(status);
+         };
+         return fn;
+      }
+
+      /**
        * Set callback for Pin interrupts
        *
        * @param[in] pinCallback The function to call on Pin interrupt. \n
@@ -636,7 +794,7 @@ public:
    };
 };
 
-template<class Info> LLWUCallbackFunction LlwuBase_T<Info>::sCallback = LlwuBase_T<Info>::unhandledCallback;
+template<class Info> LlwuCallbackFunction LlwuBase_T<Info>::sCallback = LlwuBase_T<Info>::unhandledCallback;
 
 #ifdef USBDM_LLWU_IS_DEFINED
 /**

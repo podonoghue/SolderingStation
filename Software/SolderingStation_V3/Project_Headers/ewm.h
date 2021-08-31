@@ -33,7 +33,7 @@ namespace USBDM {
 enum EwmInput {
    EwmInput_Disabled    = EWM_CTRL_INEN(0)|EWM_CTRL_ASSIN(0), //!< EWM_in Pin disabled
    EwmInput_ActiveLow   = EWM_CTRL_INEN(1)|EWM_CTRL_ASSIN(0), //!< EWM_in Pin activeLow
-   EwmInput_ActiveHighe = EWM_CTRL_INEN(1)|EWM_CTRL_ASSIN(1), //!< EWM_in Pin activeHigh
+   EwmInput_ActiveHigh  = EWM_CTRL_INEN(1)|EWM_CTRL_ASSIN(1), //!< EWM_in Pin activeHigh
 };
 
 /**
@@ -55,7 +55,7 @@ static constexpr uint8_t EwmKey2 = 0x2C;
  *
  * @param[in]  status Struct indicating interrupt source and state
  */
-typedef void (*EWMCallbackFunction)();
+typedef void (*EwmCallbackFunction)();
 
 /**
  * Template class representing the External Watchdog Monitor
@@ -77,7 +77,7 @@ protected:
    }
 
    /** Callback function for ISR */
-   static EWMCallbackFunction sCallback;
+   static EwmCallbackFunction sCallback;
 
 public:
    /**
@@ -96,12 +96,91 @@ public:
    }
 
    /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note Only usable with static objects.
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    int y;
+    *
+    *    // Member function used as callback
+    *    // This function must match EwmCallbackFunction
+    *    void callback() {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * static AClass aClass;
+    * ...
+    * // Wrap member function
+    * auto fn = Ewm::wrapCallback<AClass, &AClass::callback, aClass>();
+    * // Use as callback
+    * Ewm::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)(), T &object>
+   static EwmCallbackFunction wrapCallback() {
+      static EwmCallbackFunction fn = []() {
+         (object.*callback)();
+      };
+      return fn;
+   }
+
+   /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note There is a considerable space and time overhead to using this method
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    int y;
+    *
+    *    // Member function used as callback
+    *    // This function must match EwmCallbackFunction
+    *    void callback() {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * AClass aClass;
+    * ...
+    * // Wrap member function
+    * auto fn = Ewm::wrapCallback<AClass, &AClass::callback>(aClass);
+    * // Use as callback
+    * Ewm::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)()>
+   static EwmCallbackFunction wrapCallback(T &object) {
+      static T &obj = object;
+      static EwmCallbackFunction fn = []() {
+         (obj.*callback)();
+      };
+      return fn;
+   }
+
+   /**
     * Set callback function
     *
     * @param[in] callback Callback function to execute on interrupt.\n
     *                     Use nullptr to remove callback.
     */
-   static void setCallback(EWMCallbackFunction callback) {
+   static void setCallback(EwmCallbackFunction callback) {
       static_assert(Info::irqHandlerInstalled, "EWM not configured for interrupts");
       if (callback == nullptr) {
          callback = unhandledCallback;
@@ -289,7 +368,7 @@ public:
    }
 };
 
-template<class Info> EWMCallbackFunction EwmBase_T<Info>::sCallback = EwmBase_T<Info>::unhandledCallback;
+template<class Info> EwmCallbackFunction EwmBase_T<Info>::sCallback = EwmBase_T<Info>::unhandledCallback;
 
 #if defined(USBDM_EWM_IS_DEFINED)
 class Ewm : public EwmBase_T<EwmInfo> {};

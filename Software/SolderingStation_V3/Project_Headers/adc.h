@@ -203,7 +203,7 @@ enum AdcCompare {
  * @param[in] result  Conversion result from channel
  * @param[in] channel Channel providing the result
  */
-typedef void (*ADCCallbackFunction)(uint32_t result, int channel);
+typedef void (*AdcCallbackFunction)(uint32_t result, int channel);
 
 /**
  * Provides common unhandledCallback for all ADCs.
@@ -264,7 +264,7 @@ private:
 
 protected:
    /** Callback function for ISR */
-   static ADCCallbackFunction sCallback;
+   static AdcCallbackFunction sCallback;
 
 public:
    /** Hardware instance pointer */
@@ -302,6 +302,81 @@ public:
    }
 
    /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note Only usable with static objects.
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    // Member function used as callback
+    *    // This function must match AdcCallbackFunction
+    *    void callback(uint32_t result, int channel) {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * static AClass aClass;
+    * ...
+    * // Wrap member function to create handler
+    * auto fn = Adc0::wrapCallback<AClass, &AClass::callback, aClass>();
+    * // Use as callback
+    * Adc0::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)(uint32_t result, int channel), T &object>
+   static constexpr AdcCallbackFunction wrapCallback() {
+      AdcCallbackFunction fn = [](uint32_t result, int channel) {
+         (object.*callback)(result, channel);
+      };
+      return fn;
+   }
+
+   /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note There is a considerable space and time overhead to using this method
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    // Member function used as callback
+    *    // This function must match AdcCallbackFunction
+    *    void callback(uint32_t result, int channel) {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * static AClass aClass;
+    * ...
+    * // Wrap member function to create handler
+    * auto fn = Adc0::wrapCallback<AClass, &AClass::callback, aClass>();
+    * // Use as callback
+    * Adc0::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)(uint32_t result, int channel)>
+   static AdcCallbackFunction wrapCallback(T &object) {
+      static T &obj = object;
+      AdcCallbackFunction fn = [](uint32_t result, int channel) {
+         (obj.*callback)(result, channel);
+      };
+      return fn;
+   }
+
+   /**
     * Set callback for conversion complete interrupts
     *
     * @param[in] callback Callback function to execute on interrupt.\n
@@ -314,7 +389,7 @@ public:
     *       It is necessary to identify the originating channel in the callback.
     * @note To change between handlers first use setCallback(nullptr).
     */
-   static void setCallback(ADCCallbackFunction callback) {
+   static void setCallback(AdcCallbackFunction callback) {
       static_assert(Info::irqHandlerInstalled, "ADC not configured for interrupts. Modify Configure.usbdmProject");
       if (callback == nullptr) {
          sCallback = AdcBase::unhandledCallback;
@@ -970,7 +1045,7 @@ public:
 
 };
 
-template<class Info> ADCCallbackFunction AdcBase_T<Info>::sCallback = AdcBase::unhandledCallback;
+template<class Info> AdcCallbackFunction AdcBase_T<Info>::sCallback = AdcBase::unhandledCallback;
 
 #ifdef USBDM_ADC0_IS_DEFINED
 /**

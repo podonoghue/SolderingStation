@@ -316,6 +316,11 @@ public:
       PORT_PCR_SRE(0) |   // Slew Rate Enable
       PORT_PCR_PS(0);     // Pull device
 
+   //! Whether to configure RTC
+   //! If disabled then no RTC registers are touched.
+   //! This is useful if RTC is not powered as register access will trap.
+   static constexpr bool configure_rtc = 1;
+
    //! Frequency of RTC External Clock or Crystal
    static constexpr uint32_t osc_input_freq = 32768UL;
 

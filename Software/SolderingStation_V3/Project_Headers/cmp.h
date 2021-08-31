@@ -78,6 +78,8 @@ enum CmpEvent : uint8_t {
 struct CmpStatus {
    CmpEvent event;   //!< Event triggering handler
    uint8_t  state;   //!< State of CMPO at event
+
+   constexpr CmpStatus(CmpEvent event, uint8_t  state) : event(event), state(state) {}
 };
 
 /**
@@ -240,7 +242,7 @@ enum Cmp3Input {
  *
  * @param[in]  status Struct indicating interrupt source and state
  */
-typedef void (*CMPCallbackFunction)(CmpStatus status);
+typedef void (*CmpCallbackFunction)(CmpStatus status);
 
 /**
  * Template class representing a Analogue Comparator
@@ -311,7 +313,7 @@ protected:
    }
 
    /** Callback function for ISR */
-   static CMPCallbackFunction sCallback;
+   static CmpCallbackFunction sCallback;
 
 public:
    /**
@@ -338,12 +340,91 @@ public:
    }
 
    /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note Only usable with static objects.
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    int y;
+    *
+    *    // Member function used as callback
+    *    // This function must match CmpCallbackFunction
+    *    void callback() {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * static AClass aClass;
+    * ...
+    * // Wrap member function
+    * auto fn = Cmp0::wrapCallback<AClass, &AClass::callback, aClass>();
+    * // Use as callback
+    * Cmp0::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)(CmpStatus status), T &object>
+   static CmpCallbackFunction wrapCallback() {
+      static CmpCallbackFunction fn = [](CmpStatus status) {
+         (object.*callback)(status);
+      };
+      return fn;
+   }
+
+   /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note There is a considerable space and time overhead to using this method
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    int y;
+    *
+    *    // Member function used as callback
+    *    // This function must match CmpCallbackFunction
+    *    void callback() {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * AClass aClass;
+    * ...
+    * // Wrap member function
+    * auto fn = Cmp0::wrapCallback<AClass, &AClass::callback>(aClass);
+    * // Use as callback
+    * Cmp0::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)(CmpStatus status)>
+   static CmpCallbackFunction wrapCallback(T &object) {
+      static T &obj = object;
+      static CmpCallbackFunction fn = [](CmpStatus status) {
+         (obj.*callback)(status);
+      };
+      return fn;
+   }
+
+   /**
     * Set callback function
     *
     * @param[in] callback Callback function to execute on interrupt.\n
     *                     Use nullptr to remove callback.
     */
-   static void setCallback(CMPCallbackFunction callback) {
+   static void setCallback(CmpCallbackFunction callback) {
       static_assert(Info::irqHandlerInstalled, "CMP not configured for interrupts");
       if (callback == nullptr) {
          callback = unhandledCallback;
@@ -824,7 +905,7 @@ protected:
    };
 };
 
-template<class Info> CMPCallbackFunction CmpBase_T<Info>::sCallback = CmpBase_T<Info>::unhandledCallback;
+template<class Info> CmpCallbackFunction CmpBase_T<Info>::sCallback = CmpBase_T<Info>::unhandledCallback;
 
 #if defined(USBDM_CMP_IS_DEFINED)
 using Cmp = CmpBase_T<CmpInfo>;

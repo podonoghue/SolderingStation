@@ -39,9 +39,10 @@ void Control::initialise() {
    ch2.enable();
 
    // Configure ADC to use a call-back
-   static auto adc_cb = [](uint32_t result, int channel){
-      This->adcHandler(result, channel);
+   static AdcCallbackFunction adc_cb = [](uint32_t result, int channel){
+      control.adcHandler(result, channel);
    };
+
    ADConverter::configure(
          ADC_RESOLUTION,
          AdcClockSource_Bus,
@@ -67,8 +68,8 @@ void Control::initialise() {
    // Configure comparator for mains zero-crossing detection
    // Trigger is actually on the falling edge of rectified waveform near zero
 
-   static auto zero_crossing_cb = [](CmpStatus){
-      This->zeroCrossingHandler();
+   static CmpCallbackFunction zero_crossing_cb = [](CmpStatus){
+      control.zeroCrossingHandler();
    };
 
    // Threshold for zero-crossing comparator
@@ -84,12 +85,12 @@ void Control::initialise() {
    ZeroCrossingComparator::enableNvicInterrupts(NvicPriority_Normal);
 
    // Over-current detection using external comparator and pin IRQ
-   static auto overcurrent_cb = [](CmpStatus){
+   static CmpCallbackFunction overcurrent_cb = [](CmpStatus){
       // Mark channels as overloaded
       channels[1].setOverload();
       channels[2].setOverload();
-      This->setNeedsRefresh();
-};
+      control.setNeedsRefresh();
+   };
 
    // Threshold for over-current comparator
    static constexpr uint8_t OVERCURRENT_DAC_THRESHOLD = 1.0*(OverCurrentComparator::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
@@ -178,7 +179,7 @@ static constexpr unsigned SAMPLE_DELAY  = 500;
 void Control::zeroCrossingHandler() {
 
    // Schedule ADC conversions
-   static auto cb = [](){
+   static PitCallbackFunction cb = [](){
       // Do chip temperature measurement
       // This also starts the entire sequence of chained conversions
       // This is delayed until after the thermocouple amplifier has recovered
@@ -305,7 +306,7 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 
    // Schedule next ADC conversion
    // This is delayed to allow for mux and bias settling time
-   static auto cb = [](){
+   static PitCallbackFunction cb = [](){
       if (lastConversion&HIGH_MASK) {
          HighGainAdcChannel::startConversion(AdcInterrupt_Enabled);
       }
@@ -458,6 +459,3 @@ void Control::eventLoop()  {
       }
    }
 }
-
-/// this pointer for static members (call-backs)
-Control *Control::This = nullptr;

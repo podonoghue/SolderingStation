@@ -55,9 +55,6 @@ private:
    bool doReportPid       = false;
    bool doReportPidTitle  = false;
 
-   /// Static this pointer for static members (call-backs)
-   static Control *This;
-
    /// Measurements to do near zero-crossing
    MuxSelect sequence[10];
 
@@ -83,10 +80,7 @@ public:
     * Constructor
     * Does minimal work - see initialise for main initialisation.
     */
-   Control() {
-      usbdm_assert(This == nullptr, "Control instantiated more than once");
-      This = this;
-   }
+   Control() {}
 
    /**
     * Get chip temperature from on-chip sensor

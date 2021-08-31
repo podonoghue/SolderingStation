@@ -305,6 +305,85 @@ public:
    }
 
    /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note Only usable with static objects.
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    int y;
+    *
+    *    // Member function used as callback
+    *    // This function must match FtmChannelCallbackFunction
+    *    void callback(uint8_t status) {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * static AClass aClass;
+    * ...
+    * // Wrap member function
+    * auto fn = Ftm0::wrapCallback<AClass, &AClass::callback, aClass>();
+    * // Use as callback
+    * Ftm0::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)(uint8_t), T &object>
+   static FtmChannelCallbackFunction wrapCallback() {
+      static FtmChannelCallbackFunction fn = [](uint8_t status) {
+         (object.*callback)(status);
+      };
+      return fn;
+   }
+
+   /**
+    * Wrapper to allow the use of a class member as a callback function
+    * @note There is a considerable space and time overhead to using this method
+    *
+    * @tparam T         Type of the object containing the callback member function
+    * @tparam callback  Member function pointer
+    * @tparam object    Object containing the member function
+    *
+    * @return  Pointer to a function suitable for the use as a callback
+    *
+    * @code
+    * class AClass {
+    * public:
+    *    int y;
+    *
+    *    // Member function used as callback
+    *    // This function must match FtmChannelCallbackFunction
+    *    void callback(uint8_t status) {
+    *       ...;
+    *    }
+    * };
+    * ...
+    * // Instance of class containing callback member function
+    * AClass aClass;
+    * ...
+    * // Wrap member function
+    * auto fn = Ftm0::wrapCallback<AClass, &AClass::callback>(aClass);
+    * // Use as callback
+    * Ftm0::setCallback(fn);
+    * @endcode
+    */
+   template<class T, void(T::*callback)(uint8_t)>
+   static FtmChannelCallbackFunction wrapCallback(T &object) {
+      static T &obj = object;
+      static FtmChannelCallbackFunction fn = [](uint8_t status) {
+         (obj.*callback)(status);
+      };
+      return fn;
+   }
+
+   /**
     * Set channel Callback function\n
     * Note that one callback may be shared by multiple channels of the timer
     *

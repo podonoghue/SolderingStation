@@ -66,7 +66,14 @@ static constexpr unsigned HARDWARE_VERSION = HW_SOLDER_STATION_V3;
 static uint32_t magicNumber = 0;
 
 __attribute__((used))
+#ifdef RELEASE_BUILD
+// Make bootloader information visible to linker
+// Triggers changes to memory map to suit bootloader
 __attribute__ ((section(".bootloader"))) extern
+#else
+// No bootloader used
+static
+#endif
 BootInformation const bootInformation = {
       &magicNumber,        // Pointer to magic number location to force ICP
       1,                   // Version of this software image
