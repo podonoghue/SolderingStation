@@ -1,6 +1,0 @@
-Removed Pin From Net: NetName=+3V3_I Pin=C38-1
-Removed Pin From Net: NetName=GND Pin=C38-2
-Removed Pin From Net: NetName=-5V Pin=C39-1
-Removed Pin From Net: NetName=GND Pin=C39-2
-Removed Member From Class: ClassName=SolderingStation_Power Member=C38
-Removed Member From Class: ClassName=SolderingStation_Power Member=C39

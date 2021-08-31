@@ -1,4 +1,0 @@
-Removed Pin From Net: NetName=NetQ23_4 Pin=Z9-1
-Removed Pin From Net: NetName=NetQ21_4 Pin=Z9-2
-Added Pin To Net: NetName=NetQ21_4 Pin=Z9-1
-Added Pin To Net: NetName=NetQ23_4 Pin=Z9-2

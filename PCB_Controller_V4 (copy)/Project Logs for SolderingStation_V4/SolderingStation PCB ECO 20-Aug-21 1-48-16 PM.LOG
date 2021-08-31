@@ -1,4 +1,0 @@
-Removed Pin From Net: NetName=AC24a Pin=F1-2
-Removed Pin From Net: NetName=AC24b Pin=F2-2
-Added Pin To Net: NetName=AC24b Pin=F1-2
-Added Pin To Net: NetName=AC24a Pin=F2-2
