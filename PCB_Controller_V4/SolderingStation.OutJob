@@ -126,11 +126,11 @@ Configuration5_Item2=OpenExported=False|AddToProject=False|ReportBOMViolationsIn
 Configuration5_Name3=GroupOrder
 Configuration5_Item3=Comment=True|Footprint=True
 Configuration5_Name4=SortOrder
-Configuration5_Item4=Designator=Up
+Configuration5_Item4=LCSC=Up
 Configuration5_Name5=VisibleOrder
-Configuration5_Item5=Designator=391|Comment=143|Footprint=283|Quantity=56|LCSC=65|Farnell PN=75
+Configuration5_Item5=Designator=391|Comment=143|Footprint=283|Quantity=56|LCSC=173|Farnell PN=75
 Configuration5_Name6=VisibleOrder_Flat
-Configuration5_Item6=Designator=391|Comment=143|Footprint=283|Quantity=56|LCSC=65|Farnell PN=75
+Configuration5_Item6=Designator=391|Comment=143|Footprint=283|Quantity=56|LCSC=173|Farnell PN=75
 OutputType6=Pick Place
 OutputName6=Generates pick and place files
 OutputCategory6=Assembly
@@ -187,7 +187,7 @@ OutputEnabled9_OutputMedium1=0
 OutputEnabled9_OutputMedium2=3
 OutputEnabled9_OutputMedium3=0
 OutputDefault9=0
-PageOptions9=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=2.05|XCorrection=1.00|YCorrection=1.00|PrintKind=1|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-3|MediaType=1|DitherType=10|PrintScaleMode=1|PaperKind=A4|PaperIndex=9
+PageOptions9=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=1.97|XCorrection=1.00|YCorrection=1.00|PrintKind=1|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-3|MediaType=1|DitherType=10|PrintScaleMode=1|PaperKind=A4|PaperIndex=9
 Configuration9_Name1=OutputConfigurationParameter1
 Configuration9_Item1=Record=Pcb3DPrintView|ResX=150|ResY=150|ViewX=59448821|ViewY=41338588|LookAtX=38355824|LookAtY=31269690|LookAtZ=0|UpX=0|UpY=1|UpZ=0|FOV=0|QuatX=0|QuatY=0|QuatZ=0|QuatW=1|Zoom=4.18679455392395E-5|UnitsPercent=True|UnitsDPI=True|LockResAspect=True|ViewConfigType=.config_3d|CustomCamera=False|ViewFromTop=True|ScreenWidth=0|ScreenHeight=0|ViewConfig=|DocumentPath=Z:\Documents\Development\SolderingStation\PCB_Controller\SolderingStation.PcbDoc
 

@@ -127,7 +127,7 @@ DocumentUniqueId=DOBWBUGO
 
 [Parameter1]
 Name=Version
-Value=4
+Value=4.0
 
 [Configuration1]
 Name=Sources

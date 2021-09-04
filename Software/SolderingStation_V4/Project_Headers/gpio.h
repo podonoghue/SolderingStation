@@ -163,7 +163,7 @@ public:
     *
     * @param[in] pcrValue PCR value to use in configuring pin (excluding MUX value). See pcrValue()
     */
-   static void setInOut(PcrValue pcrValue=GPIO_DEFAULT_PCR) {
+   static void setInOut(PcrValue pcrValue) {
       // Make input initially
       setIn();
       // Set inactive pin state (if later made output)
@@ -187,15 +187,22 @@ public:
     * @param[in] pinSlewRate      One of PinSlewRate_Slow, PinSlewRate_Fast (defaults to PinSlewRate_Fast)
     */
    static void setInOut(
-         PinPull           pinPull,
+         PinPull           pinPull           = PinPull_None,
          PinDriveStrength  pinDriveStrength  = PinDriveStrength_Low,
          PinDriveMode      pinDriveMode      = PinDriveMode_PushPull,
          PinAction         pinAction         = PinAction_None,
          PinFilter         pinFilter         = PinFilter_None,
          PinSlewRate       pinSlewRate       = PinSlewRate_Fast
    ) {
-      setInOut(pinPull|pinDriveStrength|pinDriveMode|pinAction|pinFilter|pinSlewRate|PinMux_Gpio);
-   }
+      const PcrValue pcrValue = pinPull|pinDriveStrength|pinDriveMode|pinAction|pinFilter|pinSlewRate;
+
+      // Make input initially
+      setIn();
+      // Set inactive pin state (if later made output)
+      setInactive();
+      // Configure PCR
+      Pcr::setPCR((pcrValue&~PORT_PCR_MUX_MASK)|PinMux_Gpio);
+      }
    /**
     * Set pin as digital output
     *
@@ -219,7 +226,7 @@ public:
     *
     * @param[in] pcrValue PCR value to use in configuring port (excluding MUX value). See pcrValue()
     */
-   static void setOutput(PcrValue pcrValue=GPIO_DEFAULT_PCR) {
+   static void setOutput(PcrValue pcrValue) {
       // Set initial level before enabling pin drive
       setInactive();
       // Make pin an output
@@ -241,12 +248,18 @@ public:
     * @param[in] pinSlewRate      One of PinSlewRate_Slow, PinSlewRate_Fast (defaults to PinSlewRate_Slow)
     */
    static void setOutput(
-         PinDriveStrength  pinDriveStrength,
+         PinDriveStrength  pinDriveStrength  = PinDriveStrength_Low,
          PinDriveMode      pinDriveMode      = PinDriveMode_PushPull,
          PinSlewRate       pinSlewRate       = PinSlewRate_Fast
    ) {
-      setOutput(pinDriveStrength|pinDriveMode|pinSlewRate);
-   }
+      const PcrValue pcrValue = pinDriveStrength|pinDriveMode|pinSlewRate;
+      // Set initial level before enabling pin drive
+      setInactive();
+      // Make pin an output
+      setOut();
+      // Configure pin
+      Pcr::setPCR((pcrValue&~PORT_PCR_MUX_MASK)|PinMux_Gpio);
+      }
    /**
     * Set pin as digital input
     *
@@ -270,7 +283,7 @@ public:
     *
     * @param[in] pcrValue PCR value to use in configuring port (excluding MUX value)
     */
-   static void setInput(PcrValue pcrValue=GPIO_DEFAULT_PCR) {
+   static void setInput(PcrValue pcrValue) {
       // Make pin an input
       setIn();
       Pcr::setPCR((pcrValue&~PORT_PCR_MUX_MASK)|PinMux_Gpio);
@@ -288,12 +301,16 @@ public:
     * @param[in] pinFilter        One of PinFilter_None, PinFilter_Passive (defaults to PinFilter_None)
     */
    static void setInput(
-         PinPull           pinPull,
+         PinPull           pinPull           = PinPull_None,
          PinAction         pinAction         = PinAction_None,
          PinFilter         pinFilter         = PinFilter_None
    ) {
-      setInput(pinPull|pinAction|pinFilter|PinMux_Gpio);
-   }
+      const PcrValue pcrValue = pinPull|pinAction|pinFilter;
+
+      // Make pin an input
+      setIn();
+      Pcr::setPCR((pcrValue&~PORT_PCR_MUX_MASK)|PinMux_Gpio);
+      }
    /**
     * Set pin. Pin will be high if configured as an output.
     *
