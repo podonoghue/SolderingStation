@@ -1,6 +1,6 @@
 /**
  * @file      hardware.cpp (generated from MK20D5.usbdmHardware)
- * @version   1.2.0
+ * @version   1.3.0
  * @brief     Pin initialisation for MK20DX128VLF5
  *
  * *****************************

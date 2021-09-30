@@ -11,11 +11,12 @@
 
 using namespace USBDM;
 
-/**
- * Number of consistent samples to confirm debouncing
- */
+/// How often the switches are polled
 constexpr unsigned POLL_INTERVAL_IN_MS = 10;                               // Polled every 10 ms
+
+/// Number of consistent samples to confirm debouncing
 constexpr unsigned DEBOUNCE_COUNT      = 40/POLL_INTERVAL_IN_MS;           // 40 ms
+/// How long to hold a button for long press in samples
 constexpr unsigned HOLD_COUNT          = 1*1000/POLL_INTERVAL_IN_MS;       // 1 s
 
 /**
@@ -116,16 +117,15 @@ EventType SwitchPolling::pollSwitches() {
 
    // Check at debounce time for valid button
    if (stableButtonCount == DEBOUNCE_COUNT) {
-      //      console.write('d');
 
-      // We have a button pressed for the debounce time - regular button press
+      // We have button(s) pressed for the debounce time - regular button press
       switch(currentButtonValue) {
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch1Release;    break;
          case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch2Release;    break;
-         case (1<<(MenuButton::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_SelRelease;    break;
+         case (1<<(MenuButton::BITNUM-Buttons::RIGHT)) : pendingEvent = ev_SelRelease;    break;
          case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : pendingEvent = ev_QuadRelease;   quadState = QuadState_Pressed; break;
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
-               (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch1Ch2Release; break;
+               (1<<(Ch2Button::BITNUM-Buttons::RIGHT)) : pendingEvent = ev_Ch1Ch2Release; break;
          default:                                        pendingEvent = ev_None;        break;
       }
       // Don't report button presses - only releases
@@ -145,7 +145,7 @@ EventType SwitchPolling::pollSwitches() {
       switch(currentButtonValue) {
          case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch1Hold;    break;
          case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch2Hold;    break;
-         case (1<<(MenuButton::BITNUM-Buttons::RIGHT))  : event = ev_SelHold;    break;
+         case (1<<(MenuButton::BITNUM-Buttons::RIGHT)) : event = ev_SelHold;    break;
          case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) :
             // Swallow QuadHold when rotating
             if (quadState != QuadState_Pressed_Rotate) {

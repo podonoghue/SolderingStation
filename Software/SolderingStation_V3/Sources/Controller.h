@@ -12,6 +12,9 @@
 
 class Channel;
 
+/**
+ * Base class for controllers
+ */
 class Controller {
 
 protected:

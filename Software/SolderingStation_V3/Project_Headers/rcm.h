@@ -150,7 +150,7 @@ class RcmBase_T {
 
 public:
    /** Hardware instance pointer */
-   static __attribute__((always_inline)) volatile RCM_Type &rcm() { return Info::rcm(); }
+   static constexpr HardwarePtr<RCM_Type> rcm = Info::baseAddress;
 
 public:
    /**
@@ -158,8 +158,8 @@ public:
     */
    static void defaultConfigure() {
       // Configure RCM
-      rcm().RPFC  = Info::rcm_rpfc;
-      rcm().RPFW  = Info::rcm_rpfw;
+      rcm->RPFC  = Info::rcm_rpfc;
+      rcm->RPFW  = Info::rcm_rpfw;
    }
 
    /**
@@ -175,8 +175,8 @@ public:
          RcmResetPinRunWaitFilter      rcmResetPinRunWaitFilter,
          RcmResetPinStopFilter         rcmResetPinStopFilter,
          RcmResetFilterBusClockCount   rcmResetFilterCount = RcmResetFilterBusClockCount_10) {
-      rcm().RPFC = rcmResetPinRunWaitFilter|rcmResetPinStopFilter;
-      rcm().RPFW = rcmResetFilterCount;
+      rcm->RPFC = rcmResetPinRunWaitFilter|rcmResetPinStopFilter;
+      rcm->RPFW = rcmResetFilterCount;
    }
 
    /**
@@ -186,7 +186,7 @@ public:
     * @return Bit mask representing sources
     */
    static uint32_t getResetSource() {
-      return (rcm().SRS1<<8)|rcm().SRS0;
+      return (rcm->SRS1<<8)|rcm->SRS0;
    }
 
 #ifdef RCM_SSRS0_SWAKEUP_MASK
@@ -196,7 +196,7 @@ public:
     * @return Bit mask representing sources
     */
    static uint32_t getStickyResetSource() {
-      return (rcm().SSRS1<<8)|rcm().SSRS0;
+      return (rcm->SSRS1<<8)|rcm->SSRS0;
    }
 
    /**
@@ -206,9 +206,9 @@ public:
     * @return Bit mask representing sources
     */
    static uint32_t getAndClearStickyResetSource() {
-      uint32_t snapShot = (rcm().SSRS1<<8)|rcm().SSRS0;
-      rcm().SSRS0 = 0xFF;
-      rcm().SSRS1 = 0xFF;
+      uint32_t snapShot = (rcm->SSRS1<<8)|rcm->SSRS0;
+      rcm->SSRS0 = 0xFF;
+      rcm->SSRS1 = 0xFF;
       return snapShot;
    }
 #endif
@@ -271,7 +271,7 @@ public:
     * This setting is preserved through non-POR resets and affects the boot behaviour of the chip.
     */
    static void setRomBootOption(RcmRomBoot rcmRomBoot) {
-      rcm().MR = rcmRomBoot;
+      rcm->MR = rcmRomBoot;
    }
 #endif // RCM_FM_FORCEROM_MASK
 
@@ -283,7 +283,7 @@ public:
     * at 0x1C00_0000.
     */
    static RcmBootSource getBootSource() {
-      return reinterpret_cast<RcmBootSource>(rcm().MR&RCM_MR_BOOTROM_MASK);
+      return reinterpret_cast<RcmBootSource>(rcm->MR&RCM_MR_BOOTROM_MASK);
    }
 
    /**
@@ -291,7 +291,7 @@ public:
     * This disables the vector table relocation and restores NMI operation (if enabled)
     */
    static void clearBootSource() {
-      rcm().MR = RCM_MR_BOOTROM_MASK;
+      rcm->MR = RCM_MR_BOOTROM_MASK;
    }
 #endif // RCM_MR_BOOTROM_MASK
 

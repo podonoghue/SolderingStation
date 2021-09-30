@@ -21,49 +21,9 @@
  */
 class Channels {
 
-   /**
-    * Class to tie a channel to the templated GPIOs being used
-    *
-    * @tparam LedGpio      Channel selected LED
-    * @tparam DriveGpio    Channel heater drive
-    */
-   template<class LedGpio, template<int> typename DriveGpios>
-   class T_Channel : public Channel {
-
-   private:
-      // Channel A drive
-      using DriveA = DriveGpios<0>;
-
-      // Channel B drive
-      using DriveB = DriveGpios<1>;
-
-      // Channels A & B drive as field
-      using DriveGpio = typename DriveA::Owner;
-
-   public:
-      T_Channel(ChannelSettings &settings, Controller &controller) :
-         Channel(settings, controller) {}
-      virtual ~T_Channel() {}
-
-      void intialise() {
-         LedGpio::setOutput(USBDM::PinDriveStrength_High, USBDM::PinDriveMode_PushPull, USBDM::PinSlewRate_Slow);
-         DriveGpio::setOutput(USBDM::PinDriveStrength_High, USBDM::PinDriveMode_PushPull, USBDM::PinSlewRate_Slow);
-      }
-
-   private:
-      virtual void ledWrite(bool value) {
-         LedGpio::write(value);
-      }
-      virtual void driveWrite(bool value) {
-         DriveGpio::write(value?0b11:0b00);
-      }
-      virtual bool driveReadState() {
-         return DriveA::readState();
-      }
-   };
 private:
 
-   /// Currently selected channel for front panel controls
+   // Currently selected channel for front panel controls
    unsigned selectedChannel = 1;
 
 //   using TempController = BangBangController;
@@ -73,19 +33,32 @@ private:
    TempController ch1Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
    TempController ch2Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
 
-   /// Channel1
-   T_Channel<Ch1SelectedLed, Ch1Drive>  channel1{nvinit.ch1Settings, ch1Controller};
+   Ch1SelectedLed ch1SelectedLed;
+   Ch2SelectedLed ch2SelectedLed;
 
-   /// Channel2
-   T_Channel<Ch2SelectedLed, Ch2Drive>  channel2{nvinit.ch2Settings, ch2Controller};
+   Ch1Drive ch1Drive;
+   Ch2Drive ch2Drive;
+
+   // Channel1
+   Channel channel1{nvinit.ch1Settings, ch1Controller, ch1SelectedLed, ch1Drive};
+
+   // Channel2
+   Channel channel2{nvinit.ch2Settings, ch2Controller, ch2SelectedLed, ch2Drive};
 
 public:
 
    Channels() {
-      channel1.intialise();
-      channel2.intialise();
+      using namespace USBDM;
+
+      ch1Drive.setOutput();
+      ch2Drive.setOutput();
+      ch1SelectedLed.setOutput();
+      ch2SelectedLed.setOutput();
    }
-   /// Number of channels
+
+   /**
+    * Number of channels
+    */
    static constexpr unsigned NUM_CHANNELS = 2;
 
    /**

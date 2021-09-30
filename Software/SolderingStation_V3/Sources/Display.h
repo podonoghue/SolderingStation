@@ -1,5 +1,5 @@
 /*
- * DIsplay.h
+ * Display.h
  *
  *  Created on: 5 Apr 2020
  *      Author: podonoghue

@@ -194,8 +194,8 @@ void Control::zeroCrossingHandler() {
    Channel &ch2 = channels[2];
 
    // Turn off drives
-   ch1.driveWrite(false);
-   ch2.driveWrite(false);
+   Ch1Drive::write(0b00);
+   Ch2Drive::write(0b00);
 
    // Counter to initiate screen refresh
    static unsigned refreshCount = 0;

@@ -68,9 +68,9 @@ public:
     */
    static void irqAlarmHandler(void) {
       // Clear alarm
-      RtcBase_T<Info>::rtc().TAR   = 0;
+      RtcBase_T<Info>::rtc->TAR   = 0;
       // Call handler
-      sAlarmCallback(RtcBase_T<Info>::rtc().TSR);
+      sAlarmCallback(RtcBase_T<Info>::rtc->TSR);
    }
 
    /**
@@ -78,7 +78,7 @@ public:
     */
    static void irqSecondsHandler(void) {
       // Call handler
-      sSecondsCallback(RtcBase_T<Info>::rtc().TSR);
+      sSecondsCallback(RtcBase_T<Info>::rtc->TSR);
    }
 
    /**
@@ -88,10 +88,10 @@ public:
     */
    static void enableAlarmInterrupts(bool enable=true) {
       if (enable) {
-         rtc().IER   |= RTC_IER_TAIE_MASK;
+         rtc->IER   |= RTC_IER_TAIE_MASK;
       }
       else {
-         rtc().IER   &= ~RTC_IER_TAIE_MASK;
+         rtc->IER   &= ~RTC_IER_TAIE_MASK;
       }
    }
    /**
@@ -101,10 +101,10 @@ public:
     */
    static void enableSecondsInterrupts(bool enable=true) {
       if (enable) {
-         rtc().IER   |= RTC_IER_TSIE_MASK;
+         rtc->IER   |= RTC_IER_TSIE_MASK;
       }
       else {
-         rtc().IER   &= ~RTC_IER_TSIE_MASK;
+         rtc->IER   &= ~RTC_IER_TSIE_MASK;
       }
    }
 
@@ -218,8 +218,8 @@ public:
 
 protected:
    /** Hardware instance */
-   static volatile RTC_Type &rtc()      { return Info::rtc(); }
-   
+   static constexpr HardwarePtr<RTC_Type> rtc = Info::baseAddress;
+
 public:
    /**
     * Configures all mapped pins associated with this peripheral
@@ -251,23 +251,23 @@ public:
       // Enable to debug RTX startup
 #if defined(DEBUG_BUILD) && 0
       // Software reset RTC - trigger cold start
-      rtc().CR  = RTC_CR_SWR_MASK;
-      rtc().CR  = 0;
+      rtc->CR  = RTC_CR_SWR_MASK;
+      rtc->CR  = 0;
 
       // Disable interrupts
-      rtc().IER  = 0;
+      rtc->IER  = 0;
 #endif
 
-      if ((rtc().SR&RTC_SR_TIF_MASK) != 0) {
+      if ((rtc->SR&RTC_SR_TIF_MASK) != 0) {
          // RTC not running yet or invalid - re-initialise
 
          // Software reset RTC
-         rtc().CR  = RTC_CR_SWR_MASK;
-         rtc().CR  = 0;
+         rtc->CR  = RTC_CR_SWR_MASK;
+         rtc->CR  = 0;
 
          // Configure oscillator
          // Note - on KL25 this will disable the standard oscillator
-         rtc().CR  = Info::cr;
+         rtc->CR  = Info::cr;
 
          // Wait startup time
          for (int i=0; i<100000; i++) {
@@ -275,27 +275,27 @@ public:
          }
 
          // Set current time
-         rtc().TSR = Info::coldStartTime;
-         rtc().SR  = RTC_SR_TCE_MASK;
+         rtc->TSR = Info::coldStartTime;
+         rtc->SR  = RTC_SR_TCE_MASK;
 
          // Time compensation values
-         rtc().TCR = RtcInfo::tcr;
+         rtc->TCR = RtcInfo::tcr;
 
          // Lock registers
-         rtc().LR  = RtcInfo::lr;
+         rtc->LR  = RtcInfo::lr;
 
 #ifdef RTC_WAR_IERW_MASK
          // Write access
-         rtc().WAR = RtcInfo::war;
+         rtc->WAR = RtcInfo::war;
 #endif
 #ifdef RTC_RAR_IERR_MASK
          // Read access
-         rtc().RAR = RtcInfo::rar;
+         rtc->RAR = RtcInfo::rar;
 #endif
       }
 
       // Update settings
-      rtc().CR   = Info::cr;
+      rtc->CR   = Info::cr;
    }
 
    /**
@@ -323,7 +323,7 @@ public:
     *
     * @param[in]  nvicPriority  Interrupt priority
     */
-   static void enableNvicInterrupts(uint32_t nvicPriority) {
+   static void enableNvicInterrupts(NvicPriority nvicPriority) {
       enableNvicInterrupt(Info::irqNums[0], nvicPriority);
       if (Info::irqCount>1) {
          enableNvicInterrupt(Info::irqNums[1], nvicPriority);
@@ -346,9 +346,9 @@ public:
     *  @param[in]  timeSinceEpoch - time since the epoch in seconds
     */
    static void setTime(uint32_t timeSinceEpoch) {
-      rtc().SR  = 0;
-      rtc().TSR = timeSinceEpoch;
-      rtc().SR  = RTC_SR_TCE_MASK;
+      rtc->SR  = 0;
+      rtc->TSR = timeSinceEpoch;
+      rtc->SR  = RTC_SR_TCE_MASK;
    }
 
    /**
@@ -357,7 +357,7 @@ public:
     *  @return alarm time as 32-bit number
     */
    static uint32_t getTime(void) {
-      return rtc().TSR;
+      return rtc->TSR;
    }
 
    /**
@@ -366,7 +366,7 @@ public:
     *  @return Alarm time in seconds relative to the epoch
     */
    static uint32_t getAlarmTime(void) {
-      return rtc().TAR;
+      return rtc->TAR;
    }
 
    /**
@@ -375,7 +375,7 @@ public:
     *  @param[in]  timeSinceEpoch - Alarm time in seconds relative to the epoch
     */
    static void setAlarmTime(uint32_t timeSinceEpoch) {
-      rtc().TAR = timeSinceEpoch;
+      rtc->TAR = timeSinceEpoch;
    }
 
 };

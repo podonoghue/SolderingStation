@@ -18,7 +18,7 @@ using namespace USBDM;
  *
  * @note Assumes 4 transitions/detent
  *
-    * @param eventMask Mask indicating active pins
+ * @param eventMask Mask indicating active pins
  */
 void QuadDecoder::pinIrqCallback(uint32_t eventMask) {
 
@@ -42,7 +42,7 @@ void QuadDecoder::pinIrqCallback(uint32_t eventMask) {
     * Next state matrix: nextStateTable[current state][current input] -> next state
     * This matrix assumes 4 transitions/detent.
     * Expected encoder sequence CCW = 00->01->11->10->00,  CW = 00->10->11->01->00.
-    * Swap DecoderState_IdleInc/DecoderState_IdleDec to reverse.
+    * Swap DecoderState_IdleInc/DecoderState_IdleDec values to reverse.
     */
    static const DecoderState nextStateTable[][4] = {
       /*     Current                <------------------------------ Encoder phase outputs----------------------------->  */
@@ -60,8 +60,8 @@ void QuadDecoder::pinIrqCallback(uint32_t eventMask) {
 
    static DecoderState currentState = DecoderState_Idle;
 
-   // Check interrupt channel
-   if (eventMask && QuadPhases::MASK) {
+   // Check if interrupt from Quad switch bits
+   if (eventMask && QuadPhases::BITMASK) {
 
       // Use current state and state of GPIOs to determine next state
       DecoderState nextState = nextStateTable[currentState][QuadPhases::read()];
@@ -94,7 +94,7 @@ void QuadDecoder::initialise() {
    };
 
    // Configure encoder pins as inputs with dual-edge interrupts
-   QuadPhases::setCallback(cb);
+   QuadPhases::setPinCallback(cb);
    QuadPhases::setInput(PinPull_Up, PinAction_IrqEither, PinFilter_Passive);
    QuadPhases::enableNvicInterrupts(NvicPriority_Normal);
 }

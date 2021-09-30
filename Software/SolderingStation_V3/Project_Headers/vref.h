@@ -43,15 +43,12 @@ namespace USBDM {
 template<class Info>
 class VrefBase_T {
 
+   // Check pin assignments
+   static_assert(Info::info[0].gpioBit >= 0, "VREF output has not been assigned to a pin - Modify Configure.usbdm");
+
 private:
    /** Hardware instance pointer */
-   static __attribute__((always_inline)) volatile VREF_Type &vref() { return Info::vref(); }
-
-#ifdef DEBUG_BUILD
-   static_assert((Info::info[0].gpioBit != UNMAPPED_PCR), "VrefBase_T: Vref signal is not mapped to a pin - Modify Configure.usbdm");
-   static_assert((Info::info[0].gpioBit != INVALID_PCR),  "VrefBase_T: Non-existent signal used for Vref input");
-   static_assert((Info::info[0].gpioBit == UNMAPPED_PCR)||(Info::info[0].gpioBit == INVALID_PCR)||(Info::info[0].gpioBit >= 0), "VrefBase_T: Illegal signal used for Vref");
-#endif
+   static constexpr HardwarePtr<VREF_Type> vref = Info::baseAddress;
 
 public:
    /**
@@ -80,10 +77,10 @@ public:
       enable();
 
       // Initialise hardware
-      vref().TRM  = Info::vref_trm;
-      vref().SC   = Info::vref_sc|VREF_SC_VREFEN_MASK;
+      vref->TRM  = Info::vref_trm;
+      vref->SC   = Info::vref_sc|VREF_SC_VREFEN_MASK;
 
-      while ((vref().SC & VREF_SC_VREFST_MASK) == 0) {
+      while ((vref->SC & VREF_SC_VREFST_MASK) == 0) {
          // Wait until stable
       }
    }
@@ -101,14 +98,14 @@ public:
     * @param scValue Value for SC register e.g. VREF_SC_VREFEN_MASK|VREF_SC_REGEN_MASK|VREF_SC_ICOMPEN_MASK|VREF_SC_MO`DE_LV(2)
     */
    static void setMode(uint32_t scValue=Info::vref_sc|VREF_SC_VREFEN_MASK) {
-      vref().SC   = scValue;
+      vref->SC   = scValue;
    }
 
    /**
     * Disable Vref
     */
    static void disable() {
-      vref().SC = 0;
+      vref->SC = 0;
       Info::disableClock();
    }
 };

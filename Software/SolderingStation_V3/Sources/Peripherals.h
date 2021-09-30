@@ -89,12 +89,10 @@ using Ch1SelectedLed  = USBDM::GpioC<0, USBDM::ActiveHigh>;
 using Ch2SelectedLed  = USBDM::GpioC<6, USBDM::ActiveHigh>;
 
 /// Channel 1 Drive - 2-bit field
-template<unsigned bit>
-using Ch1Drive         = USBDM::GpioCField<2, 1, USBDM::ActiveLow>::Bit<bit>;
+using Ch1Drive         = USBDM::GpioCField<2, 1, USBDM::ActiveLow>;;
 
 /// Channel 2 Drive - 2-bit field
-template<unsigned bit>
-using Ch2Drive         = USBDM::GpioCField<4, 3, USBDM::ActiveLow>::Bit<bit>;
+using Ch2Drive         = USBDM::GpioCField<4, 3, USBDM::ActiveLow>;
 
 /// Multiplexor selection and bias enable for ADC inputs (shared with ID inputs)
 using AnalogueMultiplexor = USBDM::GpioDField<7, 4, USBDM::ActiveHigh>;

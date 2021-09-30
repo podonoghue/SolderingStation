@@ -158,7 +158,7 @@ public:
 
 protected:
    /** Pointer to hardware */
-   static __attribute__((always_inline)) volatile MCM_Type &mcm() { return Info::mcm(); }
+   static constexpr HardwarePtr<MCM_Type> mcm = McgInfo::baseAddress;
 
 public:
 
@@ -190,7 +190,7 @@ public:
     *
     * @param[in]  nvicPriority  Interrupt priority
     */
-   static void enableNvicInterrupts(uint32_t nvicPriority) {
+   static void enableNvicInterrupts(NvicPriority nvicPriority) {
       enableNvicInterrupt(Info::irqNums[0], nvicPriority);
    }
 

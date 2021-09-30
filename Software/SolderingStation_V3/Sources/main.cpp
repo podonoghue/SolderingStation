@@ -53,9 +53,8 @@ extern "C" {
 void _exit(int rc __attribute__((unused))) {
    for(;;) {
       // Disable drive on crash!
-      Ch1Drive<0>::Owner::setIn();
-      Ch2Drive<0>::Owner::setIn();
-
+      Ch1Drive::disablePins();
+      Ch1Drive::disablePins();
       __asm__("bkpt");
    }
 }
@@ -111,7 +110,7 @@ int main() {
    display.showMessage("Starting", sf.toString());
    waitMS(5000);
 
-//   using Drive = Ch1Drive<0>::Owner;
+//   using Drive = Ch1Drive;
 //   Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
 //   for(;;) {
 //      Drive::write(0b11);
@@ -119,6 +118,7 @@ int main() {
 //      Drive::write(0b00);
 //      waitMS(1000);
 //   }
+
    control.eventLoop();
 
    resetToBootloader();

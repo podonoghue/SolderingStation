@@ -151,7 +151,7 @@ public:
     *
     * @return Reference to WDOG hardware
     */
-   static __attribute__((always_inline)) volatile WDOG_Type &wdog() { return Info::wdog(); }
+   static constexpr HardwarePtr<WDOG_Type> wdog = Info::baseAddress;
 
    /**
     * IRQ handler
@@ -273,7 +273,7 @@ public:
     * @return Count of timeout resets
     */
    static uint16_t getResetCount() {
-      return wdog().RSTCNT;
+      return wdog->RSTCNT;
    }
 
    /**
@@ -282,7 +282,7 @@ public:
     * @return current timer value
     */
    static uint32_t getTimer() {
-      return (wdog().TMROUTH<<16)|wdog().TMROUTL;
+      return (wdog->TMROUTH<<16)|wdog->TMROUTL;
    }
 
    /**
@@ -298,9 +298,9 @@ public:
       // Disable interrupts while accessing watchdog
       CriticalSection cs;
       writeUnlock(WdogUnlock1, WdogUnlock2);
-      wdog().PRESC = WDOG_PRESC_PRESCVAL(prescaler-1);
-      wdog().TOVALH = ticks>>16;
-      wdog().TOVALL = ticks;
+      wdog->PRESC = WDOG_PRESC_PRESCVAL(prescaler-1);
+      wdog->TOVALH = ticks>>16;
+      wdog->TOVALL = ticks;
    }
 
    /**
@@ -340,8 +340,8 @@ public:
       // Disable interrupts while accessing watchdog
       CriticalSection cs;
       writeUnlock(WdogUnlock1, WdogUnlock2);
-      wdog().WINH = value>>16;
-      wdog().WINL = value;
+      wdog->WINH = value>>16;
+      wdog->WINL = value;
    }
 
    /**
@@ -363,8 +363,8 @@ public:
     * @param wdogRefresh2 2nd value to write (WdogRefresh2)
     */
    static void writeRefresh(uint16_t wdogRefresh1, uint16_t wdogRefresh2) {
-      wdog().REFRESH = wdogRefresh1;
-      wdog().REFRESH = wdogRefresh2;
+      wdog->REFRESH = wdogRefresh1;
+      wdog->REFRESH = wdogRefresh2;
    }
 
    /**
@@ -375,8 +375,8 @@ public:
     * @param wdogUnlock2 2nd value to write (WdogUnlock2)
     */
    static void writeUnlock(uint16_t wdogUnlock1, uint16_t wdogUnlock2) {
-      wdog().UNLOCK = wdogUnlock1;
-      wdog().UNLOCK = wdogUnlock2;
+      wdog->UNLOCK = wdogUnlock1;
+      wdog->UNLOCK = wdogUnlock2;
    }
 
    /**
@@ -402,7 +402,7 @@ public:
       // Unlock before changing settings
       writeUnlock(WdogUnlock1, WdogUnlock2);
 
-      wdog().STCTRLH = wdogEnable|wdogClock|wdogInterrupt|wdogWindow|WdogAllowUpdate_Enabled|wdogEnableInDebug|wdogEnableInStop|wdogEnableInWait;
+      wdog->STCTRLH = wdogEnable|wdogClock|wdogInterrupt|wdogWindow|WdogAllowUpdate_Enabled|wdogEnableInDebug|wdogEnableInStop|wdogEnableInWait;
    }
 
    /**
@@ -414,7 +414,7 @@ public:
 
       // Unlock before changing settings
       writeUnlock(WdogUnlock1, WdogUnlock2);
-      wdog().STCTRLH &= ~WDOG_STCTRLH_ALLOWUPDATE_MASK;
+      wdog->STCTRLH &= ~WDOG_STCTRLH_ALLOWUPDATE_MASK;
    }
 
    /**
@@ -438,7 +438,7 @@ public:
     *
     * @param[in]  nvicPriority  Interrupt priority
     */
-   static void enableNvicInterrupts(uint32_t nvicPriority) {
+   static void enableNvicInterrupts(NvicPriority nvicPriority) {
       enableNvicInterrupt(Info::irqNums[0], nvicPriority);
    }
 
@@ -460,10 +460,10 @@ public:
       // Protect sequence from interrupts
       CriticalSection cs;
       if (enable) {
-         wdog().STCTRLH |= WDOG_STCTRLH_IRQRSTEN_MASK;
+         wdog->STCTRLH |= WDOG_STCTRLH_IRQRSTEN_MASK;
       }
       else {
-         wdog().STCTRLH &= ~WDOG_STCTRLH_IRQRSTEN_MASK;
+         wdog->STCTRLH &= ~WDOG_STCTRLH_IRQRSTEN_MASK;
       }
    }
 };

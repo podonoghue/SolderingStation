@@ -135,7 +135,7 @@ protected:
    static LptmrCallbackFunction sCallback;
 
    /** Hardware instance */
-   static __attribute__((always_inline)) volatile LPTMR_Type &lptmr()     { return Info::lptmr(); }
+   static constexpr HardwarePtr<LPTMR_Type> lptmr = Info::baseAddress;
 
    /** Callback to catch unhandled interrupt */
    static void unhandledCallback() {
@@ -180,9 +180,9 @@ public:
 
       enable();
       // Change settings with timer disabled
-      lptmr().CSR = LptmrMode_PulseCounting|lptmrPinSel|lptmrPulseEdge|lptmrResetOn|lptmrInterrupt;
+      lptmr->CSR = LptmrMode_PulseCounting|lptmrPinSel|lptmrPulseEdge|lptmrResetOn|lptmrInterrupt;
       // Enable timer
-      lptmr().CSR = LptmrMode_PulseCounting|lptmrPinSel|lptmrPulseEdge|lptmrResetOn|lptmrInterrupt|LPTMR_CSR_TEN_MASK;
+      lptmr->CSR = LptmrMode_PulseCounting|lptmrPinSel|lptmrPulseEdge|lptmrResetOn|lptmrInterrupt|LPTMR_CSR_TEN_MASK;
    }
 
    /**
@@ -201,13 +201,13 @@ public:
          LptmrPrescale     lptmrPrescale  = LptmrPrescale_Bypass) {
       enable();
       // Change settings with timer disabled
-      lptmr().CSR = LptmrMode_Time|lptmrResetOn|lptmrInterrupt;
+      lptmr->CSR = LptmrMode_Time|lptmrResetOn|lptmrInterrupt;
       // Set clock source and prescaler
-      lptmr().PSR = lptmrClockSel|lptmrPrescale;
+      lptmr->PSR = lptmrClockSel|lptmrPrescale;
       // Set dummy timer value to avoid immediate interrupts
-      lptmr().CMR = (uint32_t)-1;
+      lptmr->CMR = (uint32_t)-1;
       // Enable timer and clear interrupt flag
-      lptmr().CSR = LptmrMode_Time|lptmrResetOn|lptmrInterrupt|LPTMR_CSR_TEN_MASK|LPTMR_CSR_TCF_MASK;
+      lptmr->CSR = LptmrMode_Time|lptmrResetOn|lptmrInterrupt|LPTMR_CSR_TEN_MASK|LPTMR_CSR_TCF_MASK;
    }
 
    /**
@@ -216,9 +216,9 @@ public:
     *
     */
    static void restart() {
-      uint32_t csr = lptmr().CSR;
-      lptmr().CSR   = 0;
-      lptmr().CSR   = csr|LPTMR_CSR_TCF_MASK;
+      uint32_t csr = lptmr->CSR;
+      lptmr->CSR   = 0;
+      lptmr->CSR   = csr|LPTMR_CSR_TCF_MASK;
    }
 
    /**
@@ -232,10 +232,10 @@ public:
          LptmrClockSel lptmrClockSel,
          LptmrPrescale lptmrPrescale   = LptmrPrescale_Bypass) {
 
-      uint32_t csr = lptmr().CSR;
-      lptmr().CSR   = 0;
-      lptmr().PSR   = lptmrClockSel|lptmrPrescale;
-      lptmr().CSR   = csr;
+      uint32_t csr = lptmr->CSR;
+      lptmr->CSR   = 0;
+      lptmr->PSR   = lptmrClockSel|lptmrPrescale;
+      lptmr->CSR   = csr;
    }
 
    /**
@@ -245,10 +245,10 @@ public:
     */
    static void enableInterrupts(bool enable=true) {
       if (enable) {
-         lptmr().CSR |= LPTMR_CSR_TIE_MASK;
+         lptmr->CSR |= LPTMR_CSR_TIE_MASK;
       }
       else {
-         lptmr().CSR &= ~LPTMR_CSR_TIE_MASK;
+         lptmr->CSR &= ~LPTMR_CSR_TIE_MASK;
       }
    }
 
@@ -256,7 +256,7 @@ public:
     * Clear interrupt flag
     */
    static void clearInterruptFlag() {
-      lptmr().CSR |= LPTMR_CSR_TCF_MASK;
+      lptmr->CSR |= LPTMR_CSR_TCF_MASK;
    }
 
    /**
@@ -369,7 +369,7 @@ public:
     *                        Use nullptr to remove callback.
     */
    static void setCallback(LptmrCallbackFunction callback) {
-      static_assert(Info::irqHandlerInstalled, "LPTMR not configure for interrupts");
+      static_assert(Info::irqLevel>=0, "LPTMR not configure for interrupts");
       if (callback == nullptr) {
          callback = unhandledCallback;
       }
@@ -382,7 +382,7 @@ public:
     */
    static void irqHandler() {
       // Clear interrupt flag
-      lptmr().CSR |= LPTMR_CSR_TCF_MASK;
+      lptmr->CSR |= LPTMR_CSR_TCF_MASK;
 
       sCallback();
    }
@@ -396,13 +396,13 @@ public:
    static void defaultConfigure() {
       enable();
       // Disable timer
-      lptmr().CSR  = Info::csr;
+      lptmr->CSR  = Info::csr;
       // PCS 0,1,2,3 => MCGIRCLK, LPO, ERCLK32K, OSCERCLK
-      lptmr().PSR  = Info::psr;
+      lptmr->PSR  = Info::psr;
       // Period/Compare value
-      lptmr().CMR  = Info::cmr;
+      lptmr->CMR  = Info::cmr;
       // Enable timer
-      lptmr().CSR |= LPTMR_CSR_TEN_MASK;
+      lptmr->CSR |= LPTMR_CSR_TEN_MASK;
 
       if (Info::csr & LPTMR_CSR_TIE_MASK) {
          // Enable timer interrupts
@@ -417,7 +417,8 @@ public:
     */
    static void disable(void) {
       // Disable timer
-      lptmr().CSR = 0;
+      Info::enableClock();
+      lptmr->CSR = 0;
       NVIC_DisableIRQ(Info::irqNums[0]);
       Info::disableClock();
    }
@@ -590,8 +591,8 @@ public:
     */
    static ErrorCode setPeriod(float period) {
       // Disable LPTMR before prescale change
-      uint32_t csr = lptmr().CSR;
-      lptmr().CSR = 0;
+      uint32_t csr = lptmr->CSR;
+      lptmr->CSR = 0;
 
       float    inputClock = Info::getInputClockFrequency();
       int      prescaleFactor=1;
@@ -605,9 +606,9 @@ public:
          }
          if (mod <= 65535) {
             __DSB();
-            lptmr().CMR  = mod;
-            lptmr().PSR  = (lptmr().PSR & ~(LPTMR_PSR_PRESCALE_MASK|LPTMR_PSR_PBYP_MASK))|LPTMR_PSR_PRESCALE(prescalerValue-1)|LPTMR_PSR_PBYP(prescalerValue==0);
-            lptmr().CSR  = csr;
+            lptmr->CMR  = mod;
+            lptmr->PSR  = (lptmr->PSR & ~(LPTMR_PSR_PRESCALE_MASK|LPTMR_PSR_PBYP_MASK))|LPTMR_PSR_PRESCALE(prescalerValue-1)|LPTMR_PSR_PBYP(prescalerValue==0);
+            lptmr->CSR  = csr;
             return E_NO_ERROR;
          }
          prescalerValue++;
@@ -636,11 +637,11 @@ public:
       while (prescalerValue<=16) {
          if ((interval*prescaleFactor) < inputClock) {
             // Disable LPTMR before prescale change
-            uint32_t csr = lptmr().CSR;
-            lptmr().CSR = 0;
+            uint32_t csr = lptmr->CSR;
+            lptmr->CSR = 0;
             __DSB();
-            lptmr().PSR  = (lptmr().PSR & ~(LPTMR_PSR_PRESCALE_MASK|LPTMR_PSR_PBYP_MASK))|LPTMR_PSR_PRESCALE(prescalerValue-1)|LPTMR_PSR_PBYP(prescalerValue==0);
-            lptmr().CSR  = csr;
+            lptmr->PSR  = (lptmr->PSR & ~(LPTMR_PSR_PRESCALE_MASK|LPTMR_PSR_PBYP_MASK))|LPTMR_PSR_PRESCALE(prescalerValue-1)|LPTMR_PSR_PBYP(prescalerValue==0);
+            lptmr->CSR  = csr;
             return E_NO_ERROR;
          }
          prescalerValue++;
@@ -657,8 +658,8 @@ public:
     */
    static uint32_t getCounterValue() {
       // It is necessary to write to the CNR to capture current value
-      lptmr().CNR = 0;
-      return lptmr().CNR;
+      lptmr->CNR = 0;
+      return lptmr->CNR;
    }
 };
 

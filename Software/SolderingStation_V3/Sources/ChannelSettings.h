@@ -11,13 +11,16 @@
 #include "flash.h"
 #include "Tips.h"
 
+/**
+ * Nonvolatile channel settings
+ */
 class ChannelSettings {
 
 public:
-   /// Preset temperatures C
+   /// Preset temperatures in Celsius
    USBDM::Nonvolatile<uint16_t> presets[3];
 
-   /// Set-back temperature for idle iron C
+   /// Set-back temperature for idle iron in Celsius
    USBDM::Nonvolatile<uint16_t> setbackTemperature;
 
    /// Idle time delay until reducing tip temperature in seconds

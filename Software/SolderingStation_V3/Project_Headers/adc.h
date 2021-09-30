@@ -56,7 +56,7 @@ namespace USBDM {
 /**
  * Default PCR value for pins used as GPIO (including multiplexor value)
  */
-static constexpr PcrValue ADC_DEFAULT_PCR = pcrValue(
+static constexpr PcrValue ADC_DEFAULT_PCR(
       PinPull_None, PinDriveStrength_Low, PinDriveMode_PushPull, PinAction_None, PinFilter_None, PinSlewRate_Fast, PinMux_Analogue);
 
 /**
@@ -213,20 +213,42 @@ class AdcBase {
 
 private:
    AdcBase() = delete;
-   AdcBase(const PcrBase&) = delete;
-   AdcBase(PcrBase&&) = delete;
+   AdcBase(const AdcBase&) = delete;
+   AdcBase(AdcBase&&) = delete;
 
 public:
-   /** Class to static check channel pin mapping is valid */
-   template<class Info, int channel> class CheckSignal {
-      static_assert((channel<Info::numSignals),
-            "Non-existent ADC channel - Check Configure.usbdm for available channels");
-      static_assert((channel>=Info::numSignals)||(Info::info[channel].gpioBit != UNMAPPED_PCR),
-            "ADC channel is not mapped to a pin - Modify Configure.usbdm");
-      static_assert((channel>=Info::numSignals)||(Info::info[channel].gpioBit != INVALID_PCR),
-            "ADC channel doesn't exist in this device/package - Check Configure.usbdm for available channels");
-      static_assert((channel>=Info::numSignals)||((Info::info[channel].gpioBit == UNMAPPED_PCR)||(Info::info[channel].gpioBit == INVALID_PCR)||(Info::info[channel].gpioBit >= 0)),
-            "Illegal ADC Channel - Check Configure.usbdm for available channels");
+   /**
+    * Limit index to permitted pin index range
+    * Used to prevent noise from static assertion checks that detect a condition already detected in a more useful fashion.
+    *
+    * @param index   Index to limit
+    *
+    * @return Index limited to permitted range
+    */
+   template<class Info>
+   static inline constexpr int limitIndex(int channel) {
+      if (channel<0) {
+         return 0;
+      }
+      if (channel>(Info::numSignals-1)) {
+         return Info::numSignals-1;
+      }
+      return channel;
+   }
+
+   /** Class to static check channel exists and is mapped to an input pin */
+   template<class Info, int channel> class CheckInputPin {
+      // Tests are chained so only a single assertion can fail so as to reduce noise
+
+      // Out of bounds value for function index
+      static constexpr bool Test1 = (channel>=0) && (channel<(Info::numSignals));
+      // Function is not currently mapped to a pin
+      static constexpr bool Test2 = !Test1 || (Info::info[channel].gpioBit != UNMAPPED_PCR);
+      // Non-existent function and catch-all. (should be INVALID_PCR)
+      static constexpr bool Test3 = !Test1 || !Test2 || (Info::info[channel].gpioBit >= 0);
+      static_assert(Test1, "Non-existent ADC channel - Check Configure.usbdm for available inputs");
+      static_assert(Test2, "ADC channel is not mapped to a pin - Modify Configure.usbdm");
+      static_assert(Test3, "ADC channel doesn't exist in this device/package - Check Configure.usbdm for available channels");
    public:
       /** Dummy function to allow convenient in-line checking */
       static constexpr void check() {}
@@ -237,6 +259,116 @@ public:
    static void unhandledCallback(uint32_t, int) {
       setAndCheckErrorCode(E_NO_HANDLER);
    }
+};
+
+class AdcChannel {
+
+private:
+   AdcChannel() = delete;
+   AdcChannel(const AdcChannel&) = delete;
+   AdcChannel(AdcChannel&&) = delete;
+
+   const HardwarePtr<ADC_Type> adc;
+   const uint8_t ch;
+
+protected:
+   constexpr AdcChannel(uint32_t adcAddress, uint8_t channel) : adc(adcAddress), ch(channel) {}
+
+   /**
+    * Initiates a conversion and waits for it to complete.
+    *
+    * @return - The 16-bit result of the conversion
+    *
+    * @note Result is always positive
+    */
+   uint16_t readAnalogue(uint32_t sc1Value) const {
+      // Trigger conversion
+      adc->SC1[0] = ch|sc1Value;
+      (void)adc->SC1[0];
+      while ((adc->SC1[0]&ADC_SC1_COCO_MASK) == 0) {
+         __asm__("nop");
+      }
+      return static_cast<uint16_t>(adc->R[0]);
+   };
+public:
+   /**
+    * Initiates a conversion and waits for it to complete.
+    *
+    * @return - The 16-bit result of the conversion
+    *
+    * @note Result is always positive
+    */
+   uint16_t readAnalogue() const {
+      return static_cast<uint16_t>(readAnalogue(0));
+   };
+
+   /**
+    * Enables hardware trigger mode of operation and configures a channel.
+    *
+    * @param[in] adcPretrigger   Hardware pre-trigger to use for this channel.\n
+    *                            This corresponds to pre-triggers in the PDB channels and SC1[n]/R[n] register selection
+    * @param[in] adcInterrupt    Whether to generate an interrupt when each conversion completes
+    */
+   void enableHardwareConversion(AdcPretrigger adcPretrigger, AdcInterrupt adcInterrupt=AdcInterrupt_Disabled) const {
+      adc->SC2 = (adc->SC2)|ADC_SC2_ADTRG(1);
+      // Configure channel for hardware trigger input
+      adc->SC1[adcPretrigger] = adcInterrupt|ch;
+   }
+
+#ifdef ADC_SC2_DMAEN
+   /**
+    * Enables hardware trigger mode of operation and configures a channel.
+    *
+    * @param[in] adcPretrigger   Hardware pre-trigger to use for this channel\n
+    *                            This corresponds to pre-triggers in the PDB channels and SC1[n]/R[n] register selection
+    * @param[in] adcInterrupt    Whether to generate an interrupt when each conversion completes
+    * @param[in] adcDma          Whether to generate a DMA request when each conversion completes
+    */
+   void enableHardwareConversion(AdcPretrigger adcPretrigger, AdcInterrupt adcInterrupt, AdcDma adcDma) const {
+      adc->SC2 = (adc->SC2)|ADC_SC2_ADTRG(1)|adcDma;
+      // Configure channel for hardware trigger input
+      adc->SC1[adcPretrigger] = adcInterrupt|ch;
+   }
+#endif
+
+   /**
+    * Initiates a conversion but does not wait for it to complete.
+    * Intended for use with interrupts or DMA.
+    *
+    * @param[in] adcInterrupt   Determines if an interrupt is generated when conversions are complete
+    */
+   void startConversion(AdcInterrupt adcInterrupt=AdcInterrupt_Disabled) const {
+      // Trigger conversion
+      adc->SC1[0] = ch|adcInterrupt;
+   };
+};
+
+class AdcDiffChannel : public AdcChannel {
+
+private:
+   /**
+    * This class is not intended to be instantiated
+    */
+   AdcDiffChannel() = delete;
+   AdcDiffChannel(const AdcDiffChannel&) = delete;
+   AdcDiffChannel(AdcDiffChannel&&) = delete;
+
+protected:
+   constexpr AdcDiffChannel(uint32_t adcAddress, uint8_t channel) :
+      AdcChannel(adcAddress, channel) {}
+
+public:
+   /**
+    * Initiates a conversion and waits for it to complete.
+    *
+    * @return - The 16-bit result of the conversion
+    *
+    * @note Result may be negative
+    */
+   int16_t readAnalogue() const {
+      // Sign-extended to 32 bits
+      return static_cast<int16_t>(AdcChannel::readAnalogue(ADC_SC1_DIFF_MASK));
+   };
 };
 
 /**
@@ -268,7 +400,7 @@ protected:
 
 public:
    /** Hardware instance pointer */
-   static volatile ADC_Type &adc() { return Info::adc(); }
+   static constexpr HardwarePtr<ADC_Type> adc = Info::baseAddress;
 
 public:
    /** Default ADC resolution */
@@ -293,11 +425,11 @@ public:
     * IRQ handler
     */
    static void irqHandler() {
-      if (adc().SC1[0] & ADC_SC1_COCO_MASK) {
-         sCallback(adc().R[0], adc().SC1[0]&ADC_SC1_ADCH_MASK);
+      if (adc->SC1[0] & ADC_SC1_COCO_MASK) {
+         sCallback(adc->R[0], adc->SC1[0]&ADC_SC1_ADCH_MASK);
       }
-      if (adc().SC1[1] & ADC_SC1_COCO_MASK) {
-         sCallback(adc().R[1], adc().SC1[1]&ADC_SC1_ADCH_MASK);
+      if (adc->SC1[1] & ADC_SC1_COCO_MASK) {
+         sCallback(adc->R[1], adc->SC1[1]&ADC_SC1_ADCH_MASK);
       }
    }
 
@@ -432,9 +564,9 @@ public:
     * Does not change ADC pin mapping
     */
    static void disable() {
-      adc().CFG1 = 0;
-      adc().CFG2 = 0;
-      adc().SC2  = 0;
+      adc->CFG1 = 0;
+      adc->CFG2 = 0;
+      adc->SC2  = 0;
 
       // Disable clock to ADC
       Info::disableClock();
@@ -448,11 +580,11 @@ public:
       enable();
 
       // Set mode to default
-      adc().CFG1 = Info::cfg1;
-      adc().CFG2 = Info::cfg2;
-      adc().SC2  = Info::sc2;
-      adc().CV1  = Info::cv1;
-      adc().CV1  = Info::cv2;
+      adc->CFG1 = Info::cfg1;
+      adc->CFG2 = Info::cfg2;
+      adc->SC2  = Info::sc2;
+      adc->CV1  = Info::cv1;
+      adc->CV1  = Info::cv2;
 	  
       enableNvicInterrupts(Info::irqLevel);
    }
@@ -483,8 +615,8 @@ public:
          AdcAsyncClock   adcAsyncClock   = AdcAsyncClock_Disabled
          ) {
       enable();
-      adc().CFG1 = adcResolution|calculateClockDivider(adcClockSource, adcClockRange, adcPower)|adcPower|(adcSample&ADC_CFG1_ADLSMP_MASK);
-      adc().CFG2 = adcMuxsel|adcClockRange|adcAsyncClock|(adcSample&ADC_CFG2_ADLSTS_MASK);
+      adc->CFG1 = adcResolution|calculateClockDivider(adcClockSource, adcClockRange, adcPower)|adcPower|(adcSample&ADC_CFG1_ADLSMP_MASK);
+      adc->CFG2 = adcMuxsel|adcClockRange|adcAsyncClock|(adcSample&ADC_CFG2_ADLSTS_MASK);
    }
 
    /**
@@ -578,7 +710,7 @@ public:
     *
     * @param[in]  nvicPriority  Interrupt priority
     */
-   static void enableNvicInterrupts(uint32_t nvicPriority) {
+   static void enableNvicInterrupts(NvicPriority nvicPriority) {
       enableNvicInterrupt(Info::irqNums[0], nvicPriority);
    }
 
@@ -596,7 +728,7 @@ public:
     * @return false  => ADC is idle
     */
    static bool isBusy() {
-      return adc().SC2&ADC_SC2_ADACT_MASK;
+      return adc->SC2&ADC_SC2_ADACT_MASK;
    }
    
    /**
@@ -607,7 +739,7 @@ public:
     * @note This affects all channels on the ADC
     */
    static void setResolution(AdcResolution adcResolution) {
-      adc().CFG1 = (adc().CFG1&~ADC_CFG1_MODE_MASK)|adcResolution;
+      adc->CFG1 = (adc->CFG1&~ADC_CFG1_MODE_MASK)|adcResolution;
    }
 
    /**
@@ -622,7 +754,7 @@ public:
     *  [1..18MHz] for other conversion modes
     */
    static void setClockSource(AdcClockSource adcClockSource, AdcClockDivider adcClockDivider=AdcClockDivider_1) {
-      adc().CFG1 = (adc().CFG1&~(ADC_CFG1_ADIV_MASK|ADC_CFG1_ADICLK_MASK))|adcClockSource|adcClockDivider;
+      adc->CFG1 = (adc->CFG1&~(ADC_CFG1_ADIV_MASK|ADC_CFG1_ADICLK_MASK))|adcClockSource|adcClockDivider;
    }
 
    /**
@@ -633,14 +765,14 @@ public:
     *       However, enabling it beforehand will reduce the latency of the 1st conversion in a sequence.
     */
    static void enableAsynchronousClock() {
-      adc().CFG2 |= ADC_CFG2_ADACKEN_MASK;
+      adc->CFG2 |= ADC_CFG2_ADACKEN_MASK;
    }
 
    /**
     * Disable ADC internal asynchronous clock source
     */
    static void disableAsynchronousClock() {
-      adc().CFG2 &= ~ADC_CFG2_ADACKEN_MASK;
+      adc->CFG2 &= ~ADC_CFG2_ADACKEN_MASK;
    }
 
    /**
@@ -651,7 +783,7 @@ public:
     * @note This affects all channels on the ADC
     */
    static void setAveraging(AdcAveraging adcAveraging) {
-      adc().SC3 = (adc().SC3&~(ADC_SC3_AVGE_MASK|ADC_SC3_AVGS_MASK))|adcAveraging;
+      adc->SC3 = (adc->SC3&~(ADC_SC3_AVGE_MASK|ADC_SC3_AVGS_MASK))|adcAveraging;
    }
 
    /**
@@ -666,24 +798,24 @@ public:
    static ErrorCode calibrate() {
 
       // Save current SC3 as modified
-      uint8_t sc3 = adc().SC3;
+      uint8_t sc3 = adc->SC3;
 
       // Start calibration
       setAveraging(AdcAveraging_Cal);
 
       // Wait for calibration to complete
-      while ((adc().SC1[0] & ADC_SC1_COCO_MASK) == 0) {
+      while ((adc->SC1[0] & ADC_SC1_COCO_MASK) == 0) {
          __asm__("nop");
       }
 
       // Clear COCO
-      (void)adc().R[0];
+      (void)adc->R[0];
 
       // Check if calibration failed
-      bool failed = adc().SC3 & ADC_SC3_CALF_MASK;
+      bool failed = adc->SC3 & ADC_SC3_CALF_MASK;
 
       // Restore original SC3 value
-      adc().SC3 = sc3;
+      adc->SC3 = sc3;
 
       // Check calibration outcome
       if(failed) {
@@ -693,16 +825,16 @@ public:
 
       // Calibration factor
       uint16_t calib;
-      calib = adc().CLPS + adc().CLP4 + adc().CLP3 + adc().CLP2 + adc().CLP1 + adc().CLP0;
+      calib = adc->CLPS + adc->CLP4 + adc->CLP3 + adc->CLP2 + adc->CLP1 + adc->CLP0;
       calib /= 2;
       calib |= (1<<15);  // Set MSB
-      adc().PG = calib;
+      adc->PG = calib;
 
 #ifdef ADC_MG_MG_MASK
-      calib = adc().CLMS + adc().CLM4 + adc().CLM3 + adc().CLM2 + adc().CLM1 + adc().CLM0;
+      calib = adc->CLMS + adc->CLM4 + adc->CLM3 + adc->CLM2 + adc->CLM1 + adc->CLM0;
       calib /= 2;
       calib |= (1<<15);  // Set MSB
-      adc().MG = calib;
+      adc->MG = calib;
 #endif
 
       return E_NO_ERROR;
@@ -725,21 +857,21 @@ public:
             break;
          case AdcCompare_LessThan:
          case AdcCompare_GreaterThanOrEqual:
-            adc().CV1 = low;
+            adc->CV1 = low;
             break;
          case AdcCompare_OutsideRangeExclusive:
          case AdcCompare_InsideRangeInclusive:
-            adc().CV1 = low;
-            adc().CV2 = high;
+            adc->CV1 = low;
+            adc->CV2 = high;
             break;
          case AdcCompare_InsideRangeExclusive:
          case AdcCompare_OutsideRangeInclusive:
-            adc().CV1 = high;
-            adc().CV2 = low;
+            adc->CV1 = high;
+            adc->CV2 = low;
             break;
       }
       // Set comparison fields
-      adc().SC2 |= (adc().SC2&~(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)))|
+      adc->SC2 |= (adc->SC2&~(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)))|
             (adcCompare&(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)));
    }
 
@@ -750,10 +882,10 @@ public:
     */
    static void enableContinuousConversions(AdcContinuous adcContinuous) {
       if (adcContinuous) {
-         adc().SC3 |= ADC_SC3_ADCO_MASK;
+         adc->SC3 |= ADC_SC3_ADCO_MASK;
       }
       else {
-         adc().SC3 &= ~ADC_SC3_ADCO_MASK;
+         adc->SC3 &= ~ADC_SC3_ADCO_MASK;
       }
    }
 
@@ -766,10 +898,10 @@ public:
    static void enableDma(AdcDma adcDma = AdcDma_Enabled) {
       // Set up DMA
       if (adcDma) {
-         adc().SC2 |= ADC_SC2_DMAEN_MASK;
+         adc->SC2 |= ADC_SC2_DMAEN_MASK;
       }
       else {
-         adc().SC2 &= ~ADC_SC2_DMAEN_MASK;
+         adc->SC2 &= ~ADC_SC2_DMAEN_MASK;
       }
    }
 #endif
@@ -784,9 +916,9 @@ protected:
     */
    static void enableHardwareConversion(int sc1Value, AdcPretrigger adcPretrigger) {
       // Set hardware triggers
-      adc().SC2 = (adc().SC2)|ADC_SC2_ADTRG(1);
+      adc->SC2 = (adc->SC2)|ADC_SC2_ADTRG(1);
       // Configure channel for hardware trigger input
-      adc().SC1[adcPretrigger] = sc1Value;
+      adc->SC1[adcPretrigger] = sc1Value;
    }
 
 #ifdef ADC_SC2_DMAEN
@@ -800,9 +932,9 @@ protected:
     */
    static void enableHardwareConversion(int sc1Value, AdcPretrigger adcPretrigger, AdcDma adcDma) {
       // Set hardware triggers
-      adc().SC2 = (adc().SC2)|ADC_SC2_ADTRG(1)|adcDma;
+      adc->SC2 = (adc->SC2)|ADC_SC2_ADTRG(1)|adcDma;
       // Configure channel for hardware trigger input
-      adc().SC1[adcPretrigger] = sc1Value;
+      adc->SC1[adcPretrigger] = sc1Value;
    }
 #endif
 
@@ -814,7 +946,7 @@ protected:
     * @note This will also clear the conversion flag if set
     */
    static uint32_t getConversionResult() {
-      return adc().R[0];
+      return adc->R[0];
    };
 
    /**
@@ -827,13 +959,13 @@ protected:
    static uint16_t readAnalogue(const int sc1Value) {
 
       // Trigger conversion
-      adc().SC1[0] = sc1Value;
-      (void)adc().SC1[0];
+      adc->SC1[0] = sc1Value;
+      (void)adc->SC1[0];
 
-      while ((adc().SC1[0]&ADC_SC1_COCO_MASK) == 0) {
+      while ((adc->SC1[0]&ADC_SC1_COCO_MASK) == 0) {
          __asm__("nop");
       }
-      return static_cast<uint16_t>(adc().R[0]);
+      return static_cast<uint16_t>(adc->R[0]);
    };
 
 public:
@@ -845,7 +977,7 @@ public:
     */
    static void startConversion(const int sc1Value) {
       // Trigger conversion
-      adc().SC1[0] = sc1Value;
+      adc->SC1[0] = sc1Value;
    };
 
    /**
@@ -867,12 +999,21 @@ public:
     * @tparam channel ADC channel
     */
    template<int channel>
-   class Channel {
+   class Channel : public AdcChannel {
+   private:
+      /**
+       * This class is not intended to be instantiated
+       */
+      Channel(const Channel&) = delete;
+      Channel(Channel&&) = delete;
 
-      AdcBase::CheckSignal<Info, channel> check;
+      AdcBase::CheckInputPin<Info, channel> check;
 
    public:
-      using Pcr = PcrTable_T<Info, channel>;
+      constexpr Channel() : AdcChannel(Adc0Info::baseAddress, channel) {}
+
+   public:
+      using Pcr = PcrTable_T<Info, AdcBase::limitIndex<Info>(channel)>;
 
       /** Allow convenient access to owning ADC */
       using Adc =  AdcBase_T<Info>;
@@ -972,18 +1113,26 @@ public:
     * @tparam channel ADC channel
     */
    template<int channel>
-   class DiffChannel {
-
+   class DiffChannel : public AdcDiffChannel {
    private:
-      AdcBase::CheckSignal<typename Info::InfoDP, channel> checkPos;
-      AdcBase::CheckSignal<typename Info::InfoDM, channel> checkNeg;
+      /**
+       * This class is not intended to be instantiated
+       */
+      DiffChannel(const DiffChannel&) = delete;
+      DiffChannel(DiffChannel&&) = delete;
+
+      AdcBase::CheckInputPin<typename Info::InfoDP, channel> checkPos;
+      AdcBase::CheckInputPin<typename Info::InfoDM, channel> checkNeg;
+
+   public:
+      constexpr DiffChannel() : AdcDiffChannel(Adc0Info::baseAddress, channel) {}
 
    public:
       /** PCR associated with plus channel */
-      using PcrP = PcrTable_T<typename Info::InfoDP, channel>;
+      using PcrP = PcrTable_T<typename Info::InfoDP, AdcBase::limitIndex<typename Info::InfoDP>(channel)>;
 
       /** PCR associated with minus channel */
-      using PcrM = PcrTable_T<typename Info::InfoDM, channel>;
+      using PcrM = PcrTable_T<typename Info::InfoDM, AdcBase::limitIndex<typename Info::InfoDM>(channel)>;
 
       /** Allow convenient access to owning ADC */
       using Adc =  AdcBase_T<Info>;
@@ -1024,8 +1173,10 @@ public:
        * @param[in] adcInterrupt   Determines if an interrupt is generated when conversions are complete
        */
       static void startConversion(AdcInterrupt adcInterrupt=AdcInterrupt_Disabled) {
-         usbdm_assert(Info::irqHandlerInstalled || (adcInterrupt == AdcInterrupt_Disabled),
-               "Enabling interrupts without a handler installed in vector table");
+         if constexpr(!Info::irqHandlerInstalled) {
+            usbdm_assert((adcInterrupt == AdcInterrupt_Disabled),
+                  "ADC not configured for interrupts. Modify Configure.usbdmProject");
+         }
          AdcBase_T<Info>::startConversion(channel|ADC_SC1_DIFF_MASK|adcInterrupt);
       };
 

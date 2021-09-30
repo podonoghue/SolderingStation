@@ -99,24 +99,24 @@ public:
    /**
     * Toggle the enable state of a channel.
     *
-    * @param ch Channel to modify
+    * @param channel Channel to modify
     */
    void toggleEnable(unsigned channel);
 
    /**
     * Enable channel.
     *
-    * @param ch Channel to enable
+    * @param channel Channel to enable
     */
-   void enable(unsigned ch);
+   void enable(unsigned channel);
 
    /**
     * Disable channel.
     * The other channel may become selected if enabled.
     *
-    * @param ch Channel to disable
+    * @param channel Channel to disable
     */
-   void disable(unsigned ch);
+   void disable(unsigned channel);
 
    /**
     * Change temperature of currently selected channel

@@ -294,7 +294,7 @@ public:
 
 // Three methods for averaging
 //using AveragingMethod = SimpleMovingAverage<10>; // 10*10ms = even weights over 100ms average
-using AveragingMethod = MovingAverage<20>; // 10*10ms = declining weights over 100ms average
+using AveragingMethod = MovingAverage<20>; // 20*10ms = declining weights over 100ms average
 //using AveragingMethod = DummyAverage;
 
 class TemperatureAverage : public AveragingMethod {
@@ -525,7 +525,7 @@ public:
 };
 
 /**
- * Class representing an average customised for the internal temperature sensor
+ * Class representing an average customised for the chip internal temperature sensor
  */
 class ChipTemperatureAverage : public TemperatureAverage {
 

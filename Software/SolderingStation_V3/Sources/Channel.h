@@ -8,7 +8,7 @@
 #ifndef SOURCES_CHANNEL_H_
 #define SOURCES_CHANNEL_H_
 
-#include "BangBangController.h"
+#include "Controller.h"
 #include "hardware.h"
 #include "Averaging.h"
 #include "Measurement.h"
@@ -47,9 +47,14 @@ private:
    unsigned          preset              = 1;        ///< Currently selected preset for the channel
 
    Controller       &controller;                     ///< Loop controller
+
    Weller_WT50       wellerMeasurement;
    T12               t12Measurement;
+
    DummyMeasurement  dummyMeasurement;
+
+   const USBDM::Gpio       &led;                   ///< Front panel channel on LED
+   const USBDM::GpioField  &chDrive;               ///< Channel dual drive
 
 public:
 
@@ -67,10 +72,6 @@ public:
 
    friend class Control;
 
-   virtual void ledWrite(bool)   = 0;
-   virtual void driveWrite(bool) = 0;
-   virtual bool driveReadState() = 0;
-
    /**
     * Constructor for channel
     *
@@ -79,13 +80,17 @@ public:
     * @param[in] tipTemperature  Tip temperature averaging etc.
     * @param[in] coldJunction    Cold junction averaging etc.
     */
-   Channel(ChannelSettings &settings, Controller &controller) :
+   Channel(ChannelSettings &settings, Controller &controller, const USBDM::Gpio &led, const USBDM::GpioField &chDrive) :
       DutyCycleCounter(101), // 101 chosen as prime near 100. Ensures balanced mains cycles.
       controller(controller),
+      led(led),
+      chDrive(chDrive),
       nvSettings(settings) {
       setUserTemperature(settings.presets[preset]);
       refreshControllerParameters();
       setTip(nvSettings.selectedTip);
+      chDrive.write(0b00);
+      led.off();
    }
 
    virtual ~Channel() {}
@@ -136,9 +141,9 @@ public:
    }
 
    /**
-    * Set selected tip for this channel
+    * Change selected tip for this channel
     *
-    * @param index Index into tip settings table
+    * @param delta Offset from current tip in tip settings table
     */
    void changeTip(int delta) {
       setTip(tips.changeTip(nvSettings.selectedTip, delta));
@@ -165,6 +170,11 @@ public:
       return nvSettings.selectedTip;
    }
 
+   /**
+    * Get name of currently selected tip
+    *
+    * @return Pointer to tip name as static object
+    */
    const char *getTipName() {
       const TipSettings *ts = nvSettings.selectedTip;
 
@@ -179,7 +189,7 @@ public:
     *
     * @param state State to describe
     *
-    * @return Name of state
+    * @return Pointer to name of state as static object
     */
    static const char *getStateName(ChannelState state) {
       static const char *names[] = {
@@ -194,6 +204,15 @@ public:
          return "???";
       }
       return names[state];
+   }
+
+   /**
+    * Get human readable name of current channel state
+    *
+    * @return Pointer to name of state as static object
+    */
+   const char *getStateName() const {
+      return getStateName(getState());
    }
 
    /**
@@ -221,15 +240,6 @@ public:
    }
 
    /**
-    * Get human readable name of channel state
-    *
-    * @return Name of state
-    */
-   const char *getStateName() const {
-      return getStateName(getState());
-   }
-
-   /**
     * Set desired state of iron.
     * Clears physical status of iron but this will be updated when the iron is next polled.
     *
@@ -245,7 +255,7 @@ public:
       refreshControllerParameters();
 
       controller.enable(isControlled());
-      ledWrite(isRunning());
+      led.write(isRunning());
 
       restartIdleTimer();
 
@@ -253,7 +263,7 @@ public:
          controller.setOutput(0);
 
          // For safety while debugging immediately turn off drive
-         driveWrite(false);
+         chDrive.write(0b00);
       }
    }
 
@@ -267,11 +277,15 @@ public:
 
       // Disable drive
       DutyCycleCounter::disable();
-      driveWrite(false);
+      chDrive.write(0b00);
    }
 
    /**
-    * Indicates if the channel is running i.e. in active, back-off or fixed-power states
+    * Indicates if the state indicates running i.e. in active, back-off or fixed-power states
+    *
+    * @param state   State to examine
+    *
+    * @return  true if active
     */
    bool isRunning(ChannelState state) const {
       return (state == ch_active) || (state == ch_setback)|| (state == ch_fixedPower) ;
@@ -286,6 +300,8 @@ public:
 
    /**
     * Indicates if the channel temperature is being controlled i.e. in active or back-off states
+    *
+    * @return  true if active
     */
    bool isControlled() const {
       ChannelState state = getState();
@@ -450,13 +466,9 @@ public:
    /**
     * Update drive based on PWM state
     */
-   /**
-    *
-    * @param borrowCycle Whether to borrow a cycle for sampling
-    */
    void updateDrive() {
       advance();
-      driveWrite(isOn());
+      chDrive.write(0b11);
    }
 
    /**
@@ -485,8 +497,6 @@ public:
     * Does set-back when idle or off when idle for long time.
     *
     * @param milliseconds Amount to increment the idle time by
-    *
-    *
     */
    void incrementIdleTime(int milliseconds) {
 

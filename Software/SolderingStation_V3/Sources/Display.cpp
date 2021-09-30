@@ -507,4 +507,3 @@ void Display::displayHeater(Channel &ch, unsigned dutyCycle) {
    oled.refreshImage();
    oled.resetFormat();
 }
-
