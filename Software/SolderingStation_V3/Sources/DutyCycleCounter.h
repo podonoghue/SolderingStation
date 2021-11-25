@@ -13,34 +13,33 @@
  */
 class DutyCycleCounter {
 
+protected:
    /// Maximum value for duty-cycle
-   unsigned upperLimit;
+   unsigned fUpperLimit;
 
    /// Resolution (denominator of duty-cycle)
-   const unsigned resolution;
+   const unsigned fResolution;
 
    /// Count of cycles
-   unsigned count;
+   unsigned fCount;
 
    /// Duty-cycle (numerator)
-   unsigned dutyCycle;
+   unsigned fDutyCycle;
 
    /// Indicates if drive is on in the current cycle
-   bool     driveOn;
-
-   /// Enables output i.e. isOn() always returns false if false
-   bool     enabled;
+   bool     fDriveOn;
 
    /**
     * Update driveOn based on count
     */
    void check() {
-      if (count >= resolution) {
-         driveOn = true;
-         count -= resolution;
+      USBDM::CriticalSection cs;
+      if (fCount >= fResolution) {
+         fDriveOn = true;
+         fCount -= fResolution;
       }
       else {
-         driveOn = false;
+         fDriveOn = false;
       }
    }
 
@@ -51,30 +50,16 @@ public:
     * @param resolution Resolution (denominator of duty-cycle)
     */
    DutyCycleCounter(unsigned resolution) :
-      upperLimit(resolution), resolution(resolution), count(0), dutyCycle(0), driveOn(false), enabled(false) {
-   }
-
-   /**
-    * Disable output i.e. isOn() always return false
-    */
-   void disable() {
-      enabled = false;
-   }
-
-   /**
-    * Enable output i.e. isOn() returns value time dependent on PWM state
-    */
-   void enable() {
-      enabled = true;
+      fUpperLimit(resolution), fResolution(resolution), fCount(0), fDutyCycle(0), fDriveOn(false) {
    }
 
    /**
     * Sets the upper limit for the duty cycle.
     *
-    * @param upperLImit Upper limit for setDutyCycle()
+    * @param upperLimit Upper limit for setDutyCycle()
     */
    void setUpperLimit(unsigned upperLimit) {
-      this->upperLimit = upperLimit;
+      this->fUpperLimit = upperLimit;
    }
 
    /**
@@ -86,10 +71,10 @@ public:
     * @note The average duty-cycle is dutyCycle/resolution
     */
    void setDutyCycle(unsigned dutyCycle) {
-      if (dutyCycle>upperLimit) {
-         dutyCycle = upperLimit;
+      if (dutyCycle>fUpperLimit) {
+         dutyCycle = fUpperLimit;
       }
-      this->dutyCycle = dutyCycle;
+      fDutyCycle = dutyCycle;
    }
 
    /***
@@ -99,7 +84,7 @@ public:
     *
     */
    unsigned getDutyCycle() const {
-      return dutyCycle;
+      return fDutyCycle;
    }
 
    /**
@@ -108,7 +93,7 @@ public:
     * @param borrowCycle   Indicates if the next cycle must be off for measurement.
     */
    void advance() {
-      count += dutyCycle;
+      fCount += fDutyCycle;
       check();
    }
 
@@ -119,7 +104,7 @@ public:
     * @return False => off
     */
    bool isOn() const {
-      return enabled && driveOn;
+      return fDriveOn;
    }
 };
 

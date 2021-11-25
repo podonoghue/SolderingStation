@@ -17,8 +17,7 @@
  */
 #include <climits>
 #include <cstddef>
-#include "derivative.h"
-
+#include "pin_mapping.h"
 /*
  * Default port information
  */
@@ -65,18 +64,20 @@ static constexpr PcrValue ADC_DEFAULT_PCR(
  * Note the equivalence between modes e.g. 8-bit-se = 9-bit-diff
  */
 enum AdcResolution {
+#ifdef ADC_SC1_DIFF_MASK
    AdcResolution_8bit_se_9bit_diff   = ADC_CFG1_MODE(0),  //!<  8-bit unsigned/9-bit signed
    AdcResolution_10bit_se_11bit_diff = ADC_CFG1_MODE(2),  //!< 10-bit unsigned/11-bit signed
    AdcResolution_12bit_se_13bit_diff = ADC_CFG1_MODE(1),  //!< 12-bit unsigned/13-bit signed
+   AdcResolution_9bit_diff           = ADC_CFG1_MODE(0),  //!<  9-bit signed for use with differential mode
+   AdcResolution_11bit_diff          = ADC_CFG1_MODE(2),  //!< 11-bit signed for use with differential mode
+   AdcResolution_13bit_diff          = ADC_CFG1_MODE(1),  //!< 12-bit signed for use with differential mode
+   AdcResolution_16bit_diff          = ADC_CFG1_MODE(3),  //!< 16-bit signed for use with differential mode
+#endif
    AdcResolution_16bit               = ADC_CFG1_MODE(3),  //!< 16-bit unsigned/unsigned
    AdcResolution_8bit_se             = ADC_CFG1_MODE(0),  //!<  8-bit unsigned for use with single-ended mode
    AdcResolution_10bit_se            = ADC_CFG1_MODE(2),  //!< 10-bit unsigned for use with single-ended mode
    AdcResolution_12bit_se            = ADC_CFG1_MODE(1),  //!< 12-bit unsigned for use with single-ended mode
    AdcResolution_16bit_se            = ADC_CFG1_MODE(3),  //!< 16-bit unsigned for use with single-ended mode
-   AdcResolution_9bit_diff           = ADC_CFG1_MODE(0),  //!<  9-bit signed for use with differential mode
-   AdcResolution_11bit_diff          = ADC_CFG1_MODE(2),  //!< 11-bit signed for use with differential mode
-   AdcResolution_13bit_diff          = ADC_CFG1_MODE(1),  //!< 12-bit signed for use with differential mode
-   AdcResolution_16bit_diff          = ADC_CFG1_MODE(3),  //!< 16-bit signed for use with differential mode
 };
 
 /**
@@ -98,8 +99,8 @@ enum AdcAveraging {
 enum AdcClockDivider {
    AdcClockDivider_1       = ADC_CFG1_ADIV(0), //!< Clock divide by 1
    AdcClockDivider_2       = ADC_CFG1_ADIV(1), //!< Clock divide by 2
-   AdcClockDivider_4       = ADC_CFG1_ADIV(2), //!< Clock divide by 3
-   AdcClockDivider_8       = ADC_CFG1_ADIV(3), //!< Clock divide by 4
+   AdcClockDivider_4       = ADC_CFG1_ADIV(2), //!< Clock divide by 4
+   AdcClockDivider_8       = ADC_CFG1_ADIV(3), //!< Clock divide by 8
 };
 
 /**
@@ -197,6 +198,41 @@ enum AdcCompare {
    AdcCompare_InsideRangeInclusive  = (0<<8)|ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1), //!<  low <= ADC_value <= high
 };
 
+#if defined(ADC_PGA_PGAEN_MASK)
+
+/**
+ * PGA Enable and mode
+ */
+enum AdcPgaMode {
+   AdcPgaMode_Disabled    = ADC_PGA_PGAEN(0),                    // PGA Disabled
+   AdcPgaMode_LowPower    = ADC_PGA_PGAEN(0)|ADC_PGA_PGALPb(0),  // PGA Low power mode
+   AdcPgaMode_NormalPower = ADC_PGA_PGAEN(0)|ADC_PGA_PGALPb(1),  // PGA Normal power mode
+};
+
+/**
+ * PGA Gain Setting
+ */
+enum AdcPgaGain {
+   AdcPgaGain_1  = ADC_PGA_PGAG(0),     // PGA gain = x1
+   AdcPgaGain_2  = ADC_PGA_PGAG(1),     // PGA gain = x2
+   AdcPgaGain_4  = ADC_PGA_PGAG(2),     // PGA gain = x4
+   AdcPgaGain_8  = ADC_PGA_PGAG(3),     // PGA gain = x8
+   AdcPgaGain_16 = ADC_PGA_PGAG(4),     // PGA gain = x16
+   AdcPgaGain_32 = ADC_PGA_PGAG(5),     // PGA gain = x32
+   AdcPgaGain_64 = ADC_PGA_PGAG(6),     // PGA gain = x64
+};
+#endif
+
+#if defined(ADC_PGA_PGACHPb_MASK)
+/**
+ * Controls PGA chopping to remove/reduce offset
+ */
+   enum AdcPgaChop {
+      AdcPgaChop_Disabled = ADC_PGA_PGACHPb(1), // PGA chopping disabled
+      AdcPgaChop_Enabled  = ADC_PGA_PGACHPb(0), // PGA chopping enabled
+   };
+#endif
+
 /**
  * Type definition for ADC interrupt call back.
  *
@@ -218,10 +254,10 @@ private:
 
 public:
    /**
-    * Limit index to permitted pin index range
+    * Limit channel to permitted range
     * Used to prevent noise from static assertion checks that detect a condition already detected in a more useful fashion.
     *
-    * @param index   Index to limit
+    * @param channel   Channel number to limit
     *
     * @return Index limited to permitted range
     */
@@ -343,6 +379,7 @@ public:
    };
 };
 
+#ifdef ADC_SC1_DIFF_MASK
 class AdcDiffChannel : public AdcChannel {
 
 private:
@@ -370,6 +407,7 @@ public:
       return static_cast<int16_t>(AdcChannel::readAnalogue(ADC_SC1_DIFF_MASK));
    };
 };
+#endif
 
 /**
  * Template class representing an ADC.
@@ -378,7 +416,7 @@ public:
  * Example
  * @code
  *  // Access to ADC0
- *  using Adc0 = AdcBase_T<adc0Info>;
+ *  using Adc0 = AdcBase_T<Adc0Info>;
  *
  *  // Initialise ADC
  *  Adc0::setMode(AdcResolution_16bit_se);
@@ -390,7 +428,6 @@ template<class Info>
 class AdcBase_T {
 
 private:
-   AdcBase_T() = delete;
    AdcBase_T(const AdcBase_T&) = delete;
    AdcBase_T(AdcBase_T&&) = delete;
 
@@ -402,7 +439,6 @@ public:
    /** Hardware instance pointer */
    static constexpr HardwarePtr<ADC_Type> adc = Info::baseAddress;
 
-public:
    /** Default ADC resolution */
    static constexpr AdcResolution defaultAdcResolution = static_cast<AdcResolution>(Info::defaultAdcResolution);
 
@@ -417,6 +453,8 @@ public:
    static constexpr uint32_t adcR(unsigned index) { return adcBase() + offsetof(ADC_Type, R[index]); }
 
 public:
+
+   AdcBase_T() {};
 
    /** Allow convenient access to associate AdcInfo */
    using AdcInfo = Info;
@@ -636,6 +674,7 @@ public:
       }
    }
 
+#ifdef ADC_SC1_DIFF_MASK
    /**
     * Get ADC maximum conversion value for an differential range
     *
@@ -652,11 +691,16 @@ public:
          default:                     return 0;
       }
    }
+#endif
+
    /**
     * Calculate ADC clock divider (ADC_CFG1_ADIV) and confirm clock source (ADC_CFG1_ADICLK)
     * @note adcClockSource may be modified in return value
     *
-    * @param adcClockSource
+    * @param adcClockSource   ADC clock source
+    * @param adcClockRange    ADC clock range (high/normal)
+    * @param adcPower         ADC power level (normal/low)
+    *
     *
     * @return ADC_CFG1_ADIV|ADC_CFG1_ADICLK value
     */
@@ -945,8 +989,8 @@ protected:
     *
     * @note This will also clear the conversion flag if set
     */
-   static uint32_t getConversionResult() {
-      return adc->R[0];
+   static uint16_t getConversionResult() {
+      return static_cast<uint16_t>(adc->R[0]);
    };
 
    /**
@@ -1010,9 +1054,8 @@ public:
       AdcBase::CheckInputPin<Info, channel> check;
 
    public:
-      constexpr Channel() : AdcChannel(Adc0Info::baseAddress, channel) {}
+      constexpr Channel() : AdcChannel(AdcInfo::baseAddress, channel) {}
 
-   public:
       using Pcr = PcrTable_T<Info, AdcBase::limitIndex<Info>(channel)>;
 
       /** Allow convenient access to owning ADC */
@@ -1027,7 +1070,7 @@ public:
       /** GPIO pin associated with this channel (Not all channels have an associated GPIO!) */
       template<Polarity polarity=ActiveHigh>
       class GpioPin : public GpioTable_T<Info, channel, polarity> {
-         static_assert((Adc0Info::info[channel].portAddress != 0),
+         static_assert((AdcInfo::info[channel].portAddress != 0),
                "ADC channel does not have corresponding GPIO pin");
       };
 
@@ -1039,6 +1082,20 @@ public:
       static void setInput() {
          // Map pin to ADC
          Pcr::setPCR(Info::info[channel].pcrValue);
+      }
+
+      /**
+       *  Disable Pin
+       *  This sets the pin to MUX 0 which is specified for minimum leakage in low-power modes.
+       *
+       *  @note The clock is left enabled as shared with other pins.
+       *  @note Mux(0) is also the Analogue MUX setting
+       */
+      static void disablePin() {
+         // Map pin to ADC
+         if constexpr (Info::info[channel].portAddress != 0) {
+            Pcr::disablePin();
+         }
       }
 
       /**
@@ -1088,10 +1145,76 @@ public:
        * @note Result is always positive
        */
       static uint16_t readAnalogue() {
-         // Zero extended to 32 bits
          return static_cast<uint16_t>(Adc::readAnalogue(channel));
       };
    };
+
+#if defined(ADC_PGA_PGAEN_MASK)
+   /**
+    * Template class representing an ADC channel with programmable gain amplifier.
+    *
+    * Example
+    * @code
+    * // Instantiate the ADC and the channel (for ADC0 channel 6)
+    * using Adc0    = AdcBase_T<Adc0Info>;
+    * using Adc0Ch6 = Adc0::PgaChannel;
+    *
+    * // Set ADC resolution
+    * Adc0::setMode(AdcResolution_16bit_se);
+    *
+    * // Read ADC value
+    * uint32_t value = Adc0Ch6::readAnalogue();
+    * @endcode
+    */
+   class PgaChannel : public Channel<2> {
+   private:
+      /**
+       * This class is not intended to be instantiated
+       */
+      PgaChannel(const PgaChannel&) = delete;
+      PgaChannel(PgaChannel&&) = delete;
+
+   public:
+      constexpr PgaChannel(){}
+
+#if defined(ADC_PGA_PGACHPb_MASK)
+      /**
+       * Configure Programmable Gain Amplifier
+       *
+       * @param adcPgaMode Mode to operate in (or disabled)
+       * @param adcPgaGain Gain
+       * @param adcPgaChop PGA chopping control
+       */
+      void configurePga(AdcPgaMode adcPgaMode, AdcPgaGain adcPgaGain=AdcPgaGain_1, AdcPgaChop adcPgaChop=AdcPgaChop_Enabled) {
+         adc->PGA = adcPgaMode|adcPgaGain|adcPgaChop;
+      }
+      
+      /**
+       * Measure PGA offset
+       * The PGA should be configured before doing this.
+       *
+       * @note To apply offset correction subtract subtract [(pga_offset_measurement*(G+1))/(64+1)] from
+       *       the ADC result, where G is the PGA gain during ADC operation
+       *
+       * @return Offset measurement. (pga_offset * (64+1))
+       */
+      int measurePgaOffset() {
+         // ToDo
+         return 0;
+      }
+#else
+      /**
+       * Configure Programmable Gain Amplifier
+       *
+       * @param adcPgaMode Mode to operate in (or disabled)
+       * @param adcPgaGain Gain
+       */
+      static void configurePga(AdcPgaMode adcPgaMode, AdcPgaGain adcPgaGain=AdcPgaGain_1) {
+         adc->PGA = adcPgaMode|adcPgaGain;
+      }
+#endif
+   };
+#endif
 
 #ifdef ADC_SC1_DIFF_MASK
    /**
@@ -1125,9 +1248,8 @@ public:
       AdcBase::CheckInputPin<typename Info::InfoDM, channel> checkNeg;
 
    public:
-      constexpr DiffChannel() : AdcDiffChannel(Adc0Info::baseAddress, channel) {}
+      constexpr DiffChannel() : AdcDiffChannel(AdcInfo::baseAddress, channel) {}
 
-   public:
       /** PCR associated with plus channel */
       using PcrP = PcrTable_T<typename Info::InfoDP, AdcBase::limitIndex<typename Info::InfoDP>(channel)>;
 
@@ -1152,6 +1274,21 @@ public:
          // Map pins to ADC
          PcrP::setPCR(Info::InfoDP::info[channel].pcrValue);
          PcrM::setPCR(Info::InfoDM::info[channel].pcrValue);
+      }
+
+      /**
+       *  Disable Pin
+       *  This sets the pin to MUX 0 which is specified for minimum leakage in low-power modes.
+       *
+       *  @note The clock is left enabled as shared with other pins.
+       *  @note Mux(0) is also the Analogue MUX setting
+       */
+      static void disablePin() {
+         // Map pin to ADC
+         if constexpr (AdcInfo::InfoDP::info[channel].portAddress != 0) {
+            PcrP::disablePin();
+            PcrM::disablePin();
+         }
       }
 
       /**
@@ -1188,10 +1325,53 @@ public:
        * @note Result may be negative
        */
       static int16_t readAnalogue() {
-         // Sign-extended to 32 bits
+         // Sign-extended to 16 bits
          return static_cast<int16_t>(Adc::readAnalogue(channel|ADC_SC1_DIFF_MASK));
       };
    };
+
+#if defined(ADC_PGA_PGAEN_MASK)
+   /**
+    * Template class representing an ADC channel with programmable gain amplifier.
+    *
+    * Example
+    * @code
+    * // Instantiate the ADC and the channel (for ADC0 channel 6)
+    * using Adc0    = AdcBase_T<Adc0Info>;
+    * using Adc0Ch6 = Adc0::PgaChannel;
+    *
+    * // Set ADC resolution
+    * Adc0::setMode(AdcResolution_16bit_se);
+    *
+    * // Read ADC value
+    * uint32_t value = Adc0Ch6::readAnalogue();
+    * @endcode
+    */
+   class PgaDiffChannel : public DiffChannel<2> {
+
+   private:
+      /**
+       * This class is not intended to be instantiated
+       */
+      PgaDiffChannel(const PgaDiffChannel&) = delete;
+      PgaDiffChannel(PgaDiffChannel&&) = delete;
+
+   public:
+      constexpr PgaDiffChannel(){}
+
+   /**
+    * Configure Programmable Gain Amplifier
+    *
+    * @param adcPgaMode Mode to operate in (or disabled)
+    * @param adcPgaGain Gain
+    */
+   static void configurePga(AdcPgaMode adcPgaMode, AdcPgaGain adcPgaGain=AdcPgaGain_1) {
+      adc->PGA = adcPgaMode|adcPgaGain;
+   }
+
+   };
+#endif
+
 #endif
 
 };
@@ -1202,16 +1382,21 @@ template<class Info> AdcCallbackFunction AdcBase_T<Info>::sCallback = AdcBase::u
 /**
  * Class representing ADC0
  */
-using Adc0 = AdcBase_T<Adc0Info>;
-
+typedef AdcBase_T<Adc0Info> Adc0;
 #endif
 
 #ifdef USBDM_ADC1_IS_DEFINED
 /**
  * Class representing ADC1
  */
-using Adc1 = AdcBase_T<Adc1Info>;
+typedef AdcBase_T<Adc1Info> Adc1;
+#endif
 
+#ifdef USBDM_ADC2_IS_DEFINED
+/**
+ * Class representing ADC1
+ */
+typedef AdcBase_T<Adc2Info> Adc2;
 #endif
 
 /**

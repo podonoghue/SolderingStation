@@ -1,5 +1,5 @@
 /**
- * @file    BangBang.h
+ * @file    BangBangController.h
  * @brief   Bang-Bang Controller class
  *
  *  Created on: 10 Jul 2021

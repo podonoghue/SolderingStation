@@ -23,6 +23,64 @@ namespace USBDM {
  * @brief Hardware Peripheral Interface and library
  * @{
  */
+
+/// Measurement ADC
+const Adc0                                         measurementADC;                 
+/// ADC channel connected to high gain  amplifier
+const Adc0::Channel<0>                             highGainAdcChannel;             // p7
+const Adc0::Channel<6>                             ch1Identify;                    // p46
+const Adc0::Channel<7>                             ch2Identify;                    // p47
+/// ADC channel connected to low gain  amplifier
+const Adc0::Channel<19>                            lowGainAdcChannel;              // p8
+/// Internal temperature sensor T = (25 - (Tvolts-0.719)/.001715)
+const Adc0::Channel<26>                            chipTemperatureAdcChannel;      // Internal
+/// Mains zero-crossing comparator
+const Cmp0                                         zeroCrossingComparator;         
+/// AC zero Crossing Detector Comparator input
+const Cmp0::Pin<1>                                 zeroCrossingInput;              // p40
+/// Over-current comparator
+const Cmp1                                         overCurrentComparator;          
+/// Over-current Detector Comparator input
+const Cmp1::Pin<5>                                 overcurrent;                    // p13
+/// FTM used for channel drive (optional)
+const Ftm0                                         driveFtm;                       
+/// Spare pin for debugging
+const GpioA<4>                                     debug;                          // p21
+/// Quadrature Encoder pins (Bit Field)
+const GpioBField<1, 0, ActiveLow>                  quadPhases;                     // p27-p28
+/// Stand sensors (Bit Field)
+const GpioBField<17, 16, ActiveLow>                setbacks;                       // p31-p32
+/// Channel 1 Drive  (Bit Field)
+const GpioCField<2, 1, ActiveLow>                  ch1Drive;                       // p34-p35
+/// Channel 1 Selected LED
+const GpioC<0>                                     ch1SelectedLed;                 // p33
+/// Channel 2 Selected LED
+const GpioC<6>                                     ch2SelectedLed;                 // p39
+/// Controls clamp at input of amplifier chain (output of mux)
+const GpioC<5>                                     clamp;                          // p38
+/// Channel 2 Drive (Bit Field)
+const GpioCField<4, 3, ActiveLow>                  ch2Drive;                       // p36-p37
+/// Quadrature encoder centre button
+const GpioD<0, ActiveLow>                          quadButton;                     // p41
+/// Channel 2 Button
+const GpioD<1, ActiveLow>                          ch2Button;                      // p42
+/// All buttons for polling (Bit Field)
+const GpioDField<3, 0, ActiveLow>                  buttons;                        // p41-p44
+/// Channel 1 Button
+const GpioD<2, ActiveLow>                          ch1Button;                      // p43
+/// MenuButton
+const GpioD<3, ActiveLow>                          menuButton;                     // p44
+/// Bias enable on amplifier input
+const GpioD<7>                                     biasEnable;                     // p48
+/// Mux&amplifier control (Bit Field)
+const GpioDField<7, 4, 0b1>                        amplifierControl;               // p45-p48
+/// Gain boost enable on amplifier
+const GpioD<4, ActiveLow>                          highGainEnable;                 // p45
+/// PIT Channel to use for switch polling
+const Pit::Channel<0>                              pollingTimerChannel;            // Internal
+/// PIT Channel to use for sample and control timing
+const Pit::Channel<1>                              controlTimerChannel;            // Internal
+
 /**
  * Used to configure pin-mapping before 1st use of peripherals
  */
@@ -39,14 +97,13 @@ void mapAllPins() {
       PORTA->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0010UL);
       PORTA->GPCLR = 0x0200UL|PORT_GPCLR_GPWE(0x0006UL);
       PORTA->GPCLR = 0x0700UL|PORT_GPCLR_GPWE(0x0009UL);
+      PORTB->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0003UL);
       PORTB->GPCHR = 0x0100UL|PORT_GPCHR_GPWE(0x0003UL);
       PORTB->GPCLR = 0x0200UL|PORT_GPCLR_GPWE(0x000CUL);
-      PORTB->GPCLR = 0x0600UL|PORT_GPCLR_GPWE(0x0003UL);
       PORTC->GPCLR = 0x0000UL|PORT_GPCLR_GPWE(0x0080UL);
-      PORTC->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0061UL);
-      PORTC->GPCLR = 0x0400UL|PORT_GPCLR_GPWE(0x001EUL);
-      PORTD->GPCLR = 0x0000UL|PORT_GPCLR_GPWE(0x0060UL);
+      PORTC->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x007FUL);
       PORTD->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x009FUL);
+
 }
 /** 
  * End group USBDM_Group

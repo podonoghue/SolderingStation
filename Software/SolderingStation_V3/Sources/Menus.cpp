@@ -206,9 +206,11 @@ EventType Menus::editTemperature(const SettingsData &data) {
 /**
  * Calibrate a tip
  *
- * @param[in]     ch            Channel being used
- * @param[in/out] tipsettings   Tip settings being determined
- * @param[in]     stage         Stage is calibration sequence
+ * @param [in]     ch            Channel being used
+ * @param [inout]  tipsettings   Tipsettings being determined
+ * @param [in]     stage         Stage is calibration sequence
+ *
+ * @note Channel settings may be altered
  *
  * @return  false - abort or failed
  * @return  true  - continue to next stage
@@ -231,7 +233,6 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationI
    BoundedInteger controlledTemperature{Control::MIN_TEMP, Control::MAX_TEMP, (int)targetTemperature-50};
 
    // Set up channel for this tip
-   ch.setTip(&tipsettings);
    ch.setUserTemperature(controlledTemperature);
    ch.setState(ch_active);
 
@@ -239,7 +240,7 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationI
 
    title.write("Stage ").write(stage+1).write(" - ").write(tipsettings.getTipName());
 
-   enum {working, complete, fail} loopControl = working;
+   enum {working, complete, failed} loopControl = working;
 
    do {
 //      control.reportPid(ch);
@@ -247,31 +248,44 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationI
          display.displayCalibration(title.toString(), ch, targetTemperature);
       }
       Event event = switchPolling.getEvent();
+      if (event.type == ev_None) {
+         continue;
+      }
       switch(event.type) {
          case ev_QuadRotate:
             // Adjust user temperature
             controlledTemperature += event.change;
             ch.setUserTemperature(controlledTemperature);
+            // For debug
+            ch.measurement->saveCalibrationPoint(stage, tipsettings);
             doUpdate = true;
             break;
 
          case ev_SelRelease:
          case ev_QuadRelease:
+            ch.setState(ch_off);
+
             // Save calibration point values to tip-settings
-            ch.measurement->saveCalibrationPoint(stage, tipsettings);
-            loopControl = complete;
+            if (ch.measurement->saveCalibrationPoint(stage, tipsettings)) {
+               loopControl = complete;
+            }
+            else {
+               loopControl = failed;
+            }
             break;
 
          case ev_SelHold:
          case ev_QuadHold:
             // Abort
-            loopControl = fail;
+            loopControl = failed;
             break;
 
          default:
             break;
       }
    } while(loopControl == working);
+
+   tipsettings.report(console);
 
    ch.setState(ch_off);
    return loopControl == complete;
@@ -291,6 +305,8 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
 //   Ch2Drive::setIn();
 
    Channel &channel = channels[1];
+   // Save current tip setting for channel
+   const TipSettings *originalTs = channel.getTip();
 
    static constexpr unsigned modifiers = MenuItem::Starred;
 
@@ -300,10 +316,6 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
 
    int  offset    = 0;
    BoundedInteger  selection{0, tipsAllocated-1, Tips::findTipInMenu(channels[1].getTip(), menuItems, tipsAllocated)};
-
-   // This is a dummy settings object that is NOT in nv-storage
-   // Made static to avoid warnings about non-initialised object
-   static TipSettings tipSettings;
 
    bool refresh  = true;
    enum {working, complete, fail} loopControl = working;
@@ -340,17 +352,31 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
                   "- Long press to abort");
 
             if (ev.isSelRelease()) {
-               tipSettings = *menuItems[selection].tipSettings;
-//               tipSettings.setTipNameIndex(menuItems[selection].tipSettings->getTipNameIndex());
+               // This is original settings in nv-storage
+               TipSettings &oldTs = *menuItems[selection].tipSettings;
+
+               // This is a dummy settings object that is NOT in nv-storage
+               TipSettings newTs(*menuItems[selection].tipSettings);
+
+               // Change settings to RAM copy
+               channel.setTip(&newTs);
+
                bool success =
-                     calibrateTipTemp(channel, tipSettings, CalibrationIndex_250) &&
-                     calibrateTipTemp(channel, tipSettings, CalibrationIndex_325) &&
-                     calibrateTipTemp(channel, tipSettings, CalibrationIndex_400);
+                     calibrateTipTemp(channel, newTs, CalibrationIndex_250) &&
+                     calibrateTipTemp(channel, newTs, CalibrationIndex_325) &&
+                     calibrateTipTemp(channel, newTs, CalibrationIndex_400) &&
+                     display.reportSettingsChange(oldTs, newTs);
+
+               // Restore original settings (in nv-storage!)
+               channel.setTip(originalTs);
 
                if (success) {
-                  TipSettings *ts = (TipSettings*)menuItems[selection].tipSettings;
-                  ts->setThermisterCalibration(tipSettings);
+                  // Update settings in nv-storage
+                  oldTs.setThermisterCalibration(newTs);
                   menuItems[selection].modifiers |= MenuItem::Starred;
+               }
+               else {
+                  display.displayMessage("Calibration Fail", "\n Calibration values\n were out of range\n or sequence was\n aborted.");
                }
             }
          }
@@ -383,7 +409,7 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
 /**
  * Edit a non-volatile tip calibration setting.
  *
- * @param settings Data describing setting to change
+ * @param tipSettings Data describing setting to change
  *
  * @return Exiting event
  */
@@ -633,7 +659,7 @@ EventType Menus::stepResponse(const SettingsData &) {
                   "This will drive\n"
                   "the tip at fixed\n"
                   "power for a period.\n\n"
-                  "Press to start and end");
+                  "Press to start/end");
             if (ev.isSelRelease()) {
                TipSettings *settings = menuItems[selection].tipSettings;
                Channel &channel = channels[1];
@@ -672,16 +698,14 @@ EventType Menus::stepResponse(const SettingsData &) {
 }
 
 /**
- * Edit a available tips in non-volatile settings.
- *
- * @param data Data describing setting to change
+ * Edit available tips in non-volatile settings.
  *
  * @return Exiting event
  */
 EventType Menus::selectAvailableTips(const SettingsData &) {
 
-   int  offset    = 0;
-   BoundedInteger  selection{0,TipSettings::NUMBER_OF_TIPS-1, 0};
+   static int  offset    = 0;
+   static CircularInteger selection{0,TipSettings::NUMBER_OF_TIPS-1, 0};
 
    static constexpr unsigned modifiers = MenuItem::CheckBox|MenuItem::Starred;
 
@@ -823,28 +847,9 @@ bool Menus::confirmAction(const char *prompt) {
    } while(true);
 }
 
-/**
- */
-EventType Menus::displayChannelStatuses(const SettingsData &) {
+EventType Menus::runHeater(const SettingsData &data) {
 
-   BoundedInteger selection{0,1,1};
-   do {
-      display.displayChannelStatuses();
-      Event event = switchPolling.getEvent();
-      switch(event.type) {
-         case ev_SelRelease:
-         case ev_QuadRelease:
-            return ev_None;
-
-         default:
-            break;
-      }
-   } while(true);
-}
-
-EventType Menus::runHeater(const SettingsData &) {
-
-   Channel &ch = channels[1];
+   Channel &ch = channels[data.option];
 
    BoundedInteger  dutyCycle{0, 100, 0};
 
@@ -852,12 +857,14 @@ EventType Menus::runHeater(const SettingsData &) {
    enum {working, complete, fail} loopControl = working;
    Event event;
 
-   ch.setDutyCycle(dutyCycle);
    ch.setState(ch_fixedPower);
+   ch.setDutyCycle(dutyCycle);
 
+   StringFormatter_T<100> sf;
+   sf.write("Ch").write(data.option).write(" ").write(ch.getTipName());
    do {
       if (refresh || control.needsRefresh()) {
-         display.displayHeater(ch, dutyCycle);
+         display.displayHeater(sf.toString(), ch, dutyCycle);
          refresh = false;
       }
 
@@ -883,16 +890,15 @@ EventType Menus::runHeater(const SettingsData &) {
 
          default:
             // Exit on anything else
-            event.type  = ev_None;
+//            event.type  = ev_None;
             loopControl = complete;
             break;
       }
    } while (loopControl == working);
 
-   ch.setDutyCycle(0);
    ch.setState(ch_off);
 
-   return ev_None;
+   return event.type;
 }
 
 /**
@@ -900,26 +906,10 @@ EventType Menus::runHeater(const SettingsData &) {
  */
 void Menus::settingsMenu() {
 
-   static const SettingsData settingsData[] = {
-         {"Heater",                   runHeater,                                                        },
-         {"Channel 1\nSetback temp.", editTemperature,      nvinit.ch1Settings.setbackTemperature, 1    }, // C
-         {"Channel 2\nSetback temp.", editTemperature,      nvinit.ch2Settings.setbackTemperature, 1    }, // C
-         {"Channel 1\nIdle time",     editTime,             nvinit.ch1Settings.setbackTime,        10   }, // seconds
-         {"Channel 2\nIdle time",     editTime,             nvinit.ch2Settings.setbackTime,        10   }, // seconds
-         {"Channel 1\nSafety time",   editTime,             nvinit.ch1Settings.safetyOffTime,      10   }, // seconds
-         {"Channel 2\nSafety time",   editTime,             nvinit.ch2Settings.safetyOffTime,      10   }, // seconds
-         {"Tip Selection",            selectAvailableTips                                               },
-         {"Temp Calibration",         calibrateTipTemps                                                 },
-         {"Step Response",            stepResponse                                                      },
-         {"PID Manual",               editPidSettings                                                   },
-         {"Channel Status",           displayChannelStatuses                                            },
-   };
-
-   //   console.write("Size    = ").writeln(sizeof(settingsData));
-   //   console.write("Address = ").writeln(&settingsData);
-
+   // Top-level menu - must match table below
    static const MenuItem items[] = {
-         {"Heater", },
+         {"Ch1 Debug",         },
+         {"Ch2 Debug",         },
          {"Ch1 Setback temp.", },
          {"Ch2 Setback temp.", },
          {"Ch1 Idle time",     },
@@ -930,11 +920,30 @@ void Menus::settingsMenu() {
          {"Temp Calibration",  },
          {"Step Response",     },
          {"Pid Manual set",    },
-         {"Channel Status",    },
    };
 
+   // Table of routines to execute and parameters for same
+   static const SettingsData settingsData[] = {
+         // Display Title             Routine               Parameters ...
+         {items[0].name,              runHeater,            1                                           },
+         {items[1].name,              runHeater,            2                                           },
+         {"Channel 1\nSetback temp.", editTemperature,      nvinit.ch1Settings.setbackTemperature, 1    }, // C
+         {"Channel 2\nSetback temp.", editTemperature,      nvinit.ch2Settings.setbackTemperature, 1    }, // C
+         {"Channel 1\nIdle time",     editTime,             nvinit.ch1Settings.setbackTime,        10   }, // seconds
+         {"Channel 2\nIdle time",     editTime,             nvinit.ch2Settings.setbackTime,        10   }, // seconds
+         {"Channel 1\nSafety time",   editTime,             nvinit.ch1Settings.safetyOffTime,      60   }, // seconds
+         {"Channel 2\nSafety time",   editTime,             nvinit.ch2Settings.safetyOffTime,      60   }, // seconds
+         {items[8].name,              selectAvailableTips                                               },
+         {items[9].name,              calibrateTipTemps                                                 },
+         {items[10].name,             stepResponse                                                      },
+         {items[11].name,             editPidSettings                                                   },
+   };
+
+   //   console.write("Size    = ").writeln(sizeof(settingsData));
+   //   console.write("Address = ").writeln(&settingsData);
+
    int  offset    = 0;
-   BoundedInteger  selection{0,(int)(sizeof(settingsData)/sizeof(settingsData[0])-1), 0};
+   CircularInteger selection{0,(int)(sizeof(settingsData)/sizeof(settingsData[0])-1), 0};
 
    bool refresh = true;
    for (;;) {
@@ -947,7 +956,7 @@ void Menus::settingsMenu() {
          continue;
       }
 
-      // Assume refresh required
+      // Assume refresh required on event
       refresh = true;
 
       //      console.write(getEventName(event)).write(" : ").writeln(event.change);

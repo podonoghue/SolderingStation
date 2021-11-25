@@ -9,8 +9,7 @@
 #ifndef INCLUDE_USBDM_DMA_H_
 #define INCLUDE_USBDM_DMA_H_
 
-#include "derivative.h"
-#include "hardware.h"
+#include "pin_mapping.h"
 
 /*
  * *****************************
@@ -748,6 +747,10 @@ template <class DmaMuxInfo, unsigned NumChannels>
 class DmaMux_T {
 
 public:
+
+   /// Number of multiplexor channels
+   static const unsigned numChannels = NumChannels;
+
    /**
     * Configures and enable hardware requests on a channel.
     *
@@ -779,8 +782,8 @@ public:
       DmaMuxInfo::enableClock();
 
       // Configure channel - must be disabled to change
-      DmaMuxInfo::dmamux().CHCFG[dmaChannelNum] = 0;
-      DmaMuxInfo::dmamux().CHCFG[dmaChannelNum] = dmaMuxEnable|DMAMUX_CHCFG_SOURCE(dmaSlot);
+      DmaMuxInfo::dmamux->CHCFG[dmaChannelNum] = 0;
+      DmaMuxInfo::dmamux->CHCFG[dmaChannelNum] = dmaMuxEnable|DMAMUX_CHCFG_SOURCE(dmaSlot);
    }
 
    /**
@@ -796,7 +799,7 @@ public:
       DmaMuxInfo::enableClock();
 
       // Disable channel
-      DmaMuxInfo::dmamux().CHCFG[dmaChannelNum] = 0;
+      DmaMuxInfo::dmamux->CHCFG[dmaChannelNum] = 0;
    }
 };
 
@@ -1375,19 +1378,19 @@ template<class Info> DmaErrorCallbackFunction DmaBase_T<Info>::errorCallback = n
 template<class Info> uint32_t DmaBase_T<Info>::allocatedChannels = -1;
 
 #ifdef USBDM_DMAMUX0_IS_DEFINED
-using DmaMux0 = DmaMux_T<Dmamux0Info, Dma0Info::NumChannels>;
+typedef DmaMux_T<Dmamux0Info, Dma0Info::NumChannels> DmaMux0;
 #endif
 
 #ifdef USBDM_DMAMUX1_IS_DEFINED
-using DmaMux1 = DmaMux_T<Dmamux1Info, Dma1Info::NumChannels>;
+typedef DmaMux_T<Dmamux1Info, Dma1Info::NumChannels> DmaMux1;
 #endif
 
 #ifdef USBDM_DMA0_IS_DEFINED
-using Dma0 = DmaBase_T<Dma0Info>;
+typedef DmaBase_T<Dma0Info> Dma0;
 #endif
 
 #ifdef USBDM_DMA1_IS_DEFINED
-using Dma0 = DmaBase_T<Dma1Info>;
+typedef DmaBase_T<Dma1Info> Dma1;
 #endif
 
 /**

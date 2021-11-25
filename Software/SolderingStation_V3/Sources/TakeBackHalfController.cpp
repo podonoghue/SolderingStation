@@ -108,7 +108,7 @@ float TakeBackHalfController::newSample(float targetTemperature, float actualTem
 /**
  * Print heading for report()
  */
-void TakeBackHalfController::reportHeading(Channel &ch) {
+void TakeBackHalfController::reportHeading(Channel &ch) const {
 
       console.setFloatFormat(3, Padding_LeadingSpaces, 3);
       console.
@@ -128,7 +128,7 @@ void TakeBackHalfController::reportHeading(Channel &ch) {
 /**
  * Report current situation
  */
-void TakeBackHalfController::report(Channel &) {
+void TakeBackHalfController::report() const {
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 4);
 //   console.write(getElapsedTime()).write(", ").write(fCurrentOutput).write(", ").write(fCurrentInput).write(", ").write(ch.tipTemperature.getLastSample()/50);

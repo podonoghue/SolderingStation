@@ -8,13 +8,9 @@
 #ifndef SOURCES_CHANNELS_H_
 #define SOURCES_CHANNELS_H_
 
-#include "PidController.h"
 #include "Channel.h"
-#include "Control.h"
 #include "NonvolatileSettings.h"
-#include "TakeBackHalfController.h"
-#include "WellerWT50.h"
-#include "T12.h"
+#include "hardware.h"
 
 /**
  * Holding class for the channels
@@ -26,34 +22,21 @@ private:
    // Currently selected channel for front panel controls
    unsigned selectedChannel = 1;
 
-//   using TempController = BangBangController;
-   using TempController = PidController;
-//   using TempController = TakeBackHalfController;
-
-   TempController ch1Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
-   TempController ch2Controller{Control::PID_INTERVAL, Control::MIN_DUTY, Control::MAX_DUTY};
-
-   Ch1SelectedLed ch1SelectedLed;
-   Ch2SelectedLed ch2SelectedLed;
-
-   Ch1Drive ch1Drive;
-   Ch2Drive ch2Drive;
-
    // Channel1
-   Channel channel1{nvinit.ch1Settings, ch1Controller, ch1SelectedLed, ch1Drive};
+   Channel channel1{nvinit.ch1Settings, USBDM::ch1SelectedLed, USBDM::ch1Drive};
 
    // Channel2
-   Channel channel2{nvinit.ch2Settings, ch2Controller, ch2SelectedLed, ch2Drive};
+   Channel channel2{nvinit.ch2Settings, USBDM::ch2SelectedLed, USBDM::ch2Drive};
 
 public:
 
    Channels() {
       using namespace USBDM;
 
-      ch1Drive.setOutput();
-      ch2Drive.setOutput();
-      ch1SelectedLed.setOutput();
-      ch2SelectedLed.setOutput();
+      ch1Drive.setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Fast);
+      ch2Drive.setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Fast);
+      ch1SelectedLed.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
+      ch2SelectedLed.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
    }
 
    /**

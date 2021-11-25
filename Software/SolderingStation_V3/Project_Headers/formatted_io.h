@@ -19,9 +19,8 @@
  */
 #include <stdint.h>
 #include <math.h>
-//#include <cstdio>       // snprintf()
 #include <ctype.h>      // isspace() etc
-#include "hardware.h"
+#include "pin_mapping.h"
 
 #if defined(__FREE_RTOS)
 #include "FreeRTOS.h"
@@ -81,7 +80,7 @@ enum Width : uint8_t {
    Width_auto = 0,//!< Width_auto
 };
 
-enum EchoMode : uint8_t {
+enum EchoMode : bool {
    /*
     * For use with operator<< and operator>>
     */
@@ -150,21 +149,20 @@ struct FormattingSettings {
 class FormattedIO {
 
 protected:
-
    /**
     * Current settings
     */
    FormattingSettings fFormat;
 
    /**
-    * Indicate in error state
-    */
-   bool inErrorState = false;
-
-   /**
     * One character look-ahead
     */
    int16_t lookAhead = -1;
+
+   /**
+    * Indicate in error state
+    */
+   bool inErrorState = false;
 
 #if defined (__FREE_RTOS) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_RECURSIVE_MUTEXES == 1 )
    SemaphoreHandle_t mutex;
@@ -226,21 +224,27 @@ protected:
     * @return true  Character available i.e. _readChar() will not block
     * @return false No character available
     */
-   virtual bool _isCharAvailable() = 0;
+   virtual bool _isCharAvailable() {
+      return false;
+   }
 
    /**
     * Receives a character (blocking)
     *
     * @return Character received
     */
-   virtual int _readChar() = 0;
+   virtual int _readChar() {
+      return -1;
+   }
 
    /**
     * Writes a character (blocking)
     *
     * @param[in]  ch - character to send
     */
-   virtual void _writeChar(char ch) = 0;
+   virtual void _writeChar(char ch) {
+      (void)ch;
+   }
 
 public:
    /**
@@ -280,12 +284,17 @@ public:
    /**
     *  Flush output data
     */
-   virtual void flushOutput() = 0;
+   virtual FormattedIO &flushOutput() {
+      return *this;
+   }
 
    /**
     *  Flush input data
     */
-   virtual void flushInput() = 0;
+   virtual FormattedIO &flushInput() {
+      lookAhead = -1;
+      return *this;
+   }
 
    /**
     * Lock the object
@@ -318,7 +327,7 @@ public:
     * Peek at lookahead (non-blocking).
     *
     * @return <0   No character available
-    * @return >=0  Character available
+    * @return >=0  The available character
     */
    int __attribute__((noinline)) peek() {
       if (lookAhead>0) {
@@ -397,16 +406,11 @@ public:
    /**
     * Set precision for floating point numbers
     *
-    * @param precision Precision to use
-    *
-    * @return Reference to self
-    */
-   /**
-    *
     * @param precision Number of digits to the right of decimal point
     * @param padding   How to pad on the left of the number (Padding_LeadingSpaces, Padding_None, Padding_LeadingZeroes)
     * @param width     Number of characters to the left of decimal point (ignored for padding_None)
-    * @return
+    *
+    * @return Reference to self
     */
    FormattedIO &setFloatFormat( unsigned  precision,
                                 Padding   padding  = Padding_None,
@@ -636,6 +640,27 @@ public:
    }
 
    /**
+    * Receive string until terminator character or buffer full.\n
+    * The terminating character is discarded and the string always '\0' terminated
+    *
+    * @param[out] data       Data buffer for reception (size is inferred from this parameter)
+    * @param[in]  terminator Terminating character
+    *
+    * @return number of characters read (excluding terminator)
+    *
+    * @note Excess characters are discarded once the buffer is full.
+    *
+    * Usage
+    * @code
+    *    char buff[100];
+    *    int numChars = gets(buff);
+    * @endcode
+    */
+   template<size_t N>
+   int __attribute__((noinline)) gets(char (&data)[N], char terminator='\n') {
+      return gets(data, N, terminator);
+   }
+    /**
     * Write a character
     *
     * @param[in]  ch - character to send
@@ -914,16 +939,21 @@ public:
     */
    FormattedIO __attribute__((noinline)) &write(double value) {
       char buff[20];
+      if (isnan(value)) {
+         return write("Nan");
+      }
       bool isNegative = value<0;
       if (isNegative) {
          value = -value;
       }
       long scaledValue = static_cast<long>(round(value*fFormat.fFloatPrecisionMultiplier));
       ultoa(buff, scaledValue/fFormat.fFloatPrecisionMultiplier, Radix_10, fFormat.fFloatPadding, fFormat.fFloatWidth, isNegative);
-      write(buff).write('.');
-      ultoa(buff, 
-           (scaledValue)%fFormat.fFloatPrecisionMultiplier,
-           Radix_10, Padding_LeadingZeroes, fFormat.fFloatPrecision);
+      if (fFormat.fFloatPrecision>0) {
+         write(buff).write('.');
+         ultoa(buff,
+               (scaledValue)%fFormat.fFloatPrecisionMultiplier,
+               Radix_10, Padding_LeadingZeroes, fFormat.fFloatPrecision);
+      }
       write(buff);
       return *this;
    }

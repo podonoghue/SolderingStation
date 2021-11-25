@@ -208,6 +208,7 @@ void MCG_IRQHandler(void)                     WEAK_DEFAULT_HANDLER;
 void LPTMR0_IRQHandler(void)                  WEAK_DEFAULT_HANDLER;
 void PORTA_IRQHandler(void)                   WEAK_DEFAULT_HANDLER;
 void PORTC_IRQHandler(void)                   WEAK_DEFAULT_HANDLER;
+void PORTD_IRQHandler(void)                   WEAK_DEFAULT_HANDLER;
 void PORTE_IRQHandler(void)                   WEAK_DEFAULT_HANDLER;
 void SWI_IRQHandler(void)                     WEAK_DEFAULT_HANDLER;
 
@@ -283,7 +284,7 @@ VectorTable const __vector_table = {
       PORTA_IRQHandler,                        /*   56,   40  General Purpose Input/Output                                                     */
       USBDM::PortB::irqHandler,                /*   57,   41  General Purpose Input/Output                                                     */
       PORTC_IRQHandler,                        /*   58,   42  General Purpose Input/Output                                                     */
-      USBDM::PortD::irqHandler,                /*   59,   43  General Purpose Input/Output                                                     */
+      PORTD_IRQHandler,                        /*   59,   43  General Purpose Input/Output                                                     */
       PORTE_IRQHandler,                        /*   60,   44  General Purpose Input/Output                                                     */
       SWI_IRQHandler,                          /*   61,   45  Software interrupt                                                               */
    }

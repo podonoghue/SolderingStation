@@ -83,9 +83,15 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
       if (currentTemp>999) {
          currentTemp = 999;
       }
-      oled.moveXY(offset+2, 8).write(currentTemp);
-      oled.setFont(fontMedium);
-      oled.moveXY(offset+48, 14).write("C");
+      oled.moveXY(offset+2, 8);
+      if (currentTemp < 40) {
+         oled.write("low");
+      }
+      else {
+         oled.write(currentTemp);
+         oled.setFont(fontMedium);
+         oled.moveXY(offset+48, 14).write("C");
+      }
    }
 
    if (selected) {
@@ -101,7 +107,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
       oled.moveXY(offset,  35).write("P").setWidth(1).write(ch.getPreset()).
             write(ch.isTempModified()?"*:":" :").setWidth(3).write(ch.getUserTemperature());
    }
-   float power = ch.getPower();
+   float power = ch.measurement->getPower();
 
    oled.setFont(fontSmall);
    oled.moveXY(offset,  50).write(ch.getTipName());
@@ -109,7 +115,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
    oled.moveXY(offset+35,  50).write((int)round(power)).writeln('W');
 
-   float percentagePower = ((oled.WIDTH/2)-3)*(ch.power.getAveragedAdcSamples()/100);
+   float percentagePower = ((oled.WIDTH/2)-3)*(ch.measurement->getPercentagePower()/100);
 #if 0
    static constexpr int BG_TOP    = 58;
    static constexpr int BG_BOTTOM = oled.HEIGHT-1;
@@ -164,7 +170,7 @@ void Display::displayChannels() {
  * @param seconds          Time in seconds to display
  * @param modified         Indicates item has been modified since saving - adds indicator to display
  */
-void Display::displayTimeMenuItem(const char *description, unsigned ms, bool modified) {
+void Display::displayTimeMenuItem(const char *description, unsigned seconds, bool modified) {
    oled.clearDisplay();
 
    oled.setFont(fontLarge);
@@ -173,11 +179,15 @@ void Display::displayTimeMenuItem(const char *description, unsigned ms, bool mod
    oled.setFont(fontVeryLarge);
    oled.moveXY(0, 30).write(modified?'*':' ');
 
-   int seconds = ms;
-
-   if (ms>0) {
-      oled.setPadding(Padding_LeadingSpaces).setWidth(2).write(seconds/60).write("m");
-      oled.setPadding(Padding_LeadingZeroes).setWidth(2).write(seconds%60).write("s");
+   if (seconds>0) {
+      if (seconds>=60) {
+         oled.setPadding(Padding_LeadingSpaces).setWidth(2).write(seconds/60).write("m");
+      }
+      else {
+         oled.write("   ");
+      }
+      seconds %= 60;
+      oled.setPadding(Padding_LeadingZeroes).setWidth(2).write(seconds).write("s");
    }
    else {
       oled.write(" Off");
@@ -243,11 +253,11 @@ void Display::displayTemperatureMenuItem(const char *description, unsigned tempe
 /**
  * Display a menu list with selected item
  *
- * @param[in]     title         Title to display at top of screen
- * @param[in]     items         Array of menu items.  Must have at least MIN_MENU_ENTRIES items.
- * @param[in]     modifiersUsed Modifiers that may be applied to items (for sizing)
- * @param[in/out] offset        Offset into list for display i.e. first item on visible menu.
- * @param[in]     selection     Selected item index
+ * @param [in]     title         Title to display at top of screen
+ * @param [in]     items         Array of menu items.  Must have at least MIN_MENU_ENTRIES items.
+ * @param [in]     modifiersUsed Modifiers that may be applied to items (for sizing)
+ * @param [inout]  offset        Offset into list for display i.e. first item on visible menu.
+ * @param [in]     selection     Selected item index
  */
 void Display::displayMenuList(const char *title, MenuItem const items[], unsigned modifiersUsed, int &offset, int selection) {
    Font &font = fontSmall;
@@ -262,6 +272,7 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
    oled.moveXY(0, oled.getY()+2);
    oled.setFont(font);
 
+   // Make sure selection is visible
    if (selection < offset) {
       offset = selection;
    }
@@ -346,12 +357,10 @@ void Display::displayChoice(const char *title, const char *prompt, const char *o
 }
 
 /**
- * Display message and waits for user action
+ * Display message and return immediately
  *
  * @param[in] title     Title to display at top of screen
  * @param[in] message   Message to display
- *
- * @return Event type that exited wait
  */
 void Display::showMessage(const char *title, const char *message) {
    Font &font = fontSmall;
@@ -409,14 +418,14 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
    oled.setFont(fontSmall);
    oled.write("Target ----> ").write(targetTemperature).writeln(" C");
 
-   oled.moveXY(0, oled.getY()+2);
+   oled.moveXY(0, oled.getY()+3);
    oled.write("Measured     ").write((int)round(ch.getCurrentTemperature())).writeln(" C");
 
-   oled.moveXY(0, oled.getY()+2);
+   oled.moveXY(0, oled.getY()+3);
    oled.write("Controlled   ").write(ch.getUserTemperature()).writeln(" C");
 
    oled.moveXY(0, oled.getY()+5);
-   oled.write(ch.measurement->reportCalibrationValues());
+   ch.measurement->reportCalibrationValues(oled, true);
 
 //   oled.write(" Power ").write(ch.getPower());
 //   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
@@ -435,13 +444,11 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
  *
  * @param tipname    Name of tip to display
  * @param selection  Index of selected item
- * @param stars      Array containing character to prefix menu items with
- * @param kp         Scaled PID Kp value
- * @param ki         Scaled PID Ki value
- * @param kd         Scaled PID Kd value
- * @param iLimit     Scaled PID I limit value
- *
- * @return
+ * @param stars      Array containing character to prefic menu item with
+ * @param kp         PID Kp value
+ * @param ki         PID Ki value
+ * @param kd         PID Kd value
+ * @param iLimit     PID I limit value
  */
 void Display::displayPidSettings(const char *tipname, unsigned selection, char stars[4], int kp, int ki, int kd, int iLimit) {
    static constexpr float SCALE_FACTOR = TipSettings::FLOAT_SCALE_FACTOR;
@@ -489,21 +496,73 @@ void Display::displayPidSettings(const char *tipname, unsigned selection, char s
    oled.resetFormat();
 }
 
-void Display::displayHeater(Channel &ch, unsigned dutyCycle) {
-   float value = ch.measurement->getMeasurement();
-   const char *calReport = ch.measurement->reportCalibrationValues();
+/**
+ * Channel status display - for debug
+ *
+ * @param title      Title to display at top of screen
+ * @param ch         Channel to report on
+ * @param dutyCycle  Duty cycle to display
+ */
+void Display::displayHeater(const char *title, Channel &ch, unsigned dutyCycle) {
+   float power = ch.measurement->getPower();
+   float chipTemp = control.getChipTemperature();
 
    oled.clearDisplay();
    oled.setFont(fontMedium);
    oled.moveXY(0, 0);
-   oled.writeln(" Heater");
+   oled.writeln(title);
    oled.moveXY(0, oled.getY()+2);
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY()+1);
    oled.moveXY(0, oled.getY()+3);
    oled.setFont(fontSmall);
-   oled.write("DutyCyle = ").writeln(dutyCycle);
-   oled.write("Value = ").writeln(value);
-   oled.writeln(calReport);
+   oled.setFloatFormat(1);
+   oled.write("Chip = ").write(chipTemp).writeln(" C");
+   oled.write("DutyCyle=").write(dutyCycle).write(" (").write(power).writeln(" W)");
+   oled.moveXY(0, oled.getY()+3);
+   ch.measurement->reportCalibrationValues(oled);
    oled.refreshImage();
    oled.resetFormat();
 }
+
+/**
+ * Report changes between old and new calibration values
+ *
+ * @param oldTs    Original values
+ * @param newTs    Changed values
+ *
+ * @return True  - Confirmed (Short press)
+ * @return False - Cancelled (Press and hold)
+ */
+bool Display::reportSettingsChange(const TipSettings &oldTs, const TipSettings &newTs) {
+   oled.clearDisplay();
+   oled.setFont(fontMedium);
+   oled.moveXY(0, 0);
+   oled.writeln("Calibration");
+   oled.moveXY(0, oled.getY()+2);
+   oled.drawHorizontalLine(0, oled.WIDTH, oled.getY()+1);
+   oled.moveXY(0, oled.getY()+3);
+   oled.setFont(fontSmall);
+   oled.setFloatFormat(0);
+
+   oled.writeln("   Old       New");
+   oled.moveXY(0, oled.getY()+3);
+   for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
+      oled.setFloatFormat(0).write("(").write(oldTs.getCalibrationTempValue(index)).write(",")
+          .setFloatFormat(1, Padding_LeadingSpaces, 2).write(oldTs.getCalibrationMeasurementValue(index)).write(")(")
+          .setFloatFormat(0).write(newTs.getCalibrationTempValue(index)).write(",")
+          .setFloatFormat(1, Padding_LeadingSpaces, 2).write(newTs.getCalibrationMeasurementValue(index)).writeln(")");
+   }
+   oled.moveXY(0, oled.getY()+3);
+   oled.writeln("Long press to discard");
+
+   oled.refreshImage();
+   oled.resetFormat();
+
+   Event event;
+   while (!event.isSelHold() && !event.isSelRelease()) {
+      event = switchPolling.getEvent();
+   }
+
+   return ((event.type == ev_SelRelease) || (event.type == ev_QuadRelease));
+}
+

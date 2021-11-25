@@ -8,6 +8,7 @@
 #ifndef SOURCES_TIPSETTINGS_H_
 #define SOURCES_TIPSETTINGS_H_
 
+#include "formatted_io.h"
 #include "flash.h"
 
 enum IronType : uint8_t {
@@ -43,6 +44,10 @@ inline CalibrationIndex operator++(CalibrationIndex &ci) {
 class TipSettings {
 
 public:
+
+   /// Type for index into tipNames table
+   using TipNameIndex = uint8_t;
+
    /**
     * Get the temperature for calibration at the given calibration point
     *
@@ -63,9 +68,6 @@ public:
 
    /// Names of all tips
    static const InitialTipInfo initialTipInfo[NUMBER_OF_TIPS];
-
-   /// Index into tipNames table
-   using TipNameIndex = uint8_t;
 
    /// Indicates unused entry in calibration table
    /// Corresponds to default flash value (0xFFFF)
@@ -117,36 +119,43 @@ private:
    /// Index into tip name table for this entry
    USBDM::Nonvolatile<TipNameIndex>    tipNameIndex;
 
-   TipSettings(const TipSettings &other) = delete;
-   TipSettings(TipSettings &&other) = delete;
-   TipSettings& operator=(TipSettings &&other) = delete;
+//   TipSettings(TipSettings &&other) = delete;
+//   TipSettings& operator=(TipSettings &&other) = delete;
 
 public:
    TipSettings() {}
 
    ~TipSettings() {}
 
-   TipSettings& operator=(const TipSettings &other) {
-      this->kp = other.kp;
-      this->ki = other.ki;
-      this->kd = other.kd;
-      this->flags = other.flags;
-      this->tipNameIndex = other.tipNameIndex;
-      for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
-         calibrationMeasurementValue[index] = other.calibrationMeasurementValue[index];
-         calibrationTemperatureValue[index] = other.calibrationTemperatureValue[index];
-      }
-      return *this;
-   }
+   TipSettings& operator=(const TipSettings &other) = default;
+   TipSettings(const TipSettings &other) = default;
+//   {
+//      this->kp           = other.kp;
+//      this->ki           = other.ki;
+//      this->kd           = other.kd;
+//      this->iLimit       = other.iLimit;
+//      this->flags        = other.flags;
+//      this->tipNameIndex = other.tipNameIndex;
+//      calibrationMeasurementValue = other.calibrationMeasurementValue;
+//      calibrationTemperatureValue = other.calibrationTemperatureValue;
+//      return *this;
+//   }
+
+   /**
+    * Report settings object
+    *
+    * @param io Where to write report
+    */
+   void report(USBDM::FormattedIO &io);
 
    /**
     * Get TipNameIndex for given tip name
     *
-    * @param name  Tip name
+    * @param tipName  Tip name
     *
     * @return TipNameIndex (index into tip name table)
     */
-   static TipNameIndex getTipNameIndex(const char *name);
+   static TipNameIndex getTipNameIndex(const char *tipName);
 
    /**
     * Get tip name for given TipNameIndex
@@ -176,7 +185,7 @@ public:
    /**
     * Load default calibration values for given tip
     *
-    * @param TipNameIndex  Tip name index for this setting
+    * @param tipNameIndex  Tip name index for this setting
     */
    void loadDefaultCalibration(TipNameIndex tipNameIndex = DEFAULT_ENTRY);
 
@@ -271,7 +280,7 @@ public:
    /**
     * Set values from measured values
     *
-    * @param other Dummy Tips-ettings containing measurements
+    * @param other Dummy Tips-settings containing measurements
     */
    void setThermisterCalibration(TipSettings &other) {
       flags = flags | TEMP_CALIBRATED;

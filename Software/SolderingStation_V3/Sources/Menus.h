@@ -29,7 +29,7 @@ public:
     * @param prompt Prompt to display
     *
     * @return True if confirmed
-    * @return False if cancelled
+    * @return false if cancelled
     */
    static bool confirmAction(const char *prompt);
 
@@ -68,9 +68,11 @@ public:
    /**
     * Calibrate a tip
     *
-    * @param[in]     ch            Channel being used
-    * @param[in/out] tipsettings   Tipsettings being determined
-    * @param[in]     stage         Stage is calibration sequence
+    * @param [in]     ch            Channel being used
+    * @param [inout]  tipsettings   Tipsettings being determined
+    * @param [in]     stage         Stage is calibration sequence
+    *
+    * @note Channel settings may be altered
     *
     * @return  false - abort or failed
     * @return  true  - continue to next stage
@@ -89,7 +91,7 @@ public:
    /**
     * Edit a non-volatile tip calibration setting.
     *
-    * @param settings Data describing setting to change
+    * @param tipSettings Data describing setting to change
     *
     * @return Exiting event
     */

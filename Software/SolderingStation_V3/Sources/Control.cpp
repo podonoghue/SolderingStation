@@ -4,6 +4,8 @@
  *  Created on: 5 Apr 2020
  *      Author: podonoghue
  */
+#include <stdlib.h>
+#include "hardware.h"
 #include "smc.h"
 #include "SwitchPolling.h"
 #include "Control.h"
@@ -11,8 +13,18 @@
 #include "SettingsData.h"
 #include "BoundedInteger.h"
 #include "Menus.h"
-#include <stdlib.h>
+
 using namespace USBDM;
+
+class DebLed {
+public:
+   DebLed() {
+      debug.high();
+   }
+   ~DebLed() {
+      debug.low();
+   }
+};
 
 /**
  * Initialise the control
@@ -20,30 +32,14 @@ using namespace USBDM;
 void Control::initialise() {
    using namespace USBDM;
 
-   GpioSpare1::setOutput();
-   Debug::setOutput();
-
-   AnalogueMultiplexorEnable::setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Slow);
-   BiasEnable::setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Slow);
-
-   Channel &ch1 = channels[1];
-   Channel &ch2 = channels[2];
-
-   ch1.setUpperLimit(MAX_DUTY);
-   ch2.setUpperLimit(MAX_DUTY);
-
-   ch1.setDutyCycle(0);
-   ch2.setDutyCycle(0);
-
-   ch1.enable();
-   ch2.enable();
+   debug.setOutput();
 
    // Configure ADC to use a call-back
    static AdcCallbackFunction adc_cb = [](uint32_t result, int channel){
       control.adcHandler(result, channel);
    };
 
-   ADConverter::configure(
+   measurementADC.configure(
          ADC_RESOLUTION,
          AdcClockSource_Bus,
          AdcSample_20,
@@ -54,35 +50,43 @@ void Control::initialise() {
 
    // Calibrate ADC
    unsigned retry = 10;
-   while ((ADConverter::calibrate() != E_NO_ERROR) && (retry-->0)) {
+   while ((measurementADC.calibrate() != E_NO_ERROR) && (retry-->0)) {
       console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
    }
-   ADConverter::setAveraging(AdcAveraging_4);
-   ADConverter::setCallback(adc_cb);
-   ADConverter::enableNvicInterrupts(NvicPriority_MidHigh);
+   measurementADC.setAveraging(AdcAveraging_8);
+   measurementADC.setCallback(adc_cb);
+   measurementADC.enableNvicInterrupts(NvicPriority_MidHigh);
 
    // Configure PIT for use in timing
-   Pit::configureIfNeeded();
-   ControlTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
+   controlTimerChannel.configureIfNeeded();
+   controlTimerChannel.enableNvicInterrupts(NvicPriority_Normal);
 
    // Configure comparator for mains zero-crossing detection
    // Trigger is actually on the falling edge of rectified waveform near zero
-
    static CmpCallbackFunction zero_crossing_cb = [](CmpStatus){
       control.zeroCrossingHandler();
    };
 
-   // Threshold for zero-crossing comparator
-   static constexpr uint8_t ZERO_CROSSING_DAC_THRESHOLD = 2.8*(ZeroCrossingComparator::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
+   // Sensitivity of overload amplifier and shunt (V/A)
+   static constexpr float OVERLOAD_VOLT_PER_AMP = .05*(1.0+22.0/10.0); // .160 V/A
 
-   ZeroCrossingComparator::configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
-   ZeroCrossingComparator::setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 255);
-   ZeroCrossingComparator::setInputs();
-   ZeroCrossingComparator::configureDac(ZERO_CROSSING_DAC_THRESHOLD, CmpDacSource_Vdda);
-   ZeroCrossingComparator::selectInputs(ZeroCrossingInput, Cmp0Input_Cmp0Dac);
-   ZeroCrossingComparator::setCallback(zero_crossing_cb);
-   ZeroCrossingComparator::enableInterrupts(CmpInterrupt_Falling);
-   ZeroCrossingComparator::enableNvicInterrupts(NvicPriority_Normal);
+   // Current limit based on transformer AMPS (160 VA, 24Vrms, 20% overload)
+   static constexpr float CURRENT_LIMIT = 1.2 * 1.414 * (160.0/24.0);  // 11.3 A
+
+   static_assert((CURRENT_LIMIT*OVERLOAD_VOLT_PER_AMP)<CMP_REF_VOLTAGE); // ~1.8V
+
+   // Threshold for zero-crossing comparator
+   static constexpr uint8_t ZERO_CROSSING_DAC_THRESHOLD =
+         (CURRENT_LIMIT*OVERLOAD_VOLT_PER_AMP)*(zeroCrossingComparator.MAXIMUM_DAC_VALUE/CMP_REF_VOLTAGE);
+
+   zeroCrossingComparator.configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
+   zeroCrossingComparator.setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 255);
+   zeroCrossingComparator.setInputs();
+   zeroCrossingComparator.configureDac(ZERO_CROSSING_DAC_THRESHOLD, CmpDacSource_Vdda);
+   zeroCrossingComparator.selectInputs(zeroCrossingComparator.Input_ZeroCrossingInput, zeroCrossingComparator.Input_CmpDac);
+   zeroCrossingComparator.setCallback(zero_crossing_cb);
+   zeroCrossingComparator.enableInterrupts(CmpInterrupt_Falling);
+   zeroCrossingComparator.enableNvicInterrupts(NvicPriority_MidHigh);
 
    // Over-current detection using external comparator and pin IRQ
    static CmpCallbackFunction overcurrent_cb = [](CmpStatus){
@@ -92,48 +96,48 @@ void Control::initialise() {
       control.setNeedsRefresh();
    };
 
-   // Threshold for over-current comparator
-   static constexpr uint8_t OVERCURRENT_DAC_THRESHOLD = 1.0*(OverCurrentComparator::MAXIMUM_DAC_VALUE/ADC_REF_VOLTAGE);
+   // Threshold for over-current comparator (0.305 V/A) (10Apeak limit ~3.05V)
+   static constexpr uint8_t OVERCURRENT_DAC_THRESHOLD = 1.5*(overCurrentComparator.MAXIMUM_DAC_VALUE/CMP_REF_VOLTAGE);
 
-   OverCurrentComparator::configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
-   OverCurrentComparator::setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 20);
-   OverCurrentComparator::setInputs();
-   OverCurrentComparator::configureDac(OVERCURRENT_DAC_THRESHOLD, CmpDacSource_Vdda);
-   OverCurrentComparator::selectInputs(OverCurrentInput, Cmp1Input_Cmp1Dac);
-   OverCurrentComparator::setCallback(overcurrent_cb);
-   OverCurrentComparator::enableInterrupts(CmpInterrupt_Rising);
-   OverCurrentComparator::enableNvicInterrupts(NvicPriority_Normal);
+   overCurrentComparator.configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
+   overCurrentComparator.setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 20);
+   overCurrentComparator.setInputs();
+   overCurrentComparator.configureDac(OVERCURRENT_DAC_THRESHOLD, CmpDacSource_Vdda);
+   overCurrentComparator.selectInputs(overCurrentComparator.Input_Overcurrent, overCurrentComparator.Input_CmpDac);
+   overCurrentComparator.setCallback(overcurrent_cb);
+   overCurrentComparator.enableInterrupts(CmpInterrupt_Rising);
+   overCurrentComparator.enableNvicInterrupts(NvicPriority_High);
 
-   // Set up bias resistors for measurements
-   BiasEnable::setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Slow);
+   // Set up multiplexor for measurements
+   amplifierControl.setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Slow);
 
-   // Enable control of Mux
-   AnalogueMultiplexorEnable::setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Slow);
+   // Enable amplifier input clamp
+   clamp.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
 }
 
 /**
  * Toggle the enable state of a channel.
  *
- * @param ch Channel to modify
+ * @param chNum Channel to modify
  */
-void Control::toggleEnable(unsigned ch) {
-   Channel &channel = channels[ch];
+void Control::toggleEnable(unsigned chNum) {
+   Channel &channel = channels[chNum];
    if (channel.getState() == ch_off) {
-      enable(ch);
+      enable(chNum);
    }
    else {
-      disable(ch);
+      disable(chNum);
    }
 }
 
 /**
  * Enable channel.
  *
- * @param ch Channel to enable
+ * @param chNum Channel to enable
  */
-void Control::enable(unsigned ch) {
+void Control::enable(unsigned chNum) {
 
-   Channel &channel = channels[ch];
+   Channel &channel = channels[chNum];
 
    channel.setState(ch_active);
    doReportPidTitle = true;
@@ -142,12 +146,13 @@ void Control::enable(unsigned ch) {
 
 /**
  * Disable channel.
+ * The other channel may become selected if enabled.
  *
- * @param ch Channel to disable
+ * @param chNum Channel to disable
  */
-void Control::disable(unsigned ch) {
+void Control::disable(unsigned chNum) {
 
-   Channel &channel = channels[ch];
+   Channel &channel = channels[chNum];
 
    channel.setState(ch_off);
 }
@@ -168,8 +173,14 @@ void Control::changeTemp(int16_t delta) {
    channel.setUserTemperature(targetTemperature);
 }
 
-/// Delay between zero crossing and sampling (ADC conversion start) (us)
-static constexpr unsigned SAMPLE_DELAY  = 500;
+/// Extra settling time on initial measurement or when changing gain
+static constexpr unsigned INITAL_SAMPLE_DELAY     = 0;
+
+/// Settling time for high gain amplifier
+static constexpr unsigned HIGH_GAIN_SAMPLE_DELAY  = 200;
+
+/// Settling time for low gain amplifier
+static constexpr unsigned LOW_GAIN_SAMPLE_DELAY   = 100;
 
 /**
  * Comparator interrupt handler for controlling the heaters.
@@ -178,24 +189,33 @@ static constexpr unsigned SAMPLE_DELAY  = 500;
  */
 void Control::zeroCrossingHandler() {
 
-   // Schedule ADC conversions
-   static PitCallbackFunction cb = [](){
-      // Do chip temperature measurement
-      // This also starts the entire sequence of chained conversions
-      // This is delayed until after the thermocouple amplifier has recovered
-      // from being over-driven during the previous cycle.
-      ChipTemperature::startConversion(AdcInterrupt_Enabled);
-   };
-   ControlTimerChannel::oneShotInMicroseconds(cb, 500+SAMPLE_DELAY);
+   DebLed xx;
 
+   if (holdOff) {
+       return;
+   }
+
+   holdOff = true;
+
+//   // Schedule ADC conversions
+//   static PitCallbackFunction cb = [](){
+//      DebLed xx;
+//      // Do chip temperature measurement
+//      // This also starts the entire sequence of chained conversions
+//      // This is delayed until after the thermocouple amplifier has recovered
+//      // from being over-driven during the previous cycle.
+//      chipTemperatureAdcChannel.startConversion(AdcInterrupt_Enabled);
+//   };
+//   controlTimerChannel.oneShotInMicroseconds(cb, INITAL_SAMPLE_DELAY);
+//
 //   Debug::set();
 
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
 
    // Turn off drives
-   Ch1Drive::write(0b00);
-   Ch2Drive::write(0b00);
+   ch1Drive.write(0b00);
+   ch2Drive.write(0b00);
 
    // Counter to initiate screen refresh
    static unsigned refreshCount = 0;
@@ -212,40 +232,40 @@ void Control::zeroCrossingHandler() {
    }
 
    // Get measurements to do
-   int sequenceLength;
-   sequenceLength  = ch1.measurement->getMeasurementSequence(sequence, CH1_MASK);
+   int sequenceLength = 0;
+   sequenceLength += ch1.measurement->getMeasurementSequence(sequence+sequenceLength, CH1_MASK);
    sequenceLength += ch2.measurement->getMeasurementSequence(sequence+sequenceLength, CH2_MASK);
    sequence[sequenceLength] = MuxSelect_Complete;
 
-   // Used to sort measurements according to BIAS settings
+   // Used to sort measurements according to AMPLIFIER and BIAS settings
    // Avoids enabling/disabling bias multiple times
-   auto comp = [](const void *p1, const void *p2) {
+   static auto comp = [](const void *p1, const void *p2) {
       const MuxSelect *left  = static_cast<const MuxSelect*>(p1);
       const MuxSelect *right = static_cast<const MuxSelect*>(p2);
-      return (*left&BIAS_MASK)-(*right&BIAS_MASK);
+      return ((*right^BIAS_MASK)&(AMPLIFIER_MASK|BIAS_MASK))-((*left^BIAS_MASK)&(AMPLIFIER_MASK|BIAS_MASK));
    };
 
-   // Sort so there is only a single bias change in sequence (excludes sentinel value)
+   // Sort (excluding sentinel value) so that:
+   // - High-gain measurements are done first. This prevents saturation of the high gain amplifier.
+   // - Bias is only changed once in sequence
    qsort(sequence, sequenceLength, sizeof(sequence[0]), comp);
 
    // Restart sequence
    sequenceIndex = 0;
 
-   // Need to configure AnalogueMultiplexor field as some pins are shared with analogue function
-   AnalogueMultiplexor::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
-
    // Set up initial measurement arrangement (including bias and gain)
-   AnalogueMultiplexor::write(sequence[0]);
-   AnalogueMultiplexorEnable::on();
+   amplifierControl.write(sequence[0]);
 
-   //   Debug::clear();
+   // Do chip temperature measurement
+   // This also starts the entire sequence of chained conversions
+   chipTemperatureAdcChannel.startConversion(AdcInterrupt_Enabled);
 }
 
 /**
  * Interrupt handler for ADC conversions
  *
- * @param[in] result  Conversion result from ADC channel
- * @param[in] channel ADC channel providing the result
+ * @param [in] result     Conversion result from ADC channel
+ * @param [in] adcChannel ADC channel providing the result
  *
  *   Initial conversion is started from zeroCrossingHandler().
  *   Several consecutive conversions are then chained in sequence.
@@ -258,63 +278,130 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
 
-   if (adcChannel == ChipTemperature::CHANNEL) {
+   DebLed db;
+
+   clamp.on();
+
+   if (adcChannel == chipTemperatureAdcChannel.CHANNEL) {
       // First conversion in sequence
       // Process chip temperature
-      chipTemperature.accumulate(result);
+      chipTemperatureAverage.accumulate(result);
+
+      // Unclamp amplifier inputs (mux output)
+      // Delayed to here to allow drive to drop
+      clamp.off();
+   }
+   else if (adcChannel == ch1Identify.CHANNEL) {
+      ch2Identify.startConversion(AdcInterrupt_Enabled);
+      ch1.setIdValue(result);
+      return;
+   }
+   else if (adcChannel == ch2Identify.CHANNEL) {
+      ch2.setIdValue(result);
+
+      // Need to configure amplifierControl field as some pins are shared with analogue function
+      // Default to 1st conversion to reduce likelihood of disturbance
+      amplifierControl.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
+      amplifierControl.write(sequence[0]);
+
+      // Allow new sequence
+      holdOff = false;
+      return;
    }
    else {
-      // Process last measurement
-      if ((lastConversion & CHANNEL_MASK) != 0) {
-         ch1.measurement->processMeasurement((MuxSelect)(lastConversion&~CHANNEL_MASK), result);
+      switch(lastConversion&(CHANNEL_MASK|AB_MASK)) {
+         // For debug breakpoints
+         case CH1_MASK|CHA_MASK :
+            __asm__("nop");
+            break;
+         case CH1_MASK|CHB_MASK :
+            __asm__("nop");
+            break;
+         case CH2_MASK|CHA_MASK :
+            __asm__("nop");
+            break;
+         case CH2_MASK|CHB_MASK :
+            __asm__("nop");
+            break;
+         default:
+            __asm__("nop");
+            break;
+      }
+      // Process last measurement - pass measurement to correct channel
+      uint8_t lastChannelUsed = lastConversion & CHANNEL_MASK;
+      lastConversion = static_cast<MuxSelect>(lastConversion&~CHANNEL_MASK);
+      if (lastChannelUsed == CH1_MASK) {
+         ch1.measurement->processMeasurement(lastConversion, result);
       }
       else {
-         ch2.measurement->processMeasurement((MuxSelect)(lastConversion&~CHANNEL_MASK), result);
+         ch2.measurement->processMeasurement(lastConversion, result);
       }
    }
-
    // Get conversion to start this cycle
    MuxSelect currentConversion = sequence[sequenceIndex++];
 
    if (currentConversion == MuxSelect_Complete) {
-      // Completed all channel sequences
+      // Completed all thermocouple/thermistor conversion sequences
 
-      // Disable mux to prevent op-amp gross saturation (I hope)
-      AnalogueMultiplexorEnable::off();
+      // Clamp amplifier input to prevent op-amp saturation
+      clamp.on();
 
-      // Disable bias
-      BiasEnable::off();
-
-      // Re-use some mux pins as analogue inputs
-      Identify1::setInput();
-      Identify2::setInput();
-
-      // Run PID
+      // Run PID and update drive
       pidHandler();
+
+      // Need to configure amplifierControl field as some pins are shared with analogue function
+      // Default to 1st conversion to reduce likelihood of disturbance
+//      amplifierControl.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
+      amplifierControl.write(sequence[0]);
+
+      // Allow new sequence
+      holdOff = false;
+
+      // Re-use some multiplexor pins as analogue inputs
+      ch1Identify.setInput();
+      ch2Identify.setInput();
+
+//      // Start 1st channel ID conversion
+      ch1Identify.startConversion(AdcInterrupt_Enabled);
 
       return;
    }
 
-   // Need extra time if bias is changed
-   bool biasChange = (currentConversion ^ lastConversion) & BIAS_MASK;
+   // Set up multiplexor, bias and gain boost in hardware
+   amplifierControl.write(currentConversion);
 
-   BiasEnable::write(currentConversion&BIAS_MASK);
-   AnalogueMultiplexor::write(currentConversion);
+   // Need extra time if bias has changed
+//   bool biasHasChange = (currentConversion ^ lastConversion) & BIAS_MASK;
+
+   // Allow extra time for high gain amplifier to settle
+   bool isHighGainAmplifier = (currentConversion & AMPLIFIER_MASK);
 
    // Last is now current!
    lastConversion = currentConversion;
 
    // Schedule next ADC conversion
-   // This is delayed to allow for mux and bias settling time
+   // This is delayed to allow for mux, bias and amplifier settling time
    static PitCallbackFunction cb = [](){
-      if (lastConversion&HIGH_MASK) {
-         HighGainAdcChannel::startConversion(AdcInterrupt_Enabled);
+      DebLed db;
+      if (lastConversion&AMPLIFIER_MASK) {
+         highGainAdcChannel.startConversion(AdcInterrupt_Enabled);
       }
       else {
-         LowGainAdcChanel::startConversion(AdcInterrupt_Enabled);
+         lowGainAdcChannel.startConversion(AdcInterrupt_Enabled);
       }
    };
-   ControlTimerChannel::oneShotInMicroseconds(cb, biasChange?100:50);
+   // Allow extra settling time on 1st sample
+   unsigned delay = (sequenceIndex == 1)?INITAL_SAMPLE_DELAY:0;
+
+   // Longer settling time for high-gain amplifier
+   delay += isHighGainAmplifier?HIGH_GAIN_SAMPLE_DELAY:LOW_GAIN_SAMPLE_DELAY;
+
+   // Longer time for bias turning on
+//   delay += biasHasChange?INITAL_SAMPLE_DELAY:0;
+
+   clamp.off();
+
+   controlTimerChannel.oneShotInMicroseconds(cb, delay);
 }
 
 /**
@@ -322,21 +409,12 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
  * This includes the heater drives
  */
 void Control::pidHandler() {
+   debug.off();
 
-   Channel &ch1 = channels[1];
-   Channel &ch2 = channels[2];
+   channels[1].update();
+   channels[2].update();
 
-   // Update drive to heaters as needed
-   ch1.updateDrive();
-   ch2.updateDrive();
-
-   // Calculate current temperatures
-   ch1.upDateCurrentTemperature();
-   ch2.upDateCurrentTemperature();
-
-   // Update averages and run PID
-   ch1.upDatePid();
-   ch2.upDatePid();
+   debug.on();
 }
 
 /**
@@ -345,8 +423,13 @@ void Control::pidHandler() {
 void Control::refresh() {
    needRefresh = false;
 
-   // Update display
-   display.displayChannels();
+   if (isDisplayInUse()) {
+      // Update display
+      display.displayChannels();
+   }
+   else {
+      display.enable(false);
+   }
 }
 
 /**
@@ -368,14 +451,11 @@ void Control::reportPid(Channel &ch) {
 
    doReportPid = false;
 
-   if (doReportPidTitle) {
+   if (ch.isRunning()) {
+      ch.report(doReportPidTitle);
       doReportPidTitle = false;
-      ch.controller.reportHeading(ch);
+      console.resetFormat();
    }
-   if (ch.controller.isEnabled()) {
-      ch.controller.report(ch);
-   }
-   console.resetFormat();
 }
 
 /**
@@ -403,11 +483,20 @@ void Control::eventLoop()  {
          continue;
       }
 
+      if (!isDisplayInUse()) {
+         // Fix display
+         wakeUpDisplay();
+         refresh();
+
+         // Ignore event that woke screen
+         continue;
+      }
+
       // Assume visible change due to event
       setNeedsRefresh();
 
-      //         console.write("Position = ").write(event.change).write(", Event = ").writeln(getEventName(event));
-      //         console.write("Event = ").writeln(getEventName(event));
+//      console.write("Position = ").write(event.change).write(", Event = ").writeln(getEventName(event));
+//      console.write("Event = ").writeln(getEventName(event));
 
       switch(event.type) {
          case ev_Ch1Hold      :
@@ -421,11 +510,21 @@ void Control::eventLoop()  {
             break;
 
          case ev_Ch1Release      :
-            channels.setSelectedChannel(1);
+            if (channels.getSelectedChannelNumber() == 1) {
+               channels[1].nextPreset();
+            }
+            else {
+               channels.setSelectedChannel(1);
+            }
             break;
 
          case ev_Ch2Release      :
-            channels.setSelectedChannel(2);
+            if (channels.getSelectedChannelNumber() == 2) {
+               channels[2].nextPreset();
+            }
+            else {
+               channels.setSelectedChannel(2);
+            }
             break;
 
          case ev_QuadRelease   :
@@ -441,11 +540,6 @@ void Control::eventLoop()  {
             break;
 
          case ev_SelRelease :
-            channels.getSelectedChannel().nextPreset();
-            break;
-
-         case ev_SelHold :
-         case ev_QuadHold :
             disable(1);
             disable(2);
 
@@ -458,4 +552,35 @@ void Control::eventLoop()  {
          default: break;
       }
    }
+}
+
+/**
+ * Checks if display is in use
+ *
+ * @param milliseconds Amount to increment the idle time by
+ */
+void Control::updateDisplayInUse(unsigned milliseconds) {
+   if (channels[1].isToolIdle() && channels[2].isToolIdle()) {
+      idleTime += milliseconds;
+   }
+   else {
+      idleTime = 0;
+   }
+}
+
+void Control::wakeUpDisplay() {
+   idleTime = 0;
+}
+
+/**
+ * Checks is the display is in use
+ * Considered in use for 2 minutes after any activity or while either channel is on
+ *
+ * @return True  Display is needed
+ * @return False Display may be turned off
+ */
+bool Control::isDisplayInUse() {
+   static constexpr unsigned DISPLAY_OFF_TIME = 300*1000; // milliseconds
+
+   return (idleTime<DISPLAY_OFF_TIME);
 }

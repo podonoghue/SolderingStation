@@ -8,70 +8,135 @@
    <item key="$$DeviceInfo_Device_Variant"                 value="MK20DX128VLF5" />
    <item key="$$DeviceInfo_SubFamily"                      value="MK20D5" />
    <item key="$$Hardware_Source_Filename"                  value="MK20D5.usbdmHardware" />
-   <item key="$signal$ADC0_DM0_descriptionSetting"         value="LOW_GAIN_AMP" />
-   <item key="$signal$ADC0_DP0_descriptionSetting"         value="HIGH_GAIN_AMP" />
-   <item key="$signal$BandGap_descriptionSetting"          value="Not used" />
+   <item key="$peripheral$ADC0_codeIdentifier"             value="MeasurementADC" />
+   <item key="$peripheral$ADC0_userDescription"            value="Measurement ADC" />
+   <item key="$peripheral$CMP0_codeIdentifier"             value="ZeroCrossingComparator" />
+   <item key="$peripheral$CMP0_userDescription"            value="Mains zero-crossing comparator" />
+   <item key="$peripheral$CMP1_codeIdentifier"             value="OverCurrentComparator" />
+   <item key="$peripheral$CMP1_userDescription"            value="Over-current comparator" />
+   <item key="$peripheral$FTM0_codeIdentifier"             value="driveFtm" />
+   <item key="$peripheral$FTM0_userDescription"            value="FTM used for channel drive (optional)" />
+   <item key="$pin$PTA0_muxSetting_mux7(7)"                value="mux7" />
+   <item key="$pin$PTA18_muxSetting_mux0(0)"               value="mux0" />
+   <item key="$pin$PTA19_muxSetting_mux0(0)"               value="mux0" />
+   <item key="$pin$PTA1_muxSetting_mux2(2)"                value="mux2" />
+   <item key="$pin$PTA2_muxSetting_mux2(2)"                value="mux2" />
+   <item key="$pin$PTA3_muxSetting_mux7(7)"                value="mux7" />
+   <item key="$pin$PTA4_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTB0_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTB16_muxSetting_mux1(1)"               value="mux1" />
+   <item key="$pin$PTB17_muxSetting_mux1(1)"               value="mux1" />
+   <item key="$pin$PTB1_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTB2_muxSetting_mux2(2)"                value="mux2" />
+   <item key="$pin$PTB3_muxSetting_mux2(2)"                value="mux2" />
+   <item key="$pin$PTC0_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTC1_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTC2_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTC3_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTC4_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTC5_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTC6_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTC7_muxSetting_mux0(0)"                value="mux0" />
+   <item key="$pin$PTD0_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTD1_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTD2_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTD3_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTD4_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$pin$PTD5_muxSetting_mux0(0)"                value="mux0" />
+   <item key="$pin$PTD5_muxSetting_mux1(1)"                value="mux0" />
+   <item key="$pin$PTD6_muxSetting_mux0(0)"                value="mux0" />
+   <item key="$pin$PTD6_muxSetting_mux1(1)"                value="mux0" />
+   <item key="$pin$PTD7_muxSetting_mux1(1)"                value="mux1" />
+   <item key="$signal$ADC0_SE0_codeIdentifier"             value="highGainAdcChannel" />
+   <item key="$signal$ADC0_SE0_descriptionSetting"         value="ADC channel connected to high gain  amplifier" />
+   <item key="$signal$ADC0_SE19_codeIdentifier"            value="lowGainAdcChannel" />
+   <item key="$signal$ADC0_SE19_descriptionSetting"        value="ADC channel connected to low gain  amplifier" />
+   <item key="$signal$ADC0_SE26_codeIdentifier"            value="chipTemperatureAdcChannel" />
+   <item key="$signal$ADC0_SE26_descriptionSetting"        value="Internal temperature sensor T = (25 - (Tvolts-0.719)/.001715)" />
+   <item key="$signal$ADC0_SE4b_codeIdentifier"            value="adc0_se4" />
+   <item key="$signal$ADC0_SE6b_codeIdentifier"            value="Ch1Identify" />
+   <item key="$signal$ADC0_SE7b_codeIdentifier"            value="Ch2Identify" />
+   <item key="$signal$CMP0_IN1_codeIdentifier"             value="ZeroCrossingInput" />
+   <item key="$signal$CMP0_IN1_descriptionSetting"         value="AC zero Crossing Detector Comparator input" />
+   <item key="$signal$CMP1_IN0_codeIdentifier"             value="cmp1_in0" />
+   <item key="$signal$CMP1_IN5_codeIdentifier"             value="Overcurrent" />
+   <item key="$signal$CMP1_IN5_descriptionSetting"         value="Over-current Detector Comparator input" />
+   <item key="$signal$EXTAL0_descriptionSetting"           value="EXTAL_16MHz" />
    <item key="$signal$EXTAL32_descriptionSetting"          value="N/C" />
-   <item key="$signal$PTA0_descriptionSetting"             value="SWD_CLK" />
-   <item key="$signal$PTA0_muxSetting"                     value="mux7" />
-   <item key="$signal$PTA18_descriptionSetting"            value="EXTAL_16MHz" />
-   <item key="$signal$PTA18_muxSetting"                    value="mux0" />
-   <item key="$signal$PTA19_descriptionSetting"            value="XTAL_16MHz" />
-   <item key="$signal$PTA19_muxSetting"                    value="mux0" />
-   <item key="$signal$PTA1_descriptionSetting"             value="SWD_Rx" />
-   <item key="$signal$PTA1_muxSetting"                     value="mux2" />
-   <item key="$signal$PTA2_descriptionSetting"             value="SWD_Tx" />
-   <item key="$signal$PTA2_muxSetting"                     value="mux2" />
-   <item key="$signal$PTA3_descriptionSetting"             value="SWD_DIO" />
-   <item key="$signal$PTA3_muxSetting"                     value="mux7" />
-   <item key="$signal$PTA4_descriptionSetting"             value="SPARE" />
-   <item key="$signal$PTA4_muxSetting"                     value="mux1" />
-   <item key="$signal$PTB0_descriptionSetting"             value="QUAD_B" />
-   <item key="$signal$PTB0_muxSetting"                     value="mux6" />
-   <item key="$signal$PTB16_descriptionSetting"            value="CH1_SB" />
-   <item key="$signal$PTB16_muxSetting"                    value="mux1" />
-   <item key="$signal$PTB17_descriptionSetting"            value="CH2_SB" />
-   <item key="$signal$PTB17_muxSetting"                    value="mux1" />
-   <item key="$signal$PTB1_descriptionSetting"             value="QUAD_A" />
-   <item key="$signal$PTB1_muxSetting"                     value="mux6" />
-   <item key="$signal$PTB2_descriptionSetting"             value="SCL" />
-   <item key="$signal$PTB2_muxSetting"                     value="mux2" />
-   <item key="$signal$PTB3_descriptionSetting"             value="SDA" />
-   <item key="$signal$PTB3_muxSetting"                     value="mux2" />
-   <item key="$signal$PTC0_descriptionSetting"             value="CH1_SEL_LED" />
-   <item key="$signal$PTC0_muxSetting"                     value="mux1" />
-   <item key="$signal$PTC1_descriptionSetting"             value="CH1a_DRIVEn" />
-   <item key="$signal$PTC1_muxSetting"                     value="mux4" />
-   <item key="$signal$PTC2_descriptionSetting"             value="CH1b_DRIVEn" />
-   <item key="$signal$PTC2_muxSetting"                     value="mux4" />
-   <item key="$signal$PTC3_descriptionSetting"             value="CH2a_DRIVEn" />
-   <item key="$signal$PTC3_muxSetting"                     value="mux4" />
-   <item key="$signal$PTC4_descriptionSetting"             value="CH2b_DRIVEn" />
-   <item key="$signal$PTC4_muxSetting"                     value="mux4" />
-   <item key="$signal$PTC5_descriptionSetting"             value="MUX_EN" />
-   <item key="$signal$PTC5_muxSetting"                     value="mux1" />
-   <item key="$signal$PTC6_descriptionSetting"             value="CH2_SEL_LED" />
-   <item key="$signal$PTC6_muxSetting"                     value="mux1" />
-   <item key="$signal$PTC7_descriptionSetting"             value="AC_REF" />
-   <item key="$signal$PTC7_muxSetting"                     value="mux0" />
-   <item key="$signal$PTD0_descriptionSetting"             value="QUAD_BTN" />
-   <item key="$signal$PTD0_muxSetting"                     value="mux1" />
-   <item key="$signal$PTD1_descriptionSetting"             value="CH2_BTN" />
-   <item key="$signal$PTD1_muxSetting"                     value="mux1" />
-   <item key="$signal$PTD2_descriptionSetting"             value="CH1_BTN" />
-   <item key="$signal$PTD2_muxSetting"                     value="mux1" />
-   <item key="$signal$PTD3_descriptionSetting"             value="SEL_BTN" />
-   <item key="$signal$PTD3_muxSetting"                     value="mux1" />
-   <item key="$signal$PTD4_descriptionSetting"             value="GAIN_ENABLE" />
-   <item key="$signal$PTD4_muxSetting"                     value="mux1" />
-   <item key="$signal$PTD5_descriptionSetting"             value="MUX_SEL0/ID1" />
-   <item key="$signal$PTD5_muxSetting"                     value="mux0" />
-   <item key="$signal$PTD6_descriptionSetting"             value="MUX_SEL1/ID2" />
-   <item key="$signal$PTD6_muxSetting"                     value="mux0" />
-   <item key="$signal$PTD7_descriptionSetting"             value="BIAS_ENABLE" />
-   <item key="$signal$PTD7_muxSetting"                     value="mux1" />
+   <item key="$signal$FTM0_CH0_codeIdentifier"             value="Ch1aDrive" />
+   <item key="$signal$FTM0_CH1_codeIdentifier"             value="Ch1bDrive" />
+   <item key="$signal$FTM0_CH2_codeIdentifier"             value="Ch2aDrive" />
+   <item key="$signal$FTM0_CH3_codeIdentifier"             value="Ch2bDrive" />
+   <item key="$signal$FTM1_CH0_codeIdentifier"             value="QuadPhasesA" />
+   <item key="$signal$FTM1_CH1_codeIdentifier"             value="QuadPhasesB" />
+   <item key="$signal$GPIOA_0_codeIdentifier"              value="gpioa0x" />
+   <item key="$signal$GPIOA_4_codeIdentifier"              value="debug" />
+   <item key="$signal$GPIOA_4_descriptionSetting"          value="Spare pin for debugging" />
+   <item key="$signal$GPIOB_0_codeIdentifier"              value="QuadPhases" />
+   <item key="$signal$GPIOB_0_descriptionSetting"          value="Quadrature Encoder pins" />
+   <item key="$signal$GPIOB_0_polarity"                    value="true" />
+   <item key="$signal$GPIOB_16_codeIdentifier"             value="Setbacks" />
+   <item key="$signal$GPIOB_16_descriptionSetting"         value="Stand sensors" />
+   <item key="$signal$GPIOB_16_polarity"                   value="true" />
+   <item key="$signal$GPIOB_17_codeIdentifier"             value="Setbacks" />
+   <item key="$signal$GPIOB_17_descriptionSetting"         value="Stand sensors" />
+   <item key="$signal$GPIOB_17_polarity"                   value="true" />
+   <item key="$signal$GPIOB_1_codeIdentifier"              value="QuadPhases" />
+   <item key="$signal$GPIOB_1_descriptionSetting"          value="Quadrature Encoder pins" />
+   <item key="$signal$GPIOB_1_polarity"                    value="true" />
+   <item key="$signal$GPIOC_0_codeIdentifier"              value="Ch1SelectedLed" />
+   <item key="$signal$GPIOC_0_descriptionSetting"          value="Channel 1 Selected LED" />
+   <item key="$signal$GPIOC_1_codeIdentifier"              value="Ch1Drive" />
+   <item key="$signal$GPIOC_1_descriptionSetting"          value="Channel 1 Drive " />
+   <item key="$signal$GPIOC_1_polarity"                    value="true" />
+   <item key="$signal$GPIOC_2_codeIdentifier"              value="Ch1Drive" />
+   <item key="$signal$GPIOC_2_descriptionSetting"          value="Channel 1 Drive " />
+   <item key="$signal$GPIOC_2_polarity"                    value="true" />
+   <item key="$signal$GPIOC_3_codeIdentifier"              value="Ch2Drive" />
+   <item key="$signal$GPIOC_3_descriptionSetting"          value="Channel 2 Drive" />
+   <item key="$signal$GPIOC_3_polarity"                    value="true" />
+   <item key="$signal$GPIOC_4_codeIdentifier"              value="Ch2Drive" />
+   <item key="$signal$GPIOC_4_descriptionSetting"          value="Channel 2 Drive" />
+   <item key="$signal$GPIOC_4_polarity"                    value="true" />
+   <item key="$signal$GPIOC_5_codeIdentifier"              value="Clamp" />
+   <item key="$signal$GPIOC_5_descriptionSetting"          value="Controls clamp at input of amplifier chain (output of mux)" />
+   <item key="$signal$GPIOC_6_codeIdentifier"              value="Ch2SelectedLed" />
+   <item key="$signal$GPIOC_6_descriptionSetting"          value="Channel 2 Selected LED" />
+   <item key="$signal$GPIOD_0_codeIdentifier"              value="QuadButton/Buttons" />
+   <item key="$signal$GPIOD_0_descriptionSetting"          value="Quadrature encoder centre button/All buttons for polling" />
+   <item key="$signal$GPIOD_0_polarity"                    value="true" />
+   <item key="$signal$GPIOD_1_codeIdentifier"              value="Ch2Button/Buttons" />
+   <item key="$signal$GPIOD_1_descriptionSetting"          value="Channel 2 Button" />
+   <item key="$signal$GPIOD_1_polarity"                    value="true" />
+   <item key="$signal$GPIOD_2_codeIdentifier"              value="Ch1Button/Buttons" />
+   <item key="$signal$GPIOD_2_descriptionSetting"          value="Channel 1 Button" />
+   <item key="$signal$GPIOD_2_polarity"                    value="true" />
+   <item key="$signal$GPIOD_3_codeIdentifier"              value="MenuButton/Buttons" />
+   <item key="$signal$GPIOD_3_descriptionSetting"          value="MenuButton" />
+   <item key="$signal$GPIOD_3_polarity"                    value="true" />
+   <item key="$signal$GPIOD_4_codeIdentifier"              value="amplifierControl/highGainEnable" />
+   <item key="$signal$GPIOD_4_descriptionSetting"          value="Mux&amp;amplifier control/Gain boost enable on amplifier" />
+   <item key="$signal$GPIOD_4_polarity"                    value="true" />
+   <item key="$signal$GPIOD_5_codeIdentifier"              value="amplifierControl" />
+   <item key="$signal$GPIOD_5_descriptionSetting"          value="MUX_SEL0/ID1" />
+   <item key="$signal$GPIOD_6_codeIdentifier"              value="amplifierControl" />
+   <item key="$signal$GPIOD_6_descriptionSetting"          value="MUX_SEL1/ID2" />
+   <item key="$signal$GPIOD_7_codeIdentifier"              value="amplifierControl/biasEnable" />
+   <item key="$signal$GPIOD_7_descriptionSetting"          value="/Bias enable on amplifier input" />
+   <item key="$signal$I2C0_SCL_descriptionSetting"         value="I2C SCL (oled)" />
+   <item key="$signal$I2C0_SDA_descriptionSetting"         value="I2C SDA (oled)" />
+   <item key="$signal$PIT_CH0_codeIdentifier"              value="PollingTimerChannel" />
+   <item key="$signal$PIT_CH0_descriptionSetting"          value="PIT Channel to use for switch polling" />
+   <item key="$signal$PIT_CH1_codeIdentifier"              value="ControlTimerChannel" />
+   <item key="$signal$PIT_CH1_descriptionSetting"          value="PIT Channel to use for sample and control timing" />
+   <item key="$signal$RESET_b_codeIdentifier"              value="reset" />
    <item key="$signal$RESET_b_descriptionSetting"          value="Reset_b" />
-   <item key="$signal$TempSensor_descriptionSetting"       value="Chip Temperature" />
+   <item key="$signal$SWD_CLK_codeIdentifier"              value="swd" />
+   <item key="$signal$SWD_CLK_descriptionSetting"          value="SWD_CLK" />
+   <item key="$signal$SWD_DIO_codeIdentifier"              value="swdio" />
+   <item key="$signal$SWD_DIO_descriptionSetting"          value="SWD_DIO" />
+   <item key="$signal$UART0_RX_descriptionSetting"         value="SWD_Rx" />
+   <item key="$signal$UART0_TX_descriptionSetting"         value="SWD_Tx" />
    <item key="$signal$USB0_DM_descriptionSetting"          value="USB_DM" />
    <item key="$signal$USB0_DP_descriptionSetting"          value="USB_DP" />
    <item key="$signal$VBAT_descriptionSetting"             value="+3V3" />
@@ -81,11 +146,11 @@
    <item key="$signal$VOUT33_descriptionSetting"           value="+3V3" />
    <item key="$signal$VREFH_descriptionSetting"            value="3.00 V Reference" />
    <item key="$signal$VREFL_descriptionSetting"            value="Gnd" />
-   <item key="$signal$VREF_OUT_descriptionSetting"         value="OVERCURRENT" />
    <item key="$signal$VREGIN_descriptionSetting"           value="+3V3" />
    <item key="$signal$VSS1_descriptionSetting"             value="Gnd" />
    <item key="$signal$VSS2_descriptionSetting"             value="Gnd" />
    <item key="$signal$VSSA_descriptionSetting"             value="Gnd" />
+   <item key="$signal$XTAL0_descriptionSetting"            value="XTAL_16MHz" />
    <item key="$signal$XTAL32_descriptionSetting"           value="N/C" />
    <item key="/ADC0/adc_cfg1_adiclk"                       value="0" />
    <item key="/ADC0/adc_cfg1_adiv"                         value="3" />
@@ -95,7 +160,7 @@
    <item key="/CMP1/irqHandlingMethod"                     value="$ClassMethod" />
    <item key="/FTFL/peripheral_file"                       value="ftfl_32k_flexrom" />
    <item key="/GPIOB/irqHandlingMethod"                    value="$ClassMethod" />
-   <item key="/GPIOD/irqHandlingMethod"                    value="$ClassMethod" />
+   <item key="/LLWU/device_list"                           value="LPTMR0;CMP0;CMP1;;TSI;RTC_Alarm;;RTC_Seconds" />
    <item key="/MCG/ClockConfig[0]"                         value="ClockConfig_PEE_48MHz" />
    <item key="/MCG/ClockConfig[1]"                         value="ClockConfig_BLPE_4MHz" />
    <item key="/MCG/ClockConfig[2]"                         value="ClockConfig_FEE_40MHz" />
@@ -107,6 +172,7 @@
    <item key="/MCG/system_mcgfllclk_clock[2]"              value="80000000" />
    <item key="/OSC0/osc_input_freq"                        value="16000000" />
    <item key="/PIT/irqHandlingMethod"                      value="$ClassMethod" />
+   <item key="/RTC/configure_rtc"                          value="false" />
    <item key="/RTC/rtc_cr_osce"                            value="false" />
    <item key="/SIM/ClockConfig[0]"                         value="" />
    <item key="/SIM/ClockConfig[1]"                         value="" />
@@ -119,4 +185,5 @@
    <item key="/SIM/system_core_clock[2]"                   value="40000000" />
    <item key="/SIM/system_flash_clock[1]"                  value="1000000" />
    <item key="/SIM/system_flash_clock[2]"                  value="20000000" />
+   <item key="/UART0/mapPinsOnEnable"                      value="true" />
 </section>

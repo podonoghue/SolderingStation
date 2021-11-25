@@ -19,7 +19,7 @@
  */
 #include <stdint.h>
 #include "derivative.h"
-#include "hardware.h"
+#include "pin_mapping.h"
 #ifdef __CMSIS_RTOS
 #include "cmsis.h"
 #endif
@@ -182,15 +182,14 @@ protected:
 
 public:
 
-   volatile  SPI_Type * const spi; //!< SPI hardware
-
+   const HardwarePtr<SPI_Type> spi;  //!< SPI hardware
    /**
     * Calculate communication speed factors for SPI
     *
     * @param[in]  clockFrequency => Clock frequency of SPI in Hz
     * @param[in]  frequency      => Communication frequency in Hz
     *
-    * @return CTAR register value including SPI_CTAR_BR, SPI_CTAR_PBR fields
+    * @return CTAR register value only including SPI_CTAR_BR, SPI_CTAR_PBR fields
     *
     * Note: Chooses the highest speed that is not greater than frequency.
     */
@@ -199,8 +198,8 @@ public:
    /**
     * Calculate communication speed from SPI clock frequency and speed factors
     *
-    * @param[in]  clockFrequency => Clock frequency of SPI in Hz
-    * @param[in]  clockFactors   => CTAR register value providing SPI_CTAR_BR, SPI_CTAR_PBR fields
+    * @param[in]  clockFrequency  Clock frequency of SPI in Hz
+    * @param[in]  clockFactors    CTAR register value providing SPI_CTAR_BR, SPI_CTAR_PBR fields
     *
     * @return Clock frequency of SPI in Hz for these factors
     */
@@ -228,7 +227,7 @@ protected:
     *
     * @param[in]  baseAddress    Base address of SPI
     */
-   Spi(volatile SPI_Type *baseAddress) :
+   Spi(uint32_t baseAddress) :
       spi(baseAddress), pushrMask(0) {
    }
 
@@ -244,10 +243,8 @@ protected:
     *
     * @param[in]  clockFrequency => Clock frequency of SPI in Hz
     * @param[in]  delay          => Desired delay in seconds
-    * @param[in]  bestPrescale   => Best prescaler value (0=>/1, 1=>/3, 2=/5, 3=>/7)
-    * @param[in]  bestDivider    => Best divider value (N=>/(2**(N+1)))
-    *
-    * @return true
+    * @param[out] bestPrescale   => Best prescaler value (0=>/1, 1=>/3, 2=/5, 3=>/7)
+    * @param[out] bestDivider    => Best divider value (N=>/(2**(N+1)))
     *
     * Note: Determines bestPrescaler and bestDivider for the smallest delay that is not less than delay.
     */
@@ -557,9 +554,49 @@ public:
    void txRx(uint32_t dataSize, const T *txData, T *rxData=nullptr);
 
    /**
-    * Transmit and receive a value over SPI using current settings
+    *  Transmit and receive a series of values
     *
-    * @param[in] data Data to send (4-16 bits)
+    *  @tparam T Type for data transfer (may be inferred from parameters)
+    *
+    *  @param[in]  txData    Transmit bytes (tx-rx size is inferred from this array)
+    *  @param[out] rxData    Receive byte buffer
+    *
+    *  @note: rxData may use same buffer as txData
+    */
+   template<typename T, unsigned N>
+   void txRx(const T (&txData)[N], T rxData[]) {
+      txRx(N, txData, rxData);
+   }
+
+   /**
+    *  Transmit a series of values
+    *
+    *  @tparam T Type for data transfer (may be inferred from parameters)
+    *
+    *  @param[in]  txData    Transmit bytes (tx size is inferred from this array)
+    */
+   template<typename T, unsigned N>
+   void tx(const T (&txData)[N]) {
+      txRx(N, txData, (T*)nullptr);
+   }
+
+   /**
+    *  Transmit and receive a series of values
+    *
+    *  @tparam T Type for data transfer (may be inferred from parameters)
+    *
+    *  @param[out] rxData    Receive byte buffer (rx size is inferred from this array)
+    */
+   template<typename T, unsigned N>
+   void rx(T (&rxData)[N]) {
+      txRx(N, (T*)nullptr, rxData );
+   }
+
+   /**
+    * Transmit and receive a value over SPI
+    *
+    * @param[in] data - Data to send (4-16 bits) <br>
+    *                   May include other control bits as for PUSHR
     *
     * @return Data received
     */
@@ -573,7 +610,7 @@ public:
     *
     * @return Data received
     */
-   uint32_t txRxRaw(uint32_t value);
+   uint32_t txRxRaw(uint32_t data);
 
    /**
     *  Set Configuration\n
@@ -834,7 +871,7 @@ public:
     */
    static void __attribute__((always_inline)) configureAllPins() {
       // Configure pins
-      Info::initPCRs(PcrValue(PinPull_Up, PinDriveStrength_High,PinDriveMode_PushPull));
+      Info::initPCRs(PcrValue(PinPull_Up, PinDriveStrength_High,PinDriveMode_PushPull).value);
    }
 
    virtual void enablePins() override {
@@ -891,12 +928,12 @@ public:
    /**
     * Constructor
     */
-   SpiBase_T() : Spi(reinterpret_cast<volatile SPI_Type*>(&Info::spi())) {
+   SpiBase_T() : Spi(Info::baseAddress) {
 
       // Check pin assignments
-      static_assert(Info::info[0].gpioBit != UNMAPPED_PCR, "SPIx_SCK has not been assigned to a pin - Modify Configure.usbdm");
-      static_assert(Info::info[1].gpioBit != UNMAPPED_PCR, "SPIx_SIN has not been assigned to a pin - Modify Configure.usbdm");
-      static_assert(Info::info[2].gpioBit != UNMAPPED_PCR, "SPIx_SOUT has not been assigned to a pin - Modify Configure.usbdm");
+      static_assert(Info::info[Info::sckPin].gpioBit != UNMAPPED_PCR, "SPIx_SCK has not been assigned to a pin - Modify Configure.usbdm");
+      static_assert(Info::info[Info::sinPin].gpioBit != UNMAPPED_PCR, "SPIx_SIN has not been assigned to a pin - Modify Configure.usbdm");
+      static_assert(Info::info[Info::soutPin].gpioBit != UNMAPPED_PCR, "SPIx_SOUT has not been assigned to a pin - Modify Configure.usbdm");
 
       if (Info::mapPinsOnEnable) {
          configureAllPins();
@@ -936,9 +973,9 @@ public:
     */
    static uint32_t __attribute__((always_inline)) getStatus() {
       // Capture interrupt status
-      uint32_t status = Info::spi().SR;
+      uint32_t status = Info::spi->SR;
       // Clear captured flags
-      Info::spi().SR = status;
+      Info::spi->SR = status;
       // Return status
       return status;
    }
@@ -1024,12 +1061,7 @@ class Spi0 : public SpiBase_T<Spi0Info> {};
  *
  */
 class Spi1 : public SpiBase_T<Spi1Info> {};
-
 #endif
-/**
- * End SPI_Group
- * @}
- */
 
 #if defined(USBDM_SPI2_IS_DEFINED)
 /**
@@ -1046,12 +1078,7 @@ class Spi1 : public SpiBase_T<Spi1Info> {};
  *
  */
 class Spi2 : public SpiBase_T<Spi2Info> {};
-
 #endif
-/**
- * End SPI_Group
- * @}
- */
 
 #if defined(USBDM_SPI3_IS_DEFINED)
 /**
@@ -1068,7 +1095,6 @@ class Spi2 : public SpiBase_T<Spi2Info> {};
  *
  */
 class Spi3 : public SpiBase_T<Spi3Info> {};
-
 #endif
 /**
  * End SPI_Group

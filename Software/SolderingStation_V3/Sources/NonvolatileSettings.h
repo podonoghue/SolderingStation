@@ -1,5 +1,5 @@
-/*
- * NonvolatileSettings.h
+/**
+ * @file NonvolatileSettings.h
  *
  *  Created on: 11 Jun. 2021
  *      Author: peter
@@ -11,6 +11,7 @@
 #include "flash.h"
 #include "ChannelSettings.h"
 #include "Tips.h"
+#include "HardwareCalibration.h"
 
 /**
  * A derived class similar to this should be created to do the following:
@@ -25,6 +26,10 @@ class NonvolatileSettings : public USBDM::Flash {
    friend class Channels;
    friend class Menus;
    friend class Tips;
+
+public:
+   /// Settings for calibration of hardware
+   HardwareCalibration hardwareCalibration;
 
 private:
 

@@ -1,15 +1,13 @@
 /*
- *
+ * @file main.cpp
  */
 #include "hardware.h"
 #include "BootloaderInfo.h"
 #include "stringFormatter.h"
-#include "Peripherals.h"
 #include "Display.h"
 #include "SwitchPolling.h"
 #include "Channels.h"
 #include "Control.h"
-#include "pmc.h"
 #include "rcm.h"
 
 using namespace USBDM;
@@ -53,8 +51,8 @@ extern "C" {
 void _exit(int rc __attribute__((unused))) {
    for(;;) {
       // Disable drive on crash!
-      Ch1Drive::disablePins();
-      Ch1Drive::disablePins();
+      ch1Drive.disablePins();
+      ch2Drive.disablePins();
       __asm__("bkpt");
    }
 }
@@ -65,7 +63,7 @@ static constexpr unsigned HARDWARE_VERSION = HW_SOLDER_STATION_V3;
 static uint32_t magicNumber = 0;
 
 __attribute__((used))
-#ifdef RELEASE_BUILD
+#if defined(RELEASE_BUILD) && 0
 // Make bootloader information visible to linker
 // Triggers changes to memory map to suit bootloader
 __attribute__ ((section(".bootloader"))) extern
@@ -104,20 +102,43 @@ static void resetToBootloader() {
 
 int main() {
    // Power-on message
-   StringFormatter_T<40> sf;
-   sf.write("SW:V").writeln(bootInformation.softwareVersion)
-     .write("HW:").writeln(getHardwareType<HARDWARE_VERSION>());
-   display.showMessage("Starting", sf.toString());
-   waitMS(5000);
+//   StringFormatter_T<40> sf;
+//   sf.write("SW:V").writeln(bootInformation.softwareVersion)
+//     .write("HW:").writeln(getHardwareType<HARDWARE_VERSION>());
+//   display.showMessage("Starting", sf.toString());
+//   waitMS(5000);
 
-//   using Drive = Ch1Drive;
-//   Drive::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
-//   for(;;) {
-//      Drive::write(0b11);
-//      waitMS(10);
-//      Drive::write(0b00);
-//      waitMS(1000);
-//   }
+#if 0
+   ch1Drive.setOutput();
+   ch2Drive.setOutput();
+
+   analogueMultiplexor.setOutput();
+
+   bool toggle = false;
+
+   for(;;) {
+      display.enable(toggle);
+      toggle = !toggle;
+      analogueMultiplexor.write(MuxSelect_Ch1aHighGain);
+      analogueMultiplexor.write(MuxSelect_Ch1aHighGainBoost);
+      analogueMultiplexor.write(MuxSelect_Ch1aHighGainBiased);
+      analogueMultiplexor.write(MuxSelect_Ch1aHighGainBoostBiased);
+   }
+#endif
+#if 0
+   ch1Drive.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
+   for(;;) {
+      ch1Drive.write(0b10);
+      waitMS(100);
+      ch1Drive.write(0b01);
+      waitMS(100);
+      ch1Drive.write(0b00);
+      waitMS(1000);
+   }
+#endif
+   console.writeln("Starting\n");
+
+   initialise();
 
    control.eventLoop();
 

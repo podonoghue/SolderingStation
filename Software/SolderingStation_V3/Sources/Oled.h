@@ -98,22 +98,24 @@ private:
    /**
     * Write a character to the LCD in graphics mode at the current x,y location
     *
-    * @param[in]  ch - character to send
+    * @param [in]  ch - character to send
     */
    virtual void _writeChar(char ch) override;
 
    /**
     *  Flush input data
     */
-   virtual void flushInput() override {
+   virtual Oled &flushInput() override {
+      return *this;
    }
 
 public:
    /**
     *  Flush output data
     */
-   virtual void flushOutput() override {
+   virtual Oled &flushOutput() override {
       refreshImage();
+      return *this;
    }
 
    // Address (LSB = R/W bit = 0)
@@ -165,9 +167,9 @@ public:
    /**
     * Write a custom character to the LCD in graphics mode at the current x,y location
     *
-    * @param[in] image  Image describing the character
-    * @param[in] width  Width of the image
-    * @param[in] height Height of character
+    * @param [in] image  Image describing the character
+    * @param [in] width  Width of the image
+    * @param [in] height Height of character
     */
    Oled &putCustomChar(const uint8_t *image, int width, int height) {
       writeImage(image, x, y, width, height);
@@ -189,8 +191,6 @@ public:
 
    /**
     * Initialise OLED peripheral
-    *
-    * @return true on success
     *
     * @note   This function must be called before any drawing or updates!
     * @note   Based loosely on Adafruit library initialisation sequence
@@ -224,25 +224,70 @@ public:
     /**
      * Write image to frame buffer
      *
-     * @param[in] dataPtr Pointer to start of image
-     * @param[in] x       X position of top-left corner
-     * @param[in] y       Y position of top-left corner
-     * @param[in] width   Width of image
-     * @param[in] height  Height of image
+     * @param [in] dataPtr    Pointer to start of image
+     * @param [in] x          X position of top-left corner
+     * @param [in] y          Y position of top-left corner
+     * @param [in] width      Width of image
+     * @param [in] height     Height of image
+     * @param [in] writeMode  Write mode (inverse, xor etc)
      */
     Oled &writeImage(const uint8_t *dataPtr, int x, int y, int width, int height, WriteMode writeMode=WriteMode_Write);
 
     /**
      * Writes whitespace to the frame buffer at the current x,y location
      *
-     * @param[in] width Width of white space in pixels
+     * @param [in] width Width of white space in pixels
      */
     Oled &putSpace(int width);
 
+    /**
+     *
+     * @param [in] index      Index into frame buffer in bytes
+     * @param [in] mask       Mask for pixel being manipulated in byte
+     * @param [in] pixel      Pixel value
+     * @param [in] writeMode  Mode of modification
+     */
     void putPixel(unsigned index, uint8_t mask, bool pixel, WriteMode writeMode);
+
+    /**
+     * Draw pixel to frame buffer
+     *
+     * @param [in] x          Horizontal position in pixel
+     * @param [in] y          Vertical position in pixel
+     * @param [in] pixel      Pixel value
+     * @param [in] writeMode  Mode of modification
+     */
     void drawPixel(int x, int y, bool pixel, WriteMode writeMode=WriteMode_Write);
+
+    /**
+     * Draw vertical line to frame buffer
+     *
+     * @param [in] x  Horizontal position in pixel
+     * @param [in] y1 Top Y position
+     * @param [in] y2 Top Y position
+     * @param [in] writeMode  Mode of modification
+     */
     void drawVerticalLine(int x, int y1, int y2, WriteMode writeMode=WriteMode_Write);
+
+    /**
+     * Draw horizontal line to frame buffer
+     *
+     * @param [in] x1          Left horizontal position in pixel
+     * @param [in] x2          Right horizontal position in pixel
+     * @param [in] y           Y position
+     * @param [in] writeMode   Mode of modification
+     */
     void drawHorizontalLine(int x1, int x2, int y, WriteMode writeMode=WriteMode_Write);
+
+    /**
+     *   Draw filled rectangle
+     *
+     * @param x1         Top-left X
+     * @param y1         Top-left Y
+     * @param x2         Bottom-right X
+     * @param y2         Bottom-right Y
+     * @param writeMode  Write mode (inverse, xor etc)
+     */
     void drawRect(int x1, int y1, int x2, int y2, WriteMode writeMode=WriteMode_Write);
 
     /**
@@ -280,8 +325,8 @@ public:
     /**
      * Get current X,Y location
      *
-     * @param[out] x X location in pixels
-     * @param[out] y Y location in pixels
+     * @param [out] x X location in pixels
+     * @param [out] y Y location in pixels
      *
      * @return Reference to self
      */

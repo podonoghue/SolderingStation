@@ -37,10 +37,21 @@ namespace USBDM {
  */
 class Gpio {
 
-private:
+   /**
+    * This class is not intended to be instantiated by copy
+    */
+   Gpio(const Gpio&) = delete;
+   Gpio(Gpio&&) = delete;
+
+public:
+   /// Underlying GPIO hardware
    const    HardwarePtr<GPIO_Type>     gpio;
-   const    uint8_t                    bitNo;
-   const    Polarity                   pol;
+
+   /// Mask for GPIO bit being manipulated
+   const    uint32_t                   bitMask;
+
+   /// Mask to flip bit if active low (0 otherwise)
+   const    uint32_t                   flipMask;
 
 protected:
    /**
@@ -48,9 +59,24 @@ protected:
     *
     * @param gpio       GPIO hardware address
     * @param bitNo      Bit number within GPIO
-    * @param polarity   Polarity of bit
+    * @param polarity   Polarity of bit (ActiveHigh or ActiveLow)
     */
-   constexpr Gpio(uint32_t gpio, uint8_t bitNo, Polarity polarity) : gpio(gpio), bitNo(bitNo), pol(polarity) {
+   constexpr Gpio(uint32_t gpio, uint8_t bitNo, Polarity polarity) :
+      gpio(gpio), bitMask(1<<bitNo), flipMask(isActiveLow(polarity)?bitMask:0) {
+   }
+
+   /**
+    * Checks if polarity if active-low
+    */
+   static constexpr bool isActiveLow(Polarity polarity) {
+      return (polarity == ActiveLow);
+   }
+
+   /**
+    * Checks if polarity if active-high
+    */
+   static constexpr bool isActiveHigh(Polarity polarity) {
+      return (polarity == ActiveHigh);
    }
 
 public:
@@ -61,7 +87,7 @@ public:
     */
    void setIn() const {
       // Make pin an input
-      gpio->PDDR &= ~(1<<bitNo);
+      gpio->PDDR &= ~bitMask;
    }
    /**
     * Set pin as digital output
@@ -70,7 +96,7 @@ public:
     */
    void setOut() const {
       // Make pin an output
-      gpio->PDDR |= (1<<bitNo);
+      gpio->PDDR |= bitMask;
    }
    /**
     * Set pin. Pin will be high if configured as an output.
@@ -79,7 +105,7 @@ public:
     * @note Don't use this method unless dealing with very low-level I/O
     */
    void high() const {
-      gpio->PSOR = (1<<bitNo);
+      gpio->PSOR = bitMask;
    }
    /**
     * Clear pin. Pin will be low if configured as an output.
@@ -88,7 +114,7 @@ public:
     * @note Don't use this method unless dealing with very low-level I/O
     */
    void low() const {
-      gpio->PCOR = (1<<bitNo);
+      gpio->PCOR = bitMask;
    }
    /**
     * Set pin. Pin will be high if configured as an output.
@@ -97,7 +123,7 @@ public:
     * @note Don't use this method unless dealing with very low-level I/O
     */
    void set() const {
-      gpio->PSOR = (1<<bitNo);
+      gpio->PSOR = bitMask;
    }
    /**
     * Clear pin. Pin will be low if configured as an output.
@@ -106,39 +132,37 @@ public:
     * @note Don't use this method unless dealing with very low-level I/O
     */
    void clear() const {
-      gpio->PCOR = (1<<bitNo);
+      gpio->PCOR = bitMask;
    }
    /**
     * Toggle pin (if output)
     */
    void toggle() const {
-      gpio->PTOR = (1<<bitNo);
+      gpio->PTOR = bitMask;
    }
    /**
     * Set pin to active level (if configured as output)
     *
     * @note Polarity _is_ significant
+    *
+    * ActiveHigh: bm = 1, fm = 0 PSOR <- 1 = bm^fm, PCOR <- 0 = fm
+    * ActiveLow:  bm = 1, fm = 1 PSOR <- 0 = bm^fm, PCOR <- 1 = fm
     */
    void setActive() const {
-      if (pol) {
-         set();
-      }
-      else {
-         clear();
-      }
+      gpio->PSOR = bitMask^flipMask;
+      gpio->PCOR = flipMask;
    }
    /**
     * Set pin to inactive level (if configured as output)
     *
     * @note Polarity _is_ significant
+    *
+    * ActiveHigh: bm = 1, fm = 0 PSOR <- 0 = fm, PCOR <- 1 = bm^fm
+    * ActiveLow:  bm = 1, fm = 1 PSOR <- 1 = fm, PCOR <- 0 = bm^fm
     */
    void setInactive() const {
-      if (pol) {
-         clear();
-      }
-      else {
-         set();
-      }
+      gpio->PSOR = flipMask;
+      gpio->PCOR = bitMask^flipMask;
    }
    /**
     * Set pin to active level (if configured as output).
@@ -166,21 +190,12 @@ public:
     * @note Polarity _is_ significant
     */
    void write(bool value) const {
-#ifdef RELEASE_BUILD
-      if (pol) {
-         bitbandWrite(gpio->PDOR, bitNo, value);
-      }
-      else {
-         bitbandWrite(gpio->PDOR, bitNo, !value);
-      }
-#else
       if (value) {
          setActive();
       }
       else {
          setInactive();
       }
-#endif
    }
    /**
     * Checks if pin is high
@@ -191,7 +206,7 @@ public:
     * @note Polarity _is_ _not_ significant
     */
    bool isHigh() const {
-      return (gpio->PDIR & (1<<bitNo)) != 0;
+      return (gpio->PDIR & bitMask) != 0;
    }
    /**
     * Checks if pin is low
@@ -202,7 +217,7 @@ public:
     * @note Polarity _is_ _not_ significant
     */
    bool isLow() const {
-      return (gpio->PDIR & (1<<bitNo)) == 0;
+      return (gpio->PDIR & bitMask) == 0;
    }
    /**
     * Read pin value
@@ -213,12 +228,18 @@ public:
     * @note Polarity _is_ significant
     */
    bool read() const {
-      if (pol) {
-         return isHigh();
-      }
-      else {
-         return isLow();
-      }
+      return ((gpio->PDIR^flipMask) & bitMask) != 0;
+   }
+   /**
+    * Read value being driven to pin (if configured as output)
+    *
+    * @return true/false reflecting value in output register.
+    *
+    * @note This reads the PDOR
+    * @note Polarity _is_ significant
+    */
+   bool readState() const {
+      return ((gpio->PDOR^flipMask) & bitMask) != 0;
    }
    /**
     * Read pin value and return true if active level.
@@ -268,24 +289,6 @@ public:
    bool __attribute__((always_inline)) isReleased() const {
       return isInactive();
    }
-   /**
-    * Read value being driven to pin (if configured as output)
-    *
-    * @return true/false reflecting value in output register.
-    *
-    * @note This reads the PDOR
-    * @note Polarity _is_ significant
-    */
-   bool readState() const {
-      uint32_t t = gpio->PDOR & (1<<bitNo);
-      if (pol) {
-         return t;
-      }
-      else {
-         return !t;
-      }
-   }
-
 };
 
 /**
@@ -341,6 +344,7 @@ public:
  */
 template<uint32_t clockInfo, uint32_t portAddress, IRQn_Type irqNum, uint32_t gpioAddress, uint32_t defPcrValue, NvicPriority defaultNvicPriority, int bitNum, Polarity polarity>
 class Gpio_T : public Gpio, public Pcr_T<clockInfo, portAddress, irqNum, defPcrValue, defaultNvicPriority, bitNum> {
+
    static_assert((static_cast<unsigned>(bitNum)<=31), "Illegal bit number in Gpio");
 
 private:
@@ -359,48 +363,6 @@ public:
 
    /** Get base address of GPIO hardware as pointer to struct */
    static constexpr HardwarePtr<GPIO_Type> gpio = gpioAddress;
-   /** Get base address of GPIO hardware as uint32_t */
-   static constexpr uint32_t gpioBase() { return gpioAddress; }
-   /** Get base address of GPIO.PDOR register as uint32_t */
-   static constexpr uint32_t gpioPDOR() { return gpioBase() + offsetof(GPIO_Type, PDOR); }
-   /** Get base address of GPIO.PSOR register as uint32_t */
-   static constexpr uint32_t gpioPSOR() { return gpioBase() + offsetof(GPIO_Type, PSOR); }
-   /** Get base address of GPIO.PCOR register as uint32_t */
-   static constexpr uint32_t gpioPCOR() { return gpioBase() + offsetof(GPIO_Type, PCOR); }
-   /** Get base address of GPIO.PTOR register as uint32_t */
-   static constexpr uint32_t gpioPTOR() { return gpioBase() + offsetof(GPIO_Type, PTOR); }
-   /** Get base address of GPIO.PDIR register as uint32_t */
-   static constexpr uint32_t gpioPDIR() { return gpioBase() + offsetof(GPIO_Type, PDIR); }
-   /** Get base address of GPIO.PDDR register as uint32_t */
-   static constexpr uint32_t gpioPDDR() { return gpioBase() + offsetof(GPIO_Type, PDDR); }
-
-#ifdef PORT_DFCR_CS_MASK
-   /** Get base address of PORT hardware as pointer to struct */
-   static volatile PORT_DFER_Type &port() { return *reinterpret_cast<volatile PORT_DFER_Type *>(gpioAddress); }
-   /** Get base address of PORT register as uint32_t */
-   static constexpr uint32_t portBase() { return gpioAddress; }
-   /** Get base address of PORT.PCR register as uint32_t */
-   static constexpr uint32_t portPCR(int index) { return portBase() + offsetof(PORT_DFER_Type, PCR[index]); }
-   /** Get base address of PORT.GPCLR registers as uint32_t */
-   static constexpr uint32_t portGPCLR() { return portBase() + offsetof(PORT_DFER_Type, GPCLR); }
-   /** Get base address of PORT.GPCHR registers as uint32_t */
-   static constexpr uint32_t portGPCHR() { return portBase() + offsetof(PORT_DFER_Type, GPCHR); }
-   /** Get base address of PORT.ISFR registers as uint32_t */
-   static constexpr uint32_t portISFR() { return portBase() + offsetof(PORT_DFER_Type, ISFR); }
-#else
-   /** Get base address of PORT hardware as pointer to struct */
-   static volatile PORT_Type &port() { return *reinterpret_cast<volatile PORT_Type *>(gpioAddress); }
-   /** Get base address of PORT register as uint32_t */
-   static constexpr uint32_t portBase() { return gpioAddress; }
-   /** Get base address of PORT.PCR register as uint32_t */
-   static constexpr uint32_t portPCR(int index) { return portBase() + offsetof(PORT_Type, PCR[index]); }
-   /** Get base address of PORT.GPCLR registers as uint32_t */
-   static constexpr uint32_t portGPCLR() { return portBase() + offsetof(PORT_Type, GPCLR); }
-   /** Get base address of PORT.GPCHR registers as uint32_t */
-   static constexpr uint32_t portGPCHR() { return portBase() + offsetof(PORT_Type, GPCHR); }
-   /** Get base address of PORT.ISFR registers as uint32_t */
-   static constexpr uint32_t portISFR() { return portBase() + offsetof(PORT_Type, ISFR); }
-#endif
 
    /** Polarity of pin */
    static constexpr Polarity POLARITY = polarity;
@@ -606,11 +568,11 @@ public:
     * @note Polarity _is_ significant
     */
    static void setActive() {
-      if constexpr (polarity) {
-         set();
+      if constexpr (isActiveLow(polarity)) {
+         clear();
       }
       else {
-         clear();
+         set();
       }
    }
    /**
@@ -619,11 +581,11 @@ public:
     * @note Polarity _is_ significant
     */
    static void setInactive() {
-      if constexpr (polarity) {
-         clear();
+      if constexpr (isActiveLow(polarity)) {
+         set();
       }
       else {
-         set();
+         clear();
       }
    }
    /**
@@ -653,11 +615,11 @@ public:
     */
    static void write(bool value) {
 #ifdef RELEASE_BUILD
-      if constexpr (polarity) {
-         bitbandWrite(gpio->PDOR, bitNum, value);
+      if constexpr (isActiveLow(polarity)) {
+         bitbandWrite(gpio->PDOR, bitNum, !value);
       }
       else {
-         bitbandWrite(gpio->PDOR, bitNum, !value);
+         bitbandWrite(gpio->PDOR, bitNum, value);
       }
 #else
       if (value) {
@@ -699,11 +661,11 @@ public:
     * @note Polarity _is_ significant
     */
    static bool read() {
-      if constexpr (polarity) {
-         return isHigh();
+      if constexpr (isActiveLow(polarity)) {
+         return isLow();
       }
       else {
-         return isLow();
+         return isHigh();
       }
    }
    /**
@@ -764,11 +726,11 @@ public:
     */
    static bool readState() {
       uint32_t t = gpio->PDOR & Pcr::BITMASK;
-      if constexpr (polarity) {
-         return t;
+      if constexpr (isActiveLow(polarity)) {
+         return !t;
       }
       else {
-         return !t;
+         return t;
       }
    }
 };
@@ -778,38 +740,45 @@ public:
  */
 class GpioField {
 
-private:
-   HardwarePtr<GPIO_Type>  gpio;
-   const uint8_t           bitMask;
-   const Polarity          pol;
-   const uint8_t           left;
-   const uint8_t           right;
+public:
+   /// Underlying GPIO hardware
+   const HardwarePtr<GPIO_Type>  gpio;
+
+   /// Mask for GPIO bits being manipulated
+   const uint32_t                bitMask;
+
+   /// Mask to flip bit values if active low (0 otherwise)
+   const uint32_t                flipMask;
+
+   /// Offset of bit field in GPIO hardware
+   const uint8_t                 right;
 
 protected:
    /**
     * Class representing GPIO field functionality
     *
     * @param gpio       GPIO hardware address
-    * @param bitNo      Bit number within GPIO
-    * @param polarity   Polarit of bit
+    * @param bitMask    Bitmask for bits affected in port
+    * @param right      Rightmost bit number in port
+    * @param flipMask   Mask to flip bits in port (or use ActiveHigh/ActiveLow)
     */
-   constexpr GpioField(uint32_t gpio, unsigned bitm, unsigned left, unsigned right, Polarity polarity) :
-      gpio(gpio), bitMask(bitm), pol(polarity), left(left), right(right) {
+   constexpr GpioField(uint32_t gpio, uint32_t bitMask, unsigned right, uint32_t flipMask) :
+      gpio(gpio), bitMask(bitMask), flipMask(flipMask), right(right) {
    }
 
 public:
    /**
-    * Set all pins as digital inputs.
+    * Set all pins in field as inputs.
     *
-    * @note Does not affect other pin settings
+    * @note Does not affect other pin settings.
     */
    void setIn() const {
       gpio->PDDR &= ~bitMask;
    }
    /**
-    * Set all pins as digital outputs.
+    * Set all pins in field as outputs.
     *
-    * @note Does not affect other pin settings
+    * @note Does not affect other pin settings.
     */
    void setOut() const {
       gpio->PDDR |= bitMask;
@@ -819,13 +788,14 @@ public:
     *
     * @param[in] mask Mask for pin directions (1=>out, 0=>in)
     *
-    * @note Does not affect other pin settings
+    * @note Does not affect other pin settings.
     */
    void setDirection(uint32_t mask) const {
+      USBDM::CriticalSection cs;
       gpio->PDDR = (gpio->PDDR&~bitMask)|((mask<<right)&bitMask);
    }
    /**
-    * Set bits in field
+    * Set bits in field output register
     *
     * @param[in] mask Mask to apply to the field (1 => set bit, 0 => unchanged)
     *
@@ -835,7 +805,7 @@ public:
       gpio->PSOR = (mask<<right)&bitMask;
    }
    /**
-    * Clear bits in field
+    * Clear bits in field output register
     *
     * @param[in] mask Mask to apply to the field (1 => clear bit, 0 => unchanged)
     *
@@ -845,7 +815,7 @@ public:
       gpio->PCOR = (mask<<right)&bitMask;
    }
    /**
-    * Toggle bits in field
+    * Toggle bits in field output register
     *
     * @param[in] mask Mask to apply to the field (1 => toggle bit, 0 => unchanged)
     */
@@ -855,7 +825,7 @@ public:
    /**
     * Read field as unmodified bit field
     *
-    * @return value from field
+    * @return Value from field pins
     *
     * @note Polarity _is_ _not_ significant
     */
@@ -865,31 +835,23 @@ public:
    /**
     * Read field
     *
-    * @return value from field
+    * @return value from field pins
     *
     * @note Polarity _is_ significant
     */
    uint32_t read() const {
-      uint32_t value = gpio->PDIR;
-      if (!pol) {
-         value = ~value;
-      }
-      return (value & bitMask)>>right;
+      return ((gpio->PDIR^flipMask)&bitMask)>>right;
    }
    /**
     * Read value being driven to field pins (if configured as output)
     *
-    * @return value from field output
+    * @return value from field output register
     *
     * @note This reads the PDOR
     * @note Polarity _is_ significant
     */
    bool readState() const {
-      uint32_t value = gpio->PDOR;
-      if (!pol) {
-         value = ~value;
-      }
-      return (value & bitMask)>>right;
+      return ((gpio->PDOR^flipMask)&bitMask)>>right;
    }
    /**
     * Write field
@@ -899,12 +861,9 @@ public:
     * @note Polarity _is_ significant
     */
    void write(uint32_t value) const {
-      if (!pol) {
-         value = ~value;
-      }
       {
          USBDM::CriticalSection cs;
-         gpio->PDOR = ((gpio->PDOR) & ~bitMask) | ((value<<right)&bitMask);
+         gpio->PDOR = ((gpio->PDOR) & ~bitMask) | (((value<<right)^flipMask)&bitMask);
       }
    }
 
@@ -929,7 +888,7 @@ public:
  * @tparam polarity      Polarity of pin. Either ActiveHigh or ActiveLow
  */
 template<class Info, const uint32_t index, Polarity polarity>
-using  GpioTable_T = Gpio_T<Info::info[index].clockInfo, Info::info[index].portAddress, Info::info[index].irqNum, Info::info[index].gpioAddress, GPIO_DEFAULT_PCR, Info::info[index].irqLevel, Info::info[index].gpioBit, polarity>;
+class GpioTable_T : public Gpio_T<Info::info[index].clockInfo, Info::info[index].portAddress, Info::info[index].irqNum, Info::info[index].gpioAddress, GPIO_DEFAULT_PCR.value, Info::info[index].irqLevel, Info::info[index].gpioBit, polarity> {};
 /**
  * @brief Template representing a field within a port
  *
@@ -963,10 +922,10 @@ using  GpioTable_T = Gpio_T<Info::info[index].clockInfo, Info::info[index].portA
  * @tparam Info           Class describing the associated GPIO and PORT
  * @tparam left           Bit number of leftmost bit in GPIO (inclusive)
  * @tparam right          Bit number of rightmost bit in GPIO (inclusive)
- * @tparam polarity       Polarity of all pins. Either ActiveHigh or ActiveLow
+ * @tparam polarity       Polarity of all bits in field. Either ActiveHigh, ActiveLow or a bitmask (0=>bit active-high, 1=>bit active-low)
  */
 template<uint32_t portAddress, uint32_t clockInfo, IRQn_Type irqNum, uint32_t gpioAddress, NvicPriority  irqLevel, 
-         unsigned Left, unsigned Right, Polarity polarity=ActiveHigh>
+         unsigned Left, unsigned Right, uint32_t FlipMask=ActiveHigh>
 class GpioField_T : public GpioField, public PcrBase_T<portAddress, irqNum, irqLevel>{
 
    static_assert(((Left<=31)&&(Left>=Right)), "Illegal bit number for left or right in GpioField");
@@ -979,53 +938,10 @@ private:
    GpioField_T(GpioField_T&&) = delete;
 
 public:
-   constexpr GpioField_T() : GpioField(gpioAddress, BITMASK, Left, Right, polarity) {}
+   constexpr GpioField_T() : GpioField(gpioAddress, BITMASK, Right, FLIP_MASK) {}
 
    /** Get base address of GPIO hardware as pointer to struct */
    static constexpr HardwarePtr<GPIO_Type> gpio = gpioAddress;
-
-   /** Get base address of GPIO hardware as uint32_t */
-   static constexpr uint32_t gpioBase() { return gpioAddress; }
-   /** Get base address of GPIO.PDOR register as uint32_t */
-   static constexpr uint32_t gpioPDOR() { return gpioBase() + offsetof(GPIO_Type, PDOR); }
-   /** Get base address of GPIO.PSOR register as uint32_t */
-   static constexpr uint32_t gpioPSOR() { return gpioBase() + offsetof(GPIO_Type, PSOR); }
-   /** Get base address of GPIO.PCOR register as uint32_t */
-   static constexpr uint32_t gpioPCOR() { return gpioBase() + offsetof(GPIO_Type, PCOR); }
-   /** Get base address of GPIO.PTOR register as uint32_t */
-   static constexpr uint32_t gpioPTOR() { return gpioBase() + offsetof(GPIO_Type, PTOR); }
-   /** Get base address of GPIO.PDIR register as uint32_t */
-   static constexpr uint32_t gpioPDIR() { return gpioBase() + offsetof(GPIO_Type, PDIR); }
-   /** Get base address of GPIO.PDDR register as uint32_t */
-   static constexpr uint32_t gpioPDDR() { return gpioBase() + offsetof(GPIO_Type, PDDR); }
-
-#ifdef PORT_DFCR_CS_MASK
-   /** Get base address of PORT hardware as pointer to struct */
-   static constexpr HardwarePtr<PORT_DFER_Type> port = portAddress;
-   /** Get base address of PORT register as uint32_t */
-   static constexpr uint32_t portBase() { return portAddress; }
-   /** Get base address of PORT.PCR register as uint32_t */
-   static constexpr uint32_t portPCR(int index) { return portBase() + offsetof(PORT_DFER_Type, PCR[index]); }
-   /** Get base address of PORT.GPCLR registers as uint32_t */
-   static constexpr uint32_t portGPCLR() { return portBase() + offsetof(PORT_DFER_Type, GPCLR); }
-   /** Get base address of PORT.GPCHR registers as uint32_t */
-   static constexpr uint32_t portGPCHR() { return portBase() + offsetof(PORT_DFER_Type, GPCHR); }
-   /** Get base address of PORT.ISFR registers as uint32_t */
-   static constexpr uint32_t portISFR() { return portBase() + offsetof(PORT_DFER_Type, ISFR); }
-#else
-   /** Get base address of PORT hardware as pointer to struct */
-   static constexpr HardwarePtr<PORT_Type> port = portAddress;
-   /** Get base address of PORT register as uint32_t */
-   static constexpr uint32_t portBase() { return portAddress; }
-   /** Get base address of PORT.PCR register as uint32_t */
-   static constexpr uint32_t portPCR(int index) { return portBase() + offsetof(PORT_Type, PCR[index]); }
-   /** Get base address of PORT.GPCLR registers as uint32_t */
-   static constexpr uint32_t portGPCLR() { return portBase() + offsetof(PORT_Type, GPCLR); }
-   /** Get base address of PORT.GPCHR registers as uint32_t */
-   static constexpr uint32_t portGPCHR() { return portBase() + offsetof(PORT_Type, GPCHR); }
-   /** Get base address of PORT.ISFR registers as uint32_t */
-   static constexpr uint32_t portISFR() { return portBase() + offsetof(PORT_Type, ISFR); }
-#endif
 
 public:
    /** Port associated with this GPIO Field */
@@ -1040,8 +956,14 @@ public:
    /** Mask for the bits being manipulated within underlying port hardware */
    static constexpr uint32_t BITMASK = static_cast<uint32_t>((1ULL<<(Left-Right+1))-1)<<Right;
 
-   /** Polarity of entire field */
-   static constexpr Polarity POLARITY = polarity;
+   /** Mask to flip bits in field. Two special cases for later optimisation */
+   static constexpr uint32_t FLIP_MASK =
+         (((FlipMask<<Right)&BITMASK)==BITMASK)?0xFFFFFFFFUL:  // All active-low
+         (((FlipMask<<Right)&BITMASK)==0)?0x00000000UL:        // All active-high
+         (FlipMask<<Right);                                    // Mixed
+
+   static_assert(((Left<=31)&&(Left>=Right)), "Illegal bit number for left or right in GpioField");
+   static_assert((FlipMask==0xFFFFFFFFUL)||((((FlipMask<<Right)&BITMASK)>>Right)==FlipMask), "Illegal FlipMask (polarity) in GpioField");
 
    /**
     * Calculate Port bit-mask from field bit number
@@ -1068,10 +990,10 @@ public:
        * Set all PCRs.
        */
       if constexpr (BITMASK & 0xFFFF) {
-         port->GPCLR = PORT_GPCLR_GPWE(BITMASK) | PORT_GPCLR_GPWD(PinMux_Disabled);
+         Port::port->GPCLR = PORT_GPCLR_GPWE(BITMASK) | PORT_GPCLR_GPWD(PinMux_Disabled);
       }
       if constexpr (BITMASK & 0xFFFF0000) {
-         port->GPCLR = PORT_GPCHR_GPWE(BITMASK>>16) | PORT_GPCHR_GPWD(PinMux_Disabled);
+         Port::port->GPCLR = PORT_GPCHR_GPWE(BITMASK>>16) | PORT_GPCHR_GPWD(PinMux_Disabled);
       }
    }
 
@@ -1095,24 +1017,27 @@ public:
       // Default to output inactive
       write(0);
 
-      // Make sure MUX value is correct
-      pcrValue += PinMux_Gpio;
+      uint32_t pcr  = pcrValue.value;
 
 #ifdef PORT_DFCR_CS_MASK
-      if ((uint32_t)pcrValue&PinFilter_Digital) {
-         port->DFER |= BITMASK;
-         pcrValue &= (uint32_t)~PinFilter_Digital;
+      if (pcr&PinFilter_Digital) {
+         Port::port->DFER |= BITMASK;
       }
       else {
-         port->DFER &= ~BITMASK;
+         Port::port->DFER &= ~BITMASK;
       }
+      // Make sure MUX value is correct and clear PinFilter_Digital
+      pcr = (pcr & ~(PORT_PCR_MUX_MASK|PORT_DFCR_CS_MASK)) | PinMux_Gpio;
+#else
+      // Make sure MUX value is correct and clear PinFilter_Digital
+      pcr = (pcr & ~PORT_PCR_MUX_MASK) | PinMux_Gpio;
 #endif
       /*
        * Set all PCRs.
        * Can't use GPCLR/GPCHR as doesn't affect IRQ function (PinAction)
        */
       for (unsigned bitNum=Right; bitNum<=Left; bitNum++) {
-         port->PCR[bitNum] = pcrValue;
+         Port::port->PCR[bitNum] = pcr;
       }
    }
 
@@ -1274,12 +1199,13 @@ public:
     * @note Polarity _is_ significant
     */
    static uint32_t read() {
-      if constexpr (polarity) {
+      if constexpr (FLIP_MASK==0) {
          return (gpio->PDIR & BITMASK)>>Right;
       }
-      else {
+      if constexpr (FLIP_MASK==0xFFFFFFFFUL) {
          return (~gpio->PDIR & BITMASK)>>Right;
       }
+      return ((gpio->PDIR^FLIP_MASK) & BITMASK)>>Right;
    }
    /**
     * Read value being driven to field pins (if configured as output)
@@ -1289,13 +1215,14 @@ public:
     * @note This reads the PDOR
     * @note Polarity _is_ significant
     */
-   static bool readState() {
-      if constexpr (polarity) {
+   static uint32_t readState() {
+      if constexpr (FLIP_MASK==0) {
          return (gpio->PDOR & BITMASK)>>Right;
       }
-      else {
+      if constexpr (FLIP_MASK==0xFFFFFFFFUL) {
          return (~gpio->PDOR & BITMASK)>>Right;
       }
+      return ((gpio->PDOR^FLIP_MASK) & BITMASK)>>Right;
    }
    /**
     * Write field
@@ -1305,8 +1232,11 @@ public:
     * @note Polarity _is_ significant
     */
    static void write(uint32_t value) {
-      if constexpr (!polarity) {
+      if constexpr (FLIP_MASK == 0xFFFFFFFFUL) {
          value = ~value;
+      }
+      else if constexpr (FLIP_MASK != 0) {
+         value = value^(FLIP_MASK>>Right);
       }
       {
          USBDM::CriticalSection cs;
@@ -1359,11 +1289,11 @@ public:
     *
     * @endcode
     *
-    * @tparam bitNum        Bit number within the <em>field<em>
+    * @tparam bitNum        Bit number within the <em>field</em>
     * @tparam polarity      Polarity of pin. Either ActiveHigh or ActiveLow
     */
-   template<unsigned bitNum, Polarity bitPolarity=polarity> class Bit :
-   public Gpio_T<clockInfo, portAddress, irqNum, gpioAddress, GPIO_DEFAULT_PCR, irqLevel, bitNum+RIGHT, bitPolarity> {
+   template<unsigned bitNum> class Bit :
+   public Gpio_T<clockInfo, portAddress, irqNum, gpioAddress, GPIO_DEFAULT_PCR.value, irqLevel, bitNum+RIGHT, (FLIP_MASK&(1UL<<bitNum))?ActiveLow:ActiveHigh> {
       static_assert(bitNum<=(Left-Right), "Bit does not exist in field");
    public:
       // Allow access to owning field
@@ -1411,8 +1341,8 @@ public:
  * @tparam polarity      Polarity of pin. Either ActiveHigh or ActiveLow
  */
 template<unsigned bitNum, Polarity polarity=ActiveHigh> class GpioA :
-      public Gpio_T<PortAInfo.clockInfo, PortAInfo.portAddress, PortAInfo.irqNum, PortAInfo.gpioAddress, GPIO_DEFAULT_PCR, PortAInfo.irqLevel, bitNum, polarity> {};
-using PortA = PcrBase_T<PortAInfo.portAddress, PortAInfo.irqNum, PortAInfo.irqLevel>;
+      public Gpio_T<PortAInfo.clockInfo, PortAInfo.portAddress, PortAInfo.irqNum, PortAInfo.gpioAddress, GPIO_DEFAULT_PCR.value, PortAInfo.irqLevel, bitNum, polarity> {};
+typedef PcrBase_T<PortAInfo.portAddress, PortAInfo.irqNum, PortAInfo.irqLevel> PortA;
 
 /**
  * @brief Convenience template for GpioA fields. See @ref GpioField_T
@@ -1448,10 +1378,10 @@ using PortA = PcrBase_T<PortAInfo.portAddress, PortAInfo.irqNum, PortAInfo.irqLe
  *
  * @tparam left          Bit number of leftmost bit in port (inclusive)
  * @tparam right         Bit number of rightmost bit in port (inclusive)
- * @tparam polarity      Polarity of all pins. Either ActiveHigh or ActiveLow
+ * @tparam polarity       Polarity of all pins. Either ActiveHigh, ActiveLow or a bitmask (0=>bit active-high, 1=>bit active-low)
  */
-template<unsigned left, unsigned right, Polarity polarity=ActiveHigh>
-using GpioAField = GpioField_T<PortAInfo.portAddress, PortAInfo.clockInfo, PortAInfo.irqNum, PortAInfo.gpioAddress, PortAInfo.irqLevel, left, right, polarity>;
+template<unsigned left, unsigned right, uint32_t polarity=ActiveHigh>
+class GpioAField : public GpioField_T<PortAInfo.portAddress, PortAInfo.clockInfo, PortAInfo.irqNum, PortAInfo.gpioAddress, PortAInfo.irqLevel, left, right, polarity> {};
 #endif
 
 #ifdef USBDM_GPIOB_IS_DEFINED
@@ -1494,8 +1424,8 @@ using GpioAField = GpioField_T<PortAInfo.portAddress, PortAInfo.clockInfo, PortA
  * @tparam polarity      Polarity of pin. Either ActiveHigh or ActiveLow
  */
 template<unsigned bitNum, Polarity polarity=ActiveHigh> class GpioB :
-      public Gpio_T<PortBInfo.clockInfo, PortBInfo.portAddress, PortBInfo.irqNum, PortBInfo.gpioAddress, GPIO_DEFAULT_PCR, PortBInfo.irqLevel, bitNum, polarity> {};
-using PortB = PcrBase_T<PortBInfo.portAddress, PortBInfo.irqNum, PortBInfo.irqLevel>;
+      public Gpio_T<PortBInfo.clockInfo, PortBInfo.portAddress, PortBInfo.irqNum, PortBInfo.gpioAddress, GPIO_DEFAULT_PCR.value, PortBInfo.irqLevel, bitNum, polarity> {};
+typedef PcrBase_T<PortBInfo.portAddress, PortBInfo.irqNum, PortBInfo.irqLevel> PortB;
 
 /**
  * @brief Convenience template for GpioB fields. See @ref GpioField_T
@@ -1531,10 +1461,10 @@ using PortB = PcrBase_T<PortBInfo.portAddress, PortBInfo.irqNum, PortBInfo.irqLe
  *
  * @tparam left          Bit number of leftmost bit in port (inclusive)
  * @tparam right         Bit number of rightmost bit in port (inclusive)
- * @tparam polarity      Polarity of all pins. Either ActiveHigh or ActiveLow
+ * @tparam polarity      Polarity of all pins. Either ActiveHigh, ActiveLow or a bitmask (0=>bit active-high, 1=>bit active-low)
  */
-template<unsigned left, unsigned right, Polarity polarity=ActiveHigh>
-using GpioBField = GpioField_T<PortBInfo.portAddress, PortBInfo.clockInfo, PortBInfo.irqNum, PortBInfo.gpioAddress, PortBInfo.irqLevel, left, right, polarity>;
+template<unsigned left, unsigned right, uint32_t polarity=ActiveHigh>
+class GpioBField : public GpioField_T<PortBInfo.portAddress, PortBInfo.clockInfo, PortBInfo.irqNum, PortBInfo.gpioAddress, PortBInfo.irqLevel, left, right, polarity> {};
 #endif
 
 #ifdef USBDM_GPIOC_IS_DEFINED
@@ -1577,8 +1507,8 @@ using GpioBField = GpioField_T<PortBInfo.portAddress, PortBInfo.clockInfo, PortB
  * @tparam polarity      Polarity of pin. Either ActiveHigh or ActiveLow
  */
 template<unsigned bitNum, Polarity polarity=ActiveHigh> class GpioC :
-      public Gpio_T<PortCInfo.clockInfo, PortCInfo.portAddress, PortCInfo.irqNum, PortCInfo.gpioAddress, GPIO_DEFAULT_PCR, PortCInfo.irqLevel, bitNum, polarity> {};
-using PortC = PcrBase_T<PortCInfo.portAddress, PortCInfo.irqNum, PortCInfo.irqLevel>;
+      public Gpio_T<PortCInfo.clockInfo, PortCInfo.portAddress, PortCInfo.irqNum, PortCInfo.gpioAddress, GPIO_DEFAULT_PCR.value, PortCInfo.irqLevel, bitNum, polarity> {};
+typedef PcrBase_T<PortCInfo.portAddress, PortCInfo.irqNum, PortCInfo.irqLevel> PortC;
 
 /**
  * @brief Convenience template for GpioC fields. See @ref GpioField_T
@@ -1614,10 +1544,10 @@ using PortC = PcrBase_T<PortCInfo.portAddress, PortCInfo.irqNum, PortCInfo.irqLe
  *
  * @tparam left          Bit number of leftmost bit in port (inclusive)
  * @tparam right         Bit number of rightmost bit in port (inclusive)
- * @tparam polarity      Polarity of all pins. Either ActiveHigh or ActiveLow
+ * @tparam polarity      Polarity of all pins. Either ActiveHigh, ActiveLow or a bitmask (0=>bit active-high, 1=>bit active-low)
  */
-template<unsigned left, unsigned right, Polarity polarity=ActiveHigh>
-using GpioCField = GpioField_T<PortCInfo.portAddress, PortCInfo.clockInfo, PortCInfo.irqNum, PortCInfo.gpioAddress, PortCInfo.irqLevel, left, right, polarity>;
+template<unsigned left, unsigned right, uint32_t polarity=ActiveHigh>
+class GpioCField : public GpioField_T<PortCInfo.portAddress, PortCInfo.clockInfo, PortCInfo.irqNum, PortCInfo.gpioAddress, PortCInfo.irqLevel, left, right, polarity> {};
 #endif
 
 #ifdef USBDM_GPIOD_IS_DEFINED
@@ -1660,8 +1590,8 @@ using GpioCField = GpioField_T<PortCInfo.portAddress, PortCInfo.clockInfo, PortC
  * @tparam polarity      Polarity of pin. Either ActiveHigh or ActiveLow
  */
 template<unsigned bitNum, Polarity polarity=ActiveHigh> class GpioD :
-      public Gpio_T<PortDInfo.clockInfo, PortDInfo.portAddress, PortDInfo.irqNum, PortDInfo.gpioAddress, GPIO_DEFAULT_PCR, PortDInfo.irqLevel, bitNum, polarity> {};
-using PortD = PcrBase_T<PortDInfo.portAddress, PortDInfo.irqNum, PortDInfo.irqLevel>;
+      public Gpio_T<PortDInfo.clockInfo, PortDInfo.portAddress, PortDInfo.irqNum, PortDInfo.gpioAddress, GPIO_DEFAULT_PCR.value, PortDInfo.irqLevel, bitNum, polarity> {};
+typedef PcrBase_T<PortDInfo.portAddress, PortDInfo.irqNum, PortDInfo.irqLevel> PortD;
 
 /**
  * @brief Convenience template for GpioD fields. See @ref GpioField_T
@@ -1697,10 +1627,10 @@ using PortD = PcrBase_T<PortDInfo.portAddress, PortDInfo.irqNum, PortDInfo.irqLe
  *
  * @tparam left          Bit number of leftmost bit in port (inclusive)
  * @tparam right         Bit number of rightmost bit in port (inclusive)
- * @tparam polarity      Polarity of all pins. Either ActiveHigh or ActiveLow
+ * @tparam polarity      Polarity of all pins. Either ActiveHigh, ActiveLow or a bitmask (0=>bit active-high, 1=>bit active-low)
  */
-template<unsigned left, unsigned right, Polarity polarity=ActiveHigh>
-using GpioDField = GpioField_T<PortDInfo.portAddress, PortDInfo.clockInfo, PortDInfo.irqNum, PortDInfo.gpioAddress, PortDInfo.irqLevel, left, right, polarity>;
+template<unsigned left, unsigned right, uint32_t polarity=ActiveHigh>
+class GpioDField : public  GpioField_T<PortDInfo.portAddress, PortDInfo.clockInfo, PortDInfo.irqNum, PortDInfo.gpioAddress, PortDInfo.irqLevel, left, right, polarity> {};
 #endif
 
 #ifdef USBDM_GPIOE_IS_DEFINED
@@ -1743,8 +1673,8 @@ using GpioDField = GpioField_T<PortDInfo.portAddress, PortDInfo.clockInfo, PortD
  * @tparam polarity      Polarity of pin. Either ActiveHigh or ActiveLow
  */
 template<unsigned bitNum, Polarity polarity=ActiveHigh> class GpioE :
-      public Gpio_T<PortEInfo.clockInfo, PortEInfo.portAddress, PortEInfo.irqNum, PortEInfo.gpioAddress, GPIO_DEFAULT_PCR, PortEInfo.irqLevel, bitNum, polarity> {};
-using PortE = PcrBase_T<PortEInfo.portAddress, PortEInfo.irqNum, PortEInfo.irqLevel>;
+      public Gpio_T<PortEInfo.clockInfo, PortEInfo.portAddress, PortEInfo.irqNum, PortEInfo.gpioAddress, GPIO_DEFAULT_PCR.value, PortEInfo.irqLevel, bitNum, polarity> {};
+typedef PcrBase_T<PortEInfo.portAddress, PortEInfo.irqNum, PortEInfo.irqLevel> PortE;
 
 /**
  * @brief Convenience template for GpioE fields. See @ref GpioField_T
@@ -1780,10 +1710,10 @@ using PortE = PcrBase_T<PortEInfo.portAddress, PortEInfo.irqNum, PortEInfo.irqLe
  *
  * @tparam left          Bit number of leftmost bit in port (inclusive)
  * @tparam right         Bit number of rightmost bit in port (inclusive)
- * @tparam polarity      Polarity of all pins. Either ActiveHigh or ActiveLow
+ * @tparam polarity      Polarity of all pins. Either ActiveHigh, ActiveLow or a bitmask (0=>bit active-high, 1=>bit active-low)
  */
-template<unsigned left, unsigned right, Polarity polarity=ActiveHigh>
-using GpioEField = GpioField_T<PortEInfo.portAddress, PortEInfo.clockInfo, PortEInfo.irqNum, PortEInfo.gpioAddress, PortEInfo.irqLevel, left, right, polarity>;
+template<unsigned left, unsigned right, uint32_t polarity=ActiveHigh>
+class GpioEField : public GpioField_T<PortEInfo.portAddress, PortEInfo.clockInfo, PortEInfo.irqNum, PortEInfo.gpioAddress, PortEInfo.irqLevel, left, right, polarity> {};
 #endif
 
 /**

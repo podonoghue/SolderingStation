@@ -36,9 +36,24 @@ public:
    ~Tips() {}
 
    /**
+    * Initialise all Tip non-volatile settings.
+    * A default set of tips are loaded.
+    */
+   void initialiseTipSettings() {
+      static const char * const defaultTips[] = {
+            "B0",
+            "WT50L"
+      };
+      for (unsigned index=0; index<(sizeof(defaultTips)/sizeof(defaultTips[0])); index++) {
+         TipSettings::TipNameIndex tipIndex = TipSettings::getTipNameIndex(defaultTips[index]);
+         tipSettings[index].loadDefaultCalibration(tipIndex);
+      }
+   }
+
+   /**
     * Get tip settings for given index
     *
-    * @param index Tip settings index
+    * @param tipSettingsIndex Tip settings index
     *
     * @return Settings describing this tip
     */
@@ -72,7 +87,7 @@ public:
    /**
     * Name of tip for given index
     *
-    * @param index Tip settings index
+    * @param tipSettingsIndex Tip settings index
     *
     * @return
     */
@@ -149,9 +164,10 @@ public:
    /**
     * Fill menu array with tips currently selected.
     * The array is sorted.
+    * The array contains pointers to non-volatile data so unnecessary modification should be avoided to reduce EEPROM wear
     * Menu items are marked with a star if checkModifier() evaluates true
     *
-    * @param[in/out] menuItems      Array to populate with data
+    * @param[inout]  menuItems      Array to populate with data
     * @param[in]     checkModifier  Class function to check for set attributes
     */
    unsigned populateSelectedTips(
@@ -172,11 +188,10 @@ public:
    /**
     * Fill menu array with all tips available.
     * The array is sorted.
-    * Menu items are marked with check-box if a corresponding non-volatile TipSetting exists.
     *
-    * @param[in/out] menuItems      Array to populate with data
+    * @param [inout] tipMenuItems      Array to populate with data
     */
-   void populateTips(MenuItem menuItems[TipSettings::NUMBER_OF_TIPS]);
+   void populateTips(MenuItem tipMenuItems[TipSettings::NUMBER_OF_TIPS]);
 
 };
 

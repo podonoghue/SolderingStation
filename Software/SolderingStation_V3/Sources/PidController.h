@@ -49,18 +49,11 @@ public:
    }
 
    /**
-    * Set control parameters
-    *
-    * @param settings Parameter to use
-    */
-   virtual void setControlParameters(const TipSettings *settings);
-
-   /**
     * Get current Kp
     *
     * @return Value as float
     */
-   float getKp() {
+   float getKp() const {
       return fKp;
    }
 
@@ -69,7 +62,7 @@ public:
     *
     * @return Value as float
     */
-   float getKi() {
+   float getKi() const {
       return fKi / fInterval;
    }
 
@@ -78,7 +71,7 @@ public:
     *
     * @return Value as float
     */
-   float getKd() {
+   float getKd() const {
       return fKd * fInterval;
    }
 
@@ -87,20 +80,16 @@ public:
     *
     * @return Value as float
     */
-   float getIlimit() {
+   float getIlimit() const {
       return fILimit;
    }
 
    /**
-    * Enable controller\n
-    * Note: Controller is re-initialised when enabled
+    * Set control parameters
     *
-    * @note: Controller is re-initialised when enabled.
-    * @note: Output is left unchanged when disabled.
-    *
-    * @param[in] enable True to enable
+    * @param settings Parameter to use
     */
-   virtual void enable(bool enable = true);
+   virtual void setControlParameters(const TipSettings *settings) override ;
 
    /**
     * Main calculation
@@ -109,22 +98,34 @@ public:
     *
     * Process new sample to produce new control output
     *
+    * @note If the controller is disabled it will simply return the last output value
+    *
     * @param actualTemperature   Tip temperature in Celsius
     * @param targetTemperature   Target tip temperature in Celsius
     *
     * @return Control output
     */
-   virtual float newSample(float targetTemperature, float actualTemperature);
+   virtual float newSample(float actualTemperature, float targetTemperature) override ;
+
+   /**
+    * Enable controller
+    *
+    * @note: Controller may be re-initialised when enabled.
+    * @note: Output is left unchanged when disabled.
+    *
+    * @param[in] enable True to enable
+    */
+   virtual void enable(bool enable = true);
 
    /**
     * Report current situation
     */
-   virtual void report(Channel &ch);
+   virtual void report() const override ;
 
    /**
     * Print heading for report()
     */
-   virtual void reportHeading(Channel &ch);
+   virtual void reportHeading(Channel &ch) const override ;
 };
 
 #endif // SOURCES_PIDCONTROLLER_H_

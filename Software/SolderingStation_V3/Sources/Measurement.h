@@ -9,45 +9,65 @@
 #define SOURCES_MEASUREMENT_H_
 
 #include "TipSettings.h"
-#include "stringFormatter.h"
+#include "Averaging.h"
+
+class Channel;
 
 class Measurement {
-protected:
-   static constexpr unsigned BUF_SIZE = 40;
 
-   /// Static buffer used for reporting calibration values.
-   /// Static as used as return value.
-   /// Note - hence usage is not re-entrant!!!
-   static USBDM::StringFormatter_T<BUF_SIZE> &getStringFormatter() {
-      static USBDM::StringFormatter_T<BUF_SIZE> fStringFormatter;
-      return fStringFormatter;
-   }
+protected:
+
+   /// Owning channel
+   Channel &ch;
+
+   /// Indicates if the tip is present
+   bool tipPresent;
+
+   /// Resistance of heater element in ohms
+   const float heaterResistance;
+
+   /// Resistance of heater element in ohms
+   const float heaterVoltage;
+
+   /// Maximum power calculated from heater resistance and voltage
+   const float nominalMaxPower;
+
+   /// Average power as percentage for display purposes
+   SimpleMovingAverage<5> power;
 
 public:
-   Measurement() {}
+   Measurement(Channel &ch, float heaterResistance, float heaterVoltage) :
+      ch(ch),
+      tipPresent(false),
+      heaterResistance(heaterResistance),
+      heaterVoltage(heaterVoltage), nominalMaxPower((heaterVoltage * heaterVoltage)/heaterResistance) {
+
+   }
 
    virtual ~Measurement() {}
+
+   /**
+    * Indicates if the tip is present
+    *
+    * @return
+    */
+   bool isTipPresent() const {
+      return tipPresent;
+   }
 
    /**
     * Get average tip temperature
     *
     * @return Tip temperature in Celsius
     */
-   virtual float getTemperature() = 0;
+   virtual float getTemperature() const = 0;
 
    /**
     * Get tip temperature from last sample
     *
     * @return Tip temperature in Celsius
     */
-   virtual float getInstantTemperature() = 0;
-
-   /**
-    * Get value for resistance of heating element (for power calculations)
-    *
-    * @return Resistance in ohms
-    */
-   virtual float getHeaterResistance() const = 0;
+   virtual float getInstantTemperature() const = 0;
 
    /**
     * Set calibration data from current measurements
@@ -55,17 +75,16 @@ public:
     * @param[in]  calibrationIndex Index for the calibration
     * @param[out] tipSettings      Tip-settings to update with calibratin point
     */
-   virtual void saveCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) = 0;
+   virtual bool saveCalibrationPoint(CalibrationIndex calibrationIndex, TipSettings &tipSettings) = 0;
 
    /**
     * Get a report of the calibration values for the current operating point.
     * Used for reporting during temperature calibration.
     *
-    * @return Point to static string
-    *
-    * @note Not re-entrant!
+    * @param io      Where to write report to
+    * @param brief   True to shorten report (2 lines maximum)
     */
-   virtual const char *reportCalibrationValues() = 0;
+   virtual void reportCalibrationValues(USBDM::FormattedIO &io, bool brief=false) const = 0;
 
    /**
     * Set calibration data
@@ -75,18 +94,11 @@ public:
    virtual void setCalibrationValues(const TipSettings *tipsettings) = 0;
 
    /**
-    * Get 'measurement' value for debug when calibrating
-    *
-    * @return
-    */
-   virtual float getMeasurement() const = 0;
-
-   /**
     * Get the sequence of ADC measurements to do
     *
     * @return Sequence array terminated by MuxSelect_Complete sentinel
     */
-   virtual MuxSelect const *getMeasurementSequence() = 0;
+   virtual MuxSelect const *getMeasurementSequence() const = 0;
 
    /**
     * Get the sequence of ADC measurements to do
@@ -96,7 +108,7 @@ public:
     *
     * @return Number of measurements added to seq[]
     */
-   unsigned getMeasurementSequence(MuxSelect seq[], uint8_t channelMask) {
+   unsigned getMeasurementSequence(MuxSelect seq[], uint8_t channelMask) const {
       MuxSelect const *newSequence = getMeasurementSequence();
       unsigned sequenceLength;
       for(sequenceLength=0; newSequence[sequenceLength] != MuxSelect_Complete; sequenceLength++) {
@@ -109,26 +121,83 @@ public:
    /**
     * Process ADC measurement value
     *
-    * @param[in] muxSelect  Indicates which measurement made
+    * @param[in] muxSelect  Indicates which measurement made.\n
+    *            Assumes channel information has been stripped.
     * @param[in] adcValue   ADC value for measurement
     */
    virtual void processMeasurement(MuxSelect muxSelect, uint32_t adcValue) = 0;
+
+   /**
+    * Enable control loop
+    *
+    * @param[in] enable True to enable
+    */
+   virtual void enableControlLoop(bool enable = true) = 0;
+
+   /**
+    * Run end of cycle update:
+    *   - Update drive
+    *   - Temperature
+    *   - Power
+    *   - Controller
+    *
+    * @return New drive value
+    */
+   virtual uint8_t update(float targetTemperature) = 0;
+
+   /**
+    * Get average power
+    *
+    * @return Power in watts
+    */
+   float getPower() const {
+      return power.getAveragedAdcSamples()*nominalMaxPower/100;
+   }
+
+   /**
+    * Get average power
+    *
+    * @return Power as percentage
+    */
+   float getPercentagePower() const {
+      return power.getAveragedAdcSamples();
+   }
+
+   /**
+    * Set duty cycle for use with fixed power mode
+    *
+    * @param dutyCycle
+    */
+   virtual void setDutyCycle(unsigned dutyCycle) = 0;
+
+   /**
+    * Print single line report on control situation
+    *
+    * @param doHeading True to print a header first
+    */
+   virtual void report(bool doHeading=false) const = 0;
 };
 
 class DummyMeasurement : public Measurement {
 public:
-   virtual float getHeaterResistance() const override { return 8.0; };
-   virtual float getTemperature() override { return 1.0;};
-   virtual float getInstantTemperature() override { return 1.0; };
-   virtual void  saveCalibrationPoint(CalibrationIndex, TipSettings &) override {};
-   virtual const char *reportCalibrationValues() override { return ""; };
-   virtual float getMeasurement() const override { return 0.0; };
+   DummyMeasurement(Channel &ch) : Measurement(ch, 8.0, 24) {}
+
+   virtual float getTemperature() const override { return 1.0;};
+   virtual float getInstantTemperature() const override { return 1.0; };
+   virtual bool  saveCalibrationPoint(CalibrationIndex, TipSettings &) override { return false; };
+   virtual void  reportCalibrationValues(USBDM::FormattedIO &, bool) const override {};
    virtual void setCalibrationValues(const TipSettings *) override { }
-   virtual MuxSelect const *getMeasurementSequence() override {
-      static const MuxSelect dummy = MuxSelect_Complete;
-      return &dummy;
+   virtual MuxSelect const *getMeasurementSequence() const override {
+      static const MuxSelect dummy[] = {MuxSelect_Complete, };
+      return dummy;
    };
    virtual void processMeasurement(MuxSelect, uint32_t) override {};
+
+   virtual void enableControlLoop(bool) override {};
+
+   virtual uint8_t update(float) override { return 0b00; };
+   virtual void setDutyCycle(unsigned) {};
+   virtual void report(bool) const {};
 };
 
 #endif /* SOURCES_MEASUREMENT_H_ */

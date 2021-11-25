@@ -1,5 +1,5 @@
-/*
- * Control.h
+/**
+ * @file Control.h
  *
  *  Created on: 5 Apr 2020
  *      Author: podonoghue
@@ -34,23 +34,12 @@ public:
    /// Minimum iron temperature for operation
    static constexpr int      MIN_TEMP     = 100;
 
-   /// Maximum duty cycle for tip drive
-   ///      80% ~ 60W for 8 ohm element
-   ///      90% ~ 65W for 8 ohm element
-   /// WT-50 11 ohm element 100% ~52 watts
-   /// T12    8 ohm element 100% ~72 watts
-   /// WSP80  7 ohm element 100% ~82 watts
-   static constexpr int      MAX_DUTY     = 100;
-
-   /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohm element
-   static constexpr int      MIN_DUTY     = 0;
-
-   /// PID interval (1 rectified mains cycle)
-   static constexpr float    PID_INTERVAL = 10*USBDM::ms;
-
 private:
    /// Indicates the display needs updating
-   bool     needRefresh = true;
+   bool needRefresh       = true;
+
+   /// Used to hold off re-triggerring sequence until completed
+   bool holdOff           = false;
 
    bool doReportPid       = false;
    bool doReportPidTitle  = false;
@@ -62,7 +51,7 @@ private:
    unsigned sequenceIndex = 0;
 
    /// Moving window average for Chip temperature (internal MCU sensor)
-   ChipTemperatureAverage chipTemperature;
+   ChipTemperatureAverage chipTemperatureAverage;
 
    /// Counter to initiate PID reporting
    unsigned reportCount = 0;
@@ -74,6 +63,9 @@ private:
    /// How often to log PID
    /// Multiple of zero-crossing interval
    static constexpr unsigned PID_LOG_INTERVAL = round(0.25/PID_INTERVAL);
+
+   /// Idle time for display dimming (in milliseconds)
+   unsigned idleTime = 0;
 
 public:
    /**
@@ -88,7 +80,7 @@ public:
     * @return
     */
    float getChipTemperature() {
-      return chipTemperature.getTemperature();
+      return chipTemperatureAverage.getTemperature();
    }
 
    /**
@@ -99,24 +91,24 @@ public:
    /**
     * Toggle the enable state of a channel.
     *
-    * @param channel Channel to modify
+    * @param chNum Channel to modify
     */
-   void toggleEnable(unsigned channel);
+   void toggleEnable(unsigned chNum);
 
    /**
     * Enable channel.
     *
-    * @param channel Channel to enable
+    * @param chNum Channel to enable
     */
-   void enable(unsigned channel);
+   void enable(unsigned chNum);
 
    /**
     * Disable channel.
     * The other channel may become selected if enabled.
     *
-    * @param channel Channel to disable
+    * @param chNum Channel to disable
     */
-   void disable(unsigned channel);
+   void disable(unsigned chNum);
 
    /**
     * Change temperature of currently selected channel
@@ -141,13 +133,13 @@ public:
    /**
     * Interrupt handler for ADC conversions
     *
-    * @param[in] result  Conversion result from ADC channel
-    * @param[in] channel ADC channel providing the result
+    * @param [in] result     Conversion result from ADC channel
+    * @param [in] adcChannel ADC channel providing the result
     *
     *   Initial conversion is started from zeroCrossingHandler().
     *   Several consecutive conversions are then chained in sequence.
     */
-   void adcHandler(uint32_t result, int channel);
+   void adcHandler(uint32_t result, int adcChannel);
 
    /**
     * Refresh the display of channel information
@@ -186,6 +178,25 @@ public:
     * Event loop for front panel events.
     */
    void eventLoop();
+
+   /**
+    * Checks if display is in use
+    *
+    * @param milliseconds Amount to increment the idle time by
+    */
+   void updateDisplayInUse(unsigned milliseconds);
+
+   /**
+    * Wakes up the display if off
+    */
+   void wakeUpDisplay();
+
+   /**
+    * Checks is the display is in use
+    *
+    * @return
+    */
+   bool isDisplayInUse();
 };
 
 extern Control control;

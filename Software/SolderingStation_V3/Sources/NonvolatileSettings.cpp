@@ -1,5 +1,5 @@
-/*
- * NonvolatileSettings.cpp
+/**
+ * @file NonvolatileSettings.cpp
  *
  *  Created on: 11 Jun. 2021
  *      Author: peter
@@ -29,28 +29,12 @@ NonvolatileSettings::NonvolatileSettings() : Flash() {
 }
 
 /**
- * Initialise a non-volatile channel settings object
- *
- * @param settings Settings for a channel
- */
-void NonvolatileSettings::initialiseChannelSettings() {
-   ch1Settings.initialise();
-   ch2Settings.initialise();
-}
-
-/**
- * Initialise all Tip non-volatile settings.
- * All entries except 1st are cleared.
- */
-void NonvolatileSettings::initialiseTipSettings() {
-   tipSettings[0].loadDefaultCalibration();
-}
-
-/**
  * Initialise non-volatile storage to default values
  */
 void NonvolatileSettings::initialiseNonvolatileStorage() {
-   initialiseTipSettings();
-   initialiseChannelSettings();
+   tips.initialiseTipSettings();
+   ch1Settings.initialise();
+   ch2Settings.initialise();
+   hardwareCalibration.initialise();
 }
 

@@ -18,8 +18,8 @@
  * Any manual changes will be lost.
  */
 #include <stddef.h>
-#include "derivative.h"
 #include <cmath>
+#include "pin_mapping.h"
 
 /*
  * Default port information
@@ -156,11 +156,13 @@ class FtmBase {
 private:
 
 private:
-   FtmBase() = delete;
    FtmBase(const FtmBase&) = delete;
    FtmBase(FtmBase&&) = delete;
 
 protected:
+   // Empty constructor
+   constexpr FtmBase() = default;
+
    /**
     * Limit index to permitted pin index range
     * Used to prevent noise from static assertion checks that detect a condition already detected in a more useful fashion.
@@ -260,11 +262,17 @@ template<class Info>
 class FtmBase_T : public FtmBase {
 
 private:
-   FtmBase_T() = delete;
+   /**
+    * This class is not intended to be instantiated
+    */
    FtmBase_T(const FtmBase_T&) = delete;
    FtmBase_T(FtmBase_T&&) = delete;
 
 public:
+
+   // Empty constructor
+   constexpr FtmBase_T() = default;
+
    /**
     * Hardware instance pointer
     *
@@ -868,16 +876,14 @@ public:
       while (prescalerValue<=7) {
          float    clock = inputClock/prescaleFactor;
          uint32_t periodInTicks   = round(period*clock);
-
-         pPrescalerValue = prescalerValue;
-         pPeriodInTicks  = periodInTicks;
-
          if (periodInTicks < Info::minimumResolution) {
             usbdm_assert(false, "Interval is too short");
             // Too short a period for minimum resolution
             return setErrorCode(E_TOO_SMALL);
          }
          if (periodInTicks <= maxPeriodInTicks) {
+            pPrescalerValue = prescalerValue;
+            pPeriodInTicks  = periodInTicks;
             return E_NO_ERROR;
          }
          prescalerValue++;
@@ -906,8 +912,8 @@ public:
     */
    static ErrorCode setPeriod(float period) {
 
-      unsigned prescalerValue;
-      unsigned periodInTicks;
+      unsigned prescalerValue = 0;
+      unsigned periodInTicks = 0;
       ErrorCode rc = calculateTimingParameters(period, prescalerValue, periodInTicks);
 
       if (rc != E_NO_ERROR) {
@@ -981,7 +987,7 @@ public:
       // Calculate timer prescale factor
       int prescaleFactor = 1<<((tmr->SC&FTM_SC_PS_MASK)>>FTM_SC_PS_SHIFT);
 
-      return ((float)Info::getInputClockFrequency())/prescaleFactor;
+      return static_cast<float>(Info::getInputClockFrequency())/prescaleFactor;
    }
 
    /**
@@ -1046,7 +1052,7 @@ public:
 
       // Calculate period
       uint32_t tickRate = getTickFrequencyAsInt();
-      uint64_t rv       = ((uint64_t)time*tickRate)/1000000;
+      uint64_t rv       = (static_cast<uint64_t>(time)*tickRate)/1000000;
       usbdm_assert(rv <= 0xFFFFUL, "Interval is too long");
       if (rv > 0xFFFFUL) {
          // Attempt to set too long a period
@@ -1098,7 +1104,7 @@ public:
    static uint32_t convertTicksToMicroseconds(int timeInTicks) {
 
       // Calculate period
-      uint64_t rv = ((uint64_t)timeInTicks*1000000)/getTickFrequencyAsInt();
+      uint64_t rv = (static_cast<uint64_t>(timeInTicks)*1000000)/getTickFrequencyAsInt();
 #ifdef DEBUG_BUILD
       if (rv > 0xFFFFUL) {
          // Attempt to set too long a period
@@ -1124,7 +1130,7 @@ public:
    static uint32_t convertTicksToMilliseconds(int timeInTicks) {
 
       // Calculate period
-      uint64_t rv = ((uint64_t)timeInTicks*1000)/getTickFrequencyAsInt();
+      uint64_t rv = (static_cast<uint64_t>(timeInTicks)*1000)/getTickFrequencyAsInt();
 #ifdef DEBUG_BUILD
       if (rv > 0xFFFFUL) {
          // Attempt to set too long a period
@@ -1146,7 +1152,7 @@ public:
     * @return Time in seconds
     */
    static float INLINE_RELEASE convertTicksToSeconds(int timeInTicks) {
-      return ((float)timeInTicks)/getTickFrequencyAsFloat();
+      return static_cast<float>(timeInTicks)/getTickFrequencyAsFloat();
    }
 
    /**
@@ -1821,7 +1827,7 @@ public:
       }
 
       /**
-       * Get and Clear Timer interrupt flag.
+       * Get and Clear Timer channel interrupt flag.
        *
        * @return true  Indicates an event has occurred on a channel
        * @return false Indicates no event has occurred on a channel since last polled
@@ -1843,6 +1849,7 @@ public:
          // Note - requires read and write zero to clear flag
          Ftm::tmr->CONTROLS[channel].CnSC &= ~FTM_CnSC_CHF_MASK;
       }
+
 
       /**
        * Set polarity of channels.
@@ -1925,7 +1932,7 @@ public:
 
 #ifdef FTM_SC_PWMEN0_SHIFT
       // Enable output pin in FTM
-      ftm().SC |= (1<<(channel+FTM_SC_PWMEN0_SHIFT));
+      ftm->SC |= (1<<(channel+FTM_SC_PWMEN0_SHIFT));
 #endif
       Pcr::setPCR(pinDriveStrength|pinDriveMode|pinSlewRate);
    }
@@ -1947,7 +1954,7 @@ public:
 
 #ifdef FTM_SC_PWMEN0_SHIFT
       // Enable output pin in FTM
-      ftm().SC |= (1<<(channel+FTM_SC_PWMEN0_SHIFT));
+      ftm->SC |= (1<<(channel+FTM_SC_PWMEN0_SHIFT));
 #endif
       Pcr::setPCR(pinDriveStrength|pinDriveMode);
    }
@@ -1969,7 +1976,7 @@ public:
 
 #ifdef FTM_SC_PWMEN0_SHIFT
       // Enable output pin in FTM
-      ftm().SC |= (1<<(channel+FTM_SC_PWMEN0_SHIFT));
+      ftm->SC |= (1<<(channel+FTM_SC_PWMEN0_SHIFT));
 #endif
       Pcr::setPCR(pinDriveStrength|pinSlewRate);
    }
@@ -1989,7 +1996,7 @@ public:
 
 #ifdef FTM_SC_PWMEN0_SHIFT
       // Enable output pin in FTM
-      ftm().SC |= (1<<(channel+FTM_SC_PWMEN0_SHIFT));
+      ftm->SC |= (1<<(channel+FTM_SC_PWMEN0_SHIFT));
 #endif
 
       Pcr::setPCR(pinDriveStrength);
@@ -2018,7 +2025,7 @@ public:
 
 #ifdef FTM_SC_PWMEN0_SHIFT
          // Disable output pin in FTM
-         ftm().SC &= ~(1<<(channel+FTM_SC_PWMEN0_SHIFT));
+         ftm->SC &= ~(1<<(channel+FTM_SC_PWMEN0_SHIFT));
 #endif
 
          Pcr::setInput(pinPull,pinAction,pinFilter);
@@ -2036,32 +2043,35 @@ template<class Info> FtmChannelCallbackFunction  FtmBase_T<Info>::sChannelCallba
 /**
  * Class representing FTM0.
  */
-using Ftm0 = FtmBase_T<Ftm0Info>;
-
+typedef FtmBase_T<Ftm0Info> Ftm0;
 #endif
 
 #ifdef USBDM_FTM1_IS_DEFINED
 /**
- * Class representing FTM0.
+ * Class representing FTM1.
  */
-using Ftm1 = FtmBase_T<Ftm1Info>;
-
+typedef FtmBase_T<Ftm1Info> Ftm1;
 #endif
 
 #ifdef USBDM_FTM2_IS_DEFINED
 /**
- * Class representing FTM0.
+ * Class representing FTM2.
  */
-using Ftm2 = FtmBase_T<Ftm2Info>;
-
+typedef FtmBase_T<Ftm2Info> Ftm2;
 #endif
 
 #ifdef USBDM_FTM3_IS_DEFINED
 /**
- * Class representing FTM0.
+ * Class representing FTM3.
  */
-using Ftm3 = FtmBase_T<Ftm3Info>;
+typedef FtmBase_T<Ftm3Info> Ftm3;
+#endif
 
+#ifdef USBDM_FTM4_IS_DEFINED
+/**
+ * Class representing FTM3.
+ */
+typedef FtmBase_T<Ftm4Info> Ftm4;
 #endif
 
 #ifdef FTM_QDCTRL_QUADEN_MASK
@@ -2101,7 +2111,6 @@ template <class Info>
 class FtmQuadDecoder_T {
 
 private:
-   FtmQuadDecoder_T() = delete;
    FtmQuadDecoder_T(const FtmQuadDecoder_T&) = delete;
    FtmQuadDecoder_T(FtmQuadDecoder_T&&) = delete;
 
@@ -2109,6 +2118,9 @@ private:
    FtmBase::CheckChannel<typename Info::InfoQUAD, 1> checkQ1;
 
 public:
+   // Default constructor
+   FtmQuadDecoder_T() = default;
+
    /** Hardware instance pointer */
    static constexpr HardwarePtr<FTM_Type> tmr = Info::baseAddress;
 
@@ -2335,35 +2347,35 @@ public:
  * Class representing FTM0 as Quadrature decoder
  * Not all FTMs support this mode
  */
-class FtmQuadDecoder0 : public FtmQuadDecoder_T<Ftm0Info> {};
+typedef FtmQuadDecoder_T<Ftm0Info> FtmQuadDecoder0;
 #endif
 
 #ifdef USBDM_FTM1_INFOQUAD_IS_DEFINED
 /**
  * Class representing FTM1 as Quadrature decoder
  */
-class FtmQuadDecoder1 : public FtmQuadDecoder_T<Ftm1Info> {};
+typedef FtmQuadDecoder_T<Ftm1Info> FtmQuadDecoder1;
 #endif
 
 #ifdef USBDM_FTM2_INFOQUAD_IS_DEFINED
 /**
  * Class representing FTM2 as Quadrature decoder
  */
-class FtmQuadDecoder2 : public FtmQuadDecoder_T<Ftm2Info> {};
+typedef FtmQuadDecoder_T<Ftm2Info> FtmQuadDecoder2;
 #endif
 
 #ifdef USBDM_FTM3_INFOQUAD_IS_DEFINED
 /**
  * Class representing FTM3 as Quadrature decoder
  */
-class FtmQuadDecoder3 : public FtmQuadDecoder_T<Ftm3Info> {};
+typedef FtmQuadDecoder_T<Ftm3Info> FtmQuadDecoder3;
 #endif
 
 #ifdef USBDM_FTM4_INFOQUAD_IS_DEFINED
 /**
  * Class representing FTM4 as Quadrature decoder
  */
-class FtmQuadDecoder4 : public FtmQuadDecoder_T<Ftm4Info> {};
+typedef FtmQuadDecoder_T<Ftm4Info> FtmQuadDecoder4;
 #endif
 
 /**

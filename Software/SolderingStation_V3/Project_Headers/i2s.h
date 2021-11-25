@@ -17,7 +17,7 @@
  */
 #include <stdint.h>
 #include "derivative.h"
-#include "hardware.h"
+#include "pin_mapping.h"
 #ifdef __CMSIS_RTOS
 #include "cmsis.h"
 #endif
@@ -46,14 +46,14 @@ protected:
       // Not considered an error as may be using polling
    }
 
-   volatile I2S_Type  *i2s;                 //!< I2S hardware instance
+   const HardwarePtr<I2S_Type> i2s;                 //!< I2S hardware instance
    
    /**
     * Construct I2S interface
     *
     * @param[in]  i2s     Base address of I2S hardware
     */
-   I2s(volatile I2S_Type *i2s) : i2s(i2s) {
+   I2s(uint32_t i2s) : i2s(i2s) {
    }
 
    /**
@@ -131,12 +131,13 @@ public:
     * @param[in]  bps        Tx/Rx rate
     * @param[in]  myAddress  Address of this device on bus (not currently used)
     */
-   I2sBase_T(unsigned bps=400000, uint8_t myAddress=0) : I2s(&Info::i2s()) {
-
+   I2sBase_T(unsigned bps=400000, uint8_t myAddress=0) : I2s(Info::baseAddress) {
+   (void)bps; (void)myAddress;
+   
 #ifdef DEBUG_BUILD
       // Check pin assignments
-      static_assert(Info::info[0].gpioBit != UNMAPPED_PCR, "I2Sx_SCL has not been assigned to a pin - Modify Configure.usbdm");
-      static_assert(Info::info[1].gpioBit != UNMAPPED_PCR, "I2Sx_SDA has not been assigned to a pin - Modify Configure.usbdm");
+//      static_assert(Info::info[0].gpioBit != UNMAPPED_PCR, "I2Sx_SCL has not been assigned to a pin - Modify Configure.usbdm");
+//      static_assert(Info::info[1].gpioBit != UNMAPPED_PCR, "I2Sx_SDA has not been assigned to a pin - Modify Configure.usbdm");
 #endif
 
    }

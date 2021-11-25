@@ -8,7 +8,7 @@
 #ifndef SOURCES_CHANNEL_H_
 #define SOURCES_CHANNEL_H_
 
-#include "Controller.h"
+#include "PidController.h"
 #include "hardware.h"
 #include "Averaging.h"
 #include "Measurement.h"
@@ -34,27 +34,27 @@ enum ChannelState {
 /**
  * Class representing a channel
  */
-class Channel : public DutyCycleCounter {
+class Channel {
 
    friend StepResponseDriver;
 
 private:
-   bool              tipPresent          = false;    ///< Indicates that the tip is present
    int               toolIdleTime        = 0;        ///< How long the tool has been idle
    float             currentTemperature  = 0;        ///< Measured temperature of tool
    ChannelState      state               = ch_off;   ///< State of channel ch_off/ch_standby/ch_backoff/ch_active
    int               targetTemperature   = 0;        ///< Desired temperature of tool
    unsigned          preset              = 1;        ///< Currently selected preset for the channel
 
-   Controller       &controller;                     ///< Loop controller
+   /// Front panel channel selected LED
+   const USBDM::Gpio       &led;
 
-   Weller_WT50       wellerMeasurement;
-   T12               t12Measurement;
+   /// Channel dual drive
+   const USBDM::GpioField  &chDrive;
 
-   DummyMeasurement  dummyMeasurement;
-
-   const USBDM::Gpio       &led;                   ///< Front panel channel on LED
-   const USBDM::GpioField  &chDrive;               ///< Channel dual drive
+   // Supported irons
+   DummyMeasurement  dummyMeasurement{*this};
+   Weller_WT50       wellerMeasurement{*this};
+   T12               t12Measurement{*this};
 
 public:
 
@@ -65,27 +65,22 @@ public:
    ChannelSettings  &nvSettings;
 
    /// Measurement class
-   Measurement *measurement = nullptr;
-
-   /// Average power - just for display purposes
-   SimpleMovingAverage<5> power;
+   Measurement *measurement;
 
    friend class Control;
 
    /**
     * Constructor for channel
     *
-    * @param[in] settings        Non-volatile channel settings to associate with this channel
-    * @param[in] controller      Temperature controller e.g. PID
-    * @param[in] tipTemperature  Tip temperature averaging etc.
-    * @param[in] coldJunction    Cold junction averaging etc.
+    * @param [in] settings    Non-volatile channel settings to associate with this channel
+    * @param [in] led         Channel LED
+    * @param [in] chDrive     Channel drive
     */
-   Channel(ChannelSettings &settings, Controller &controller, const USBDM::Gpio &led, const USBDM::GpioField &chDrive) :
-      DutyCycleCounter(101), // 101 chosen as prime near 100. Ensures balanced mains cycles.
-      controller(controller),
+   Channel(ChannelSettings &settings, const USBDM::Gpio &led, const USBDM::GpioField &chDrive) :
       led(led),
       chDrive(chDrive),
-      nvSettings(settings) {
+      nvSettings(settings),
+      measurement(&dummyMeasurement) {
       setUserTemperature(settings.presets[preset]);
       refreshControllerParameters();
       setTip(nvSettings.selectedTip);
@@ -116,6 +111,16 @@ public:
    }
 
    /**
+    * Inform channel of ID value measurement
+    * (Unused)
+    *
+    * @param value Value from ADC
+    */
+   void setIdValue(unsigned value) {
+      (void) value;
+   }
+
+   /**
     * Check for a valid tip selection and re-assign if necessary
     *
     * @param defaultTip Tip use for channel if necessary
@@ -136,8 +141,7 @@ public:
     */
    void refreshControllerParameters() {
       const TipSettings *ts = nvSettings.selectedTip;
-
-      controller.setControlParameters(ts);
+      measurement->setCalibrationValues(ts);
    }
 
    /**
@@ -152,7 +156,7 @@ public:
    /**
     * Set selected tip for this channel
     *
-    * @param index Index into tip settings table
+    * @param tipSettings TipSettings for tip selection
     */
    void setTip(const TipSettings *tipSettings) {
       usbdm_assert(tipSettings != nullptr, "Illegal tip");
@@ -192,7 +196,7 @@ public:
     * @return Pointer to name of state as static object
     */
    static const char *getStateName(ChannelState state) {
-      static const char *names[] = {
+      static const char * const names[] = {
             "Off",
             "No Tip",
             "Over Ld",
@@ -216,15 +220,12 @@ public:
    }
 
    /**
-    * Set presence of tip.
+    * Indicates the presence of a tip
     *
-    * @param tipPresent
+    * @return
     */
-   void setTipPresent(bool tipPresent) {
-      if (nvSettings.selectedTip == nullptr) {
-         setState(ch_off);
-      }
-      this->tipPresent = tipPresent;
+   bool isTipPresent() const {
+      return measurement->isTipPresent();
    }
 
    /**
@@ -233,7 +234,7 @@ public:
     * @return Status value
     */
    ChannelState getState() const {
-      if (!tipPresent) {
+      if (!isTipPresent()) {
          return ch_noTip;
       }
       return state;
@@ -254,13 +255,14 @@ public:
 
       refreshControllerParameters();
 
-      controller.enable(isControlled());
+      measurement->enableControlLoop(isControlled());
       led.write(isRunning());
 
-      restartIdleTimer();
-
+      if (state != ch_setback) {
+         restartIdleTimer();
+      }
       if (!isRunning()) {
-         controller.setOutput(0);
+         measurement->setDutyCycle(0);
 
          // For safety while debugging immediately turn off drive
          chDrive.write(0b00);
@@ -276,7 +278,8 @@ public:
       state = ch_overload;
 
       // Disable drive
-      DutyCycleCounter::disable();
+      measurement->enableControlLoop(false);
+      measurement->setDutyCycle(0);
       chDrive.write(0b00);
    }
 
@@ -351,70 +354,6 @@ public:
    }
 
    /**
-    * Update current temperature from internal averages
-    * The PID controller is updated
-    */
-   void upDateCurrentTemperature() {
-      currentTemperature = measurement->getTemperature();
-      setTipPresent(currentTemperature < 600);
-      // Power average
-      power.accumulate(getDutyCycle());
-   }
-
-   /**
-    * Update current temperature from internal averages
-    * The controller is updated and used to determine drive
-    */
-   void upDatePid() {
-      if (state != ch_fixedPower) {
-         setDutyCycle(controller.newSample(getTargetTemperature(), currentTemperature));
-      }
-   }
-
-//   /**
-//    * Get Thermistor resistance
-//    *
-//    * @return Resistance in ohms
-//    */
-//   float getThermisterResistance() {
-//      return coldJunctionTemperature.getResistance();
-//   }
-
-//   /**
-//    * Get Thermistor temperature
-//    *
-//    * @return Temperature in C
-//    */
-//   float getThermisterTemperature() {
-//      return coldJunctionTemperature.getTemperature();
-//   }
-
-//   /**
-//    * Get thermocouple voltage
-//    *
-//    * @return Voltage in volts
-//    */
-//   float getThermocoupleVoltage() {
-//      return tipTemperature.getVoltage();
-//   }
-
-//   /**
-//    * Get thermocouple temperature
-//    *
-//    * @return Temperature in C
-//    */
-//   float getThermocoupleTemperature() {
-//      return tipTemperature.getTemperature();
-//   }
-
-   float getPower() const {
-      // Assume 24Vrms
-      float NOMINAL_MAX_POWER = (24 * 24)/measurement->getHeaterResistance();
-      float pwr = power.getAveragedAdcSamples()*NOMINAL_MAX_POWER/100;
-      return pwr;
-   }
-
-   /**
     * Sets the user target temperature.
     * Restart timer is cleared
     *
@@ -464,11 +403,19 @@ public:
    }
 
    /**
-    * Update drive based on PWM state
+    * Run end of cycle update:
+    *   - Update drive
+    *   - Temperature
+    *   - Power
+    *   - Controller
     */
-   void updateDrive() {
-      advance();
-      chDrive.write(0b11);
+   void update() {
+
+      // Update drive to heaters as needed
+      chDrive.write(measurement->update(targetTemperature));
+
+      // Update current temperature from internal averages
+      currentTemperature = measurement->getTemperature();
    }
 
    /**
@@ -514,7 +461,19 @@ public:
       }
    }
 
-   void report() {
+   /**
+    * Indicates if the tool has been unused (off) for a while.
+    *
+    * @return True  - Unused
+    * @return False - Used
+    */
+   bool isToolIdle() {
+      return !isRunning() && (toolIdleTime >= 100);
+   }
+
+   void report(bool doHeading = false) {
+      measurement->report(doHeading);
+
 //      USBDM::console.setFloatFormat(2, USBDM::Padding_LeadingSpaces, 2);
 //      float tipV   = 1000*tipTemperature.getVoltage();
 //      float tipT   = tipTemperature.getTemperature();
@@ -532,6 +491,17 @@ public:
 //      //         write(" C, Chip = ").write(chipTemperature.getConvertedValue()).
 //      writeln();
 //      USBDM::console.resetFormat();
+   }
+
+   /**
+    * Set output duty cycle.
+    * This is only applicable when in fixed power mode
+    *
+    * @param dutyCycle Duty cycle to set
+    */
+   void setDutyCycle(unsigned dutyCycle) {
+      usbdm_assert(state == ch_fixedPower, "");
+      measurement->setDutyCycle(dutyCycle);
    }
 };
 

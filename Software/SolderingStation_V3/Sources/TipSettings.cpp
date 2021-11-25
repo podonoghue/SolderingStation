@@ -91,7 +91,7 @@ const InitialTipInfo TipSettings::initialTipInfo[NUMBER_OF_TIPS] = {
 /**
  * Get TipNameIndex for given tip name
  *
- * @param name  Tip name
+ * @param tipName  Tip name
  *
  * @return TipNameIndex (index into tip name table)
  */
@@ -123,9 +123,9 @@ const char *TipSettings::getTipName(TipNameIndex index) {
 }
 
 /**
- * Load default calibration and control values
+ * Load default calibration values for given tip
  *
- * @param TipNameIndex  Tip name index for this setting
+ * @param tipNameIndex  Tip name index for this setting
  */
 void TipSettings::loadDefaultCalibration(TipNameIndex tipNameIndex) {
    this->tipNameIndex = tipNameIndex;
@@ -144,3 +144,25 @@ void TipSettings::loadDefaultCalibration(TipNameIndex tipNameIndex) {
          break;
    }
 }
+
+/**
+ * Report settings object
+ *
+ * @param io Where to write report
+ */
+void TipSettings::report(FormattedIO &io) {
+   using namespace USBDM;
+   io.write("name   = ").writeln(getTipName());
+   io.write("Kp     = ").writeln(getKp());
+   io.write("Ki     = ").writeln(getKi());
+   io.write("Kd     = ").writeln(getKd());
+   io.write("iLimit = ").writeln(getILimit());
+   io.write("flags  = 0b").writeln(flags, Radix_2);
+   for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
+      io.
+         write("T = ").write(getCalibrationTempValue(index)).
+         write(", M = ").writeln(getCalibrationMeasurementValue(index));
+   }
+}
+
+

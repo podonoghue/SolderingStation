@@ -70,7 +70,17 @@ public:
 };
 
 const char *getEventName(const EventType b);
-const char *getEventName(const Event b);
+
+/**
+ * Get name of event from Event
+ *
+ * @param event Event to describe
+ *
+ * @return Pointer to static string
+ */
+inline const char *getEventName(const Event event) {
+   return getEventName(event.type);
+}
 
 /**
  * Timer driven class to represent the front panel.

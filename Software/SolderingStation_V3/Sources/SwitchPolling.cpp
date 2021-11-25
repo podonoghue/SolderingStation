@@ -8,6 +8,7 @@
 #include "QuadDecoder.h"
 #include "Channels.h"
 #include "queue"
+#include "Control.h"
 
 using namespace USBDM;
 
@@ -26,8 +27,8 @@ constexpr unsigned HOLD_COUNT          = 1*1000/POLL_INTERVAL_IN_MS;       // 1 
  *
  * @return Pointer to static string
  */
-const char *getEventName(const EventType eventType) {
-   static const char *table[] = {
+const char * getEventName(const EventType eventType) {
+   static const char * const table[] = {
          "ev_None",
          "ev_QuadPress",
          "ev_QuadRelease",
@@ -59,17 +60,6 @@ const char *getEventName(const EventType eventType) {
 }
 
 /**
- * Get name of event from Event
- *
- * @param event Event to describe
- *
- * @return Pointer to static string
- */
-const char *getEventName(const Event event) {
-   return getEventName(event.type);
-}
-
-/**
  * Button polling
  */
 EventType SwitchPolling::pollSwitches() {
@@ -84,7 +74,7 @@ EventType SwitchPolling::pollSwitches() {
    static EventType pendingEvent = ev_None;
 
    // Poll buttons
-   unsigned  currentButtonValue = Buttons::read();
+   unsigned  currentButtonValue = buttons.read();
 
    // Count stable time with roll-over prevention
    if (stableButtonCount < UINT_MAX) {
@@ -120,12 +110,12 @@ EventType SwitchPolling::pollSwitches() {
 
       // We have button(s) pressed for the debounce time - regular button press
       switch(currentButtonValue) {
-         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch1Release;    break;
-         case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : pendingEvent = ev_Ch2Release;    break;
-         case (1<<(MenuButton::BITNUM-Buttons::RIGHT)) : pendingEvent = ev_SelRelease;    break;
-         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) : pendingEvent = ev_QuadRelease;   quadState = QuadState_Pressed; break;
-         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
-               (1<<(Ch2Button::BITNUM-Buttons::RIGHT)) : pendingEvent = ev_Ch1Ch2Release; break;
+         case (1<<(ch1Button.BITNUM-buttons.RIGHT))  : pendingEvent = ev_Ch1Release;    break;
+         case (1<<(ch2Button.BITNUM-buttons.RIGHT))  : pendingEvent = ev_Ch2Release;    break;
+         case (1<<(menuButton.BITNUM-buttons.RIGHT)) : pendingEvent = ev_SelRelease;    break;
+         case (1<<(quadButton.BITNUM-buttons.RIGHT)) : pendingEvent = ev_QuadRelease;   quadState = QuadState_Pressed; break;
+         case (1<<(ch1Button.BITNUM-buttons.RIGHT))|
+               (1<<(ch2Button.BITNUM-buttons.RIGHT)) : pendingEvent = ev_Ch1Ch2Release; break;
          default:                                        pendingEvent = ev_None;        break;
       }
       // Don't report button presses - only releases
@@ -143,17 +133,17 @@ EventType SwitchPolling::pollSwitches() {
 
       // We have a button pressed for the hold time - long held button
       switch(currentButtonValue) {
-         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch1Hold;    break;
-         case (1<<(Ch2Button::BITNUM-Buttons::RIGHT))  : event = ev_Ch2Hold;    break;
-         case (1<<(MenuButton::BITNUM-Buttons::RIGHT)) : event = ev_SelHold;    break;
-         case (1<<(QuadButton::BITNUM-Buttons::RIGHT)) :
+         case (1<<(ch1Button.BITNUM-buttons.RIGHT))  : event = ev_Ch1Hold;    break;
+         case (1<<(ch2Button.BITNUM-buttons.RIGHT))  : event = ev_Ch2Hold;    break;
+         case (1<<(menuButton.BITNUM-buttons.RIGHT)) : event = ev_SelHold;    break;
+         case (1<<(quadButton.BITNUM-buttons.RIGHT)) :
             // Swallow QuadHold when rotating
             if (quadState != QuadState_Pressed_Rotate) {
                event = ev_QuadHold;
             }
             break;
-         case (1<<(Ch1Button::BITNUM-Buttons::RIGHT))|
-               (1<<(Ch2Button::BITNUM-Buttons::RIGHT)) : event = ev_Ch1Ch2Hold; break;
+         case (1<<(ch1Button.BITNUM-buttons.RIGHT))|
+               (1<<(ch2Button.BITNUM-buttons.RIGHT)) : event = ev_Ch1Ch2Hold; break;
          default                                       : event = ev_None;       break;
       }
       return event;
@@ -198,6 +188,7 @@ void SwitchPolling::pollSetbacks() {
          channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
       }
    }
+   control.updateDisplayInUse(POLL_INTERVAL_IN_MS);
 }
 
 /**
@@ -242,7 +233,7 @@ void SwitchPolling::initialise() {
 
    quadState = QuadState_Normal;
 
-   Buttons::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
+   buttons.setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
 //   Setbacks::setInput(PinPull_Up, PinAction_None, PinFilter_Passive);
 
@@ -254,10 +245,10 @@ void SwitchPolling::initialise() {
       This->pollSetbacks();
    };
 
-   PollingTimerChannel::configureIfNeeded(PitDebugMode_Stop);
-   PollingTimerChannel::configure(POLL_INTERVAL_IN_MS*ms, PitChannelIrq_Enabled);
-   PollingTimerChannel::setCallback(callBack);
-   PollingTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
+   pollingTimerChannel.configureIfNeeded(PitDebugMode_Stop);
+   pollingTimerChannel.configure(POLL_INTERVAL_IN_MS*ms, PitChannelIrq_Enabled);
+   pollingTimerChannel.setCallback(callBack);
+   pollingTimerChannel.enableNvicInterrupts(NvicPriority_Normal);
 }
 
 SwitchPolling *SwitchPolling::This = nullptr;

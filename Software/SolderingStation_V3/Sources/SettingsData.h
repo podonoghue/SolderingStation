@@ -19,7 +19,6 @@ public:
    enum Type {Temperature, Time, Pid, Tip};
 
    const char      * const name;
-//   const Type              type;
    EventType (*handler)(const SettingsData &);
 
    union {
@@ -27,7 +26,10 @@ public:
       USBDM::Nonvolatile<int>       *settingInt;
       USBDM::Nonvolatile<float>     *settingFloat;
    };
-   int       increment;
+   union {
+      int       increment;
+      int       option;
+   };
 
    /**
     * Constructor for Nonvolatile<int> setting
@@ -73,6 +75,16 @@ public:
     */
    constexpr SettingsData(const char *name, EventType (*handler)(const SettingsData &))
    : name(name), handler(handler), settingFloat(nullptr), increment(0) {
+   }
+   /**
+    * Constructor for general non-volatile setting
+    *
+    * @param name       Name to display
+    * @param handler    Code to handle changes
+    * @param option     Option value
+    */
+   constexpr SettingsData(const char *name, EventType (*handler)(const SettingsData &), int option)
+   : name(name), handler(handler), settingFloat(nullptr), option(option) {
    }
 };
 

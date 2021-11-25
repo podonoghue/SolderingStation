@@ -1,5 +1,5 @@
 /*
- * MovingWIndowAverage.h
+ * @file Averageing.h
  *
  *  Created on: 4 Jun. 2021
  *      Author: peter
@@ -10,6 +10,7 @@
 
 #include "hardware.h"
 #include "Peripherals.h"
+#include "NonvolatileSettings.h"
 
 class AdcAverage {
 private:
@@ -32,7 +33,7 @@ public:
     */
    static constexpr float convertToAdcVoltage(float adcValue) {
       // Convert ADC value to voltage
-      return adcValue * (ADC_REF_VOLTAGE/ADConverter::getSingleEndedMaximum(ADC_RESOLUTION));
+      return adcValue * (ADC_REF_VOLTAGE/USBDM::measurementADC.getSingleEndedMaximum(ADC_RESOLUTION));
    }
 
    /**
@@ -294,7 +295,7 @@ public:
 
 // Three methods for averaging
 //using AveragingMethod = SimpleMovingAverage<10>; // 10*10ms = even weights over 100ms average
-using AveragingMethod = MovingAverage<20>; // 20*10ms = declining weights over 100ms average
+using AveragingMethod = MovingAverage<10>; // 10*10ms = declining weights over 100ms average
 //using AveragingMethod = DummyAverage;
 
 class TemperatureAverage : public AveragingMethod {
@@ -344,6 +345,9 @@ class ThermistorMF58Average : public TemperatureAverage {
 
 private:
 
+   /// Measurement path being used
+   static constexpr MuxSelect MEASUREMENT = MuxSelect_LowGainBiased;
+
    /**
     * Converts ADC voltage to thermistor resistance
     *
@@ -352,22 +356,25 @@ private:
     * @return Thermistor resistance in ohms
     */
    float convertAdcVoltageToNtcResistance(float voltage) const {
-      /// NTC measurement current
-      constexpr float NTC_MEASUREMENT_CURRENT  = 237E-6; // <- measured. Nominally (0.617/3.3E3)+15e-6 ~ 202uA!
 
-      /// Gain of NTC measurement amplifier - voltage follower
-      constexpr float NTC_MEASUREMENT_GAIN   = 1.0;
+      /// Gain of measurement path
+      const float gain  = nvinit.hardwareCalibration.lowGainNoBoost;
 
-      /// NTC measurement ratio ohms/volt i.e. converts ADC voltage to R
-      constexpr float NTC_MEASUREMENT_RATIO   = 1/(NTC_MEASUREMENT_CURRENT*NTC_MEASUREMENT_GAIN);
+      if (voltage>2.99) {
+         // Assume ADC at maximum => open resistor
+         return std::nanf("");//std::numeric_limits<float>::max();
+      }
 
-      return NTC_MEASUREMENT_RATIO * voltage;
+      // Scale to input voltage (voltage at divider)
+      voltage *= gain;
+
+      return BIAS_RESISTOR_VALUE / ((BIAS_VOLTAGE/voltage) - 1);
    }
 
    /**
     * Converts ADC voltage to temperature
     *
-    * @param resistance Thermistor resistance in ohms
+    * @param voltage ADC voltage
     *
     * @return Corresponding temperature in Celsius
     */
@@ -430,6 +437,15 @@ public:
    virtual float getResistance() const override {
       return convertAdcVoltageToNtcResistance(getAveragedAdcVoltage());
    }
+
+   /**
+    * Returns the measurement mux setting (excluding channel) to use
+    *
+    * @return
+    */
+   static constexpr MuxSelect getMeasurement() {
+      return MEASUREMENT;
+   }
 };
 
 /**
@@ -443,7 +459,26 @@ private:
    // Thermocouple voltage calibration values
    float calibrationVoltages[3];
 
+   /// Measurement path being used
+   static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGainBoost;
+
 public:
+
+   /**
+    * Converts ADC voltage to thermocouple voltage
+    * This accounts for the sampling and amplifier chain.
+    *
+    * @param voltage ADC voltage
+    *
+    * @return Thermocouple voltage
+    */
+   static float convertAdcVoltageToThermocoupleVoltage(float voltage) {
+
+      /// Gain of measurement path
+      const float gain  = nvinit.hardwareCalibration.highGainWithBoost;
+
+      return voltage * gain;
+   }
 
    /**
     * Converts ADC voltage to thermocouple relative temperature
@@ -455,9 +490,9 @@ public:
    float convertAdcVoltageToCelsius(float voltage) const {
 
       // Convert ADC voltage to TC voltage
-      voltage *= HIGH_GAIN_MEASUREMENT_RATIO0;
+      voltage = convertAdcVoltageToThermocoupleVoltage(voltage);
 
-      // Curve fitting was done using mV
+      // Calibration fitting was done using mV
       voltage *= 1000;
 
       // Simple linear interpolation with three calibration points
@@ -507,7 +542,7 @@ public:
     * @return Thermocouple voltage
     */
    virtual float getThermocoupleVoltage() const override {
-      return getAveragedAdcVoltage() * HIGH_GAIN_MEASUREMENT_RATIO0;
+      return convertAdcVoltageToThermocoupleVoltage(getAveragedAdcVoltage());
    }
 
    /**
@@ -517,11 +552,19 @@ public:
     */
    void setCalibrationValues(const TipSettings *tipSettings) {
       for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
-         calibrationTemperatures[index]    = tipSettings->getCalibrationTempValue(index);
-         calibrationVoltages[index] = tipSettings->getCalibrationMeasurementValue(index);
+         calibrationTemperatures[index] = tipSettings->getCalibrationTempValue(index);
+         calibrationVoltages[index]     = tipSettings->getCalibrationMeasurementValue(index);
       }
    }
 
+   /**
+    * Returns the measurement mux setting (excluding channel) to use
+    *
+    * @return
+    */
+   static constexpr MuxSelect getMeasurement() {
+      return MEASUREMENT;
+   }
 };
 
 /**
@@ -582,6 +625,10 @@ public:
 class WellerThermistorAverage : public TemperatureAverage {
 
 private:
+
+   /// Measurement path being used
+   static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGainBoostBiased;
+
    // Temperature calibration values
    float calibrationTemperatures[3];
 
@@ -600,17 +647,19 @@ private:
     */
    static float convertAdcVoltageToPtcResistance(float voltage) {
 
-      // Convert ADC voltage to thermistor voltage
-      voltage *= HIGH_GAIN_MEASUREMENT_RATIO0;
+      /// Gain of measurement path
+      const float gain  = nvinit.hardwareCalibration.highGainWithBoost;
 
-      // Thevenin equivalent supplying the PTC
-      constexpr float Rbias  = 10000.0;
-      constexpr float Ropamp = 100000.0+1000.0;
-      constexpr float Vt = 3.3*(Ropamp)/(Rbias+Ropamp);
-      constexpr float Rt = (Rbias*Ropamp)/(Rbias+Ropamp);
+      if (voltage>2.99) {
+         // Assume ADC at maximum => open resistor
+         return std::nanf("");
+      }
+
+      // Scale to input voltage (voltage at divider)
+      voltage *= gain;
 
       // Voltage divider
-      return Rt/((Vt/voltage)-1);
+      return BIAS_RESISTOR_VALUE / ((BIAS_VOLTAGE/voltage) - 1);
    }
 
    /**
@@ -618,7 +667,7 @@ private:
     * The ADC voltage is from the thermocouple amplifier with 1/TC_MEASUREMENT_RATIO gain measuring
     * the thermistor voltage produced from a Thevenin equivalent Rt and Vt i.e. voltage divider.
     *
-    * @param ADC voltage
+    * @param voltage ADC voltage
     *
     * @return Temperature in Celsius
     */
@@ -627,6 +676,20 @@ private:
       // Convert ADC voltage to resistance
       float Rptc = convertAdcVoltageToPtcResistance(voltage);
 
+      // Simple linear interpolation with three calibration points
+      float lastR = 22.0;
+      float lastT = 0.0;
+      unsigned index;
+      for (index=0; index<2; index++) {
+         if (Rptc < calibrationResistances[index]) {
+            break;
+         }
+         lastR = calibrationResistances[index];
+         lastT = calibrationTemperatures[index];
+      }
+      float temperature = lastT + ((calibrationTemperatures[index]-lastT)*(Rptc-lastR)/(calibrationResistances[index]-lastR));
+
+#if 0
       // Curve fit from PTC resistance -> Temperature
       constexpr float A_constant =  -79.560;
       constexpr float B_constant =   -0.994;
@@ -637,6 +700,9 @@ private:
       temperature += B_constant * power;
       power *= Rptc;
       temperature += C_constant * power;
+#endif
+
+      return temperature;
 
 //      USBDM::console.write("Vptc=").write(1000*voltage).write("mV Rptc=").write(Rptc).write(" T= ").writeln(temperature);
 
@@ -678,9 +744,18 @@ public:
     */
    void setCalibrationValues(const TipSettings *tipsettings) {
       for (CalibrationIndex index = CalibrationIndex_250; index <= CalibrationIndex_400; ++index) {
-         calibrationResistances[index]  =  tipsettings->getCalibrationMeasurementValue(index);
+         calibrationResistances[index]  = tipsettings->getCalibrationMeasurementValue(index);
          calibrationTemperatures[index] = tipsettings->getCalibrationTempValue(index);
       }
+   }
+
+   /**
+    * Returns the measurement mux setting (excluding channel) to use
+    *
+    * @return
+    */
+   static constexpr MuxSelect getMeasurement() {
+      return MEASUREMENT;
    }
 };
 

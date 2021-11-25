@@ -51,17 +51,7 @@ public:
     *
     * @param settings Parameter to use
     */
-   virtual void setControlParameters(const TipSettings *settings);
-
-   /**
-    * Enable controller
-    *
-    * @note: Controller is re-initialised when enabled.
-    * @note: Output is left unchanged when disabled.
-    *
-    * @param[in] enable True to enable
-    */
-   virtual void enable(bool enable = true);
+   virtual void setControlParameters(const TipSettings *settings) override ;
 
    /**
     * Main calculation
@@ -75,17 +65,27 @@ public:
     *
     * @return Control output
     */
-   virtual float newSample(float targetTemperature, float actualTemperature);
+   virtual float newSample(float actualTemperature, float targetTemperature) override ;
+
+   /**
+    * Enable controller
+    *
+    * @note: Controller is re-initialised when enabled.
+    * @note: Output is left unchanged when disabled.
+    *
+    * @param[in] enable True to enable
+    */
+   virtual void enable(bool enable = true) override ;
 
    /**
     * Report current situation
     */
-   virtual void report(Channel &ch);
+   virtual void report() const override ;
 
    /**
     * Print heading for report()
     */
-   virtual void reportHeading(Channel &ch);
+   virtual void reportHeading(Channel &ch) const override ;
 };
 
 #endif /* SOURCES_TAKEBACKHALFCONTROLLER_H_ */

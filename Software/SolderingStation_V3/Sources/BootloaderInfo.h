@@ -78,7 +78,7 @@ static constexpr unsigned MAX_MESSAGE_DATA = 1024;
  * @note return value is a pointer to a STATIC object - do not free
  */
 static inline const char *getCommandName(UsbCommand command) {
-   static const char *names[] = {
+   static const char * const names[] = {
          "UsbCommand_Nop",
          "UsbCommand_Identify",
          "UsbCommand_EraseFlash",
@@ -130,7 +130,7 @@ constexpr const char *getHardwareType() {
  * @note return value is a pointer to a STATIC object - do not free
  */
 static inline const char *getHardwareType(uint32_t hardwareVersion) {
-   static const char *names[] = {
+   static const char * const names[] = {
          "Unavailable",
          "Digital Lab Board V2",
          "Digital Lab Board V3",

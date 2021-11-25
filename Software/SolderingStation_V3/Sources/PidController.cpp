@@ -1,5 +1,5 @@
 /**
- * @file    Pid.h
+ * @file    PidController.h
  * @brief   PID Controller class
  *
  *  Created on: 10 Jul 2021
@@ -26,7 +26,7 @@ void PidController::setControlParameters(const TipSettings *settings) {
 /**
  * Enable controller
  *
- * @note: Controller is re-initialised when enabled.
+ * @note: Controller may be re-initialised when enabled.
  * @note: Output is left unchanged when disabled.
  *
  * @param[in] enable True to enable
@@ -39,6 +39,11 @@ void PidController::enable(bool enable) {
          fTickCount   = 0;
       }
    }
+   else if (fEnabled) {
+      // Just disabled
+      fCurrentOutput = 0;
+      setDutyCycle(0);
+   }
    fEnabled = enable;
 }
 
@@ -48,6 +53,8 @@ void PidController::enable(bool enable) {
  * Should be executed at interval period
  *
  * Process new sample to produce new control output
+ *
+ * @note If the controller is disabled it will simply return the last output value
  *
  * @param actualTemperature   Tip temperature in Celsius
  * @param targetTemperature   Target tip temperature in Celsius
@@ -68,8 +75,10 @@ float PidController::newSample(float targetTemperature, float actualTemperature)
 
    fTickCount++;
 
+   fCurrentTarget = targetTemperature;
+
    // Update input samples & error
-   fCurrentError = targetTemperature - fCurrentInput;
+   fCurrentError = fCurrentTarget - fCurrentInput;
 
    if ((fCurrentOutput<fOutMin+1)){
       // Hit bottom drive limit - de-integrate slower
@@ -107,10 +116,10 @@ float PidController::newSample(float targetTemperature, float actualTemperature)
 /**
  * Print heading for report()
  */
-void PidController::reportHeading(Channel &ch) {
+void PidController::reportHeading(Channel & ch) const {
 
       console.setFloatFormat(1, Padding_None).
-         write("Time,SetTemp,Drive,").write(ch.getTipName()).
+         write("SetTemp, Drive,").write(ch.getTipName()).
          write(",Error,P=").write(getKp());
       console.setFloatFormat(3, Padding_None).
          write(",I=").write(getKi());
@@ -122,37 +131,14 @@ void PidController::reportHeading(Channel &ch) {
 /**
  * Report current situation
  */
-void PidController::report(Channel &ch) {
-
-   // Take snapshot
-   volatile float targetTemp    = ch.getTargetTemperature();
-   volatile float instantTemp   = ch.measurement->getInstantTemperature();
-   volatile float currentOutput = fCurrentOutput;
-   volatile float currentInput  = fCurrentInput;
-   volatile float currentError  = fCurrentError;
-   volatile float proportional  = fProportional;
-   volatile float differential  = fDifferential;
-   volatile float integral      = fIntegral;
-//   volatile float rawTipTemp    = ch.tipTemperature.getLastSample()/50; // Approximation!
-//   volatile float resistance    = ch.tipTemperature.getResistance();
-
-   console.setFloatFormat(2, Padding_LeadingSpaces, 3);
-   console.write(getElapsedTime());
+void PidController::report() const {
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 3);
-   console.write(", ").write(targetTemp);
-   console.write(", ").write(currentOutput); // Drive
-   console.write(", ").write(currentInput);  // Averaged temperature
-
-   console.setFloatFormat(1, Padding_LeadingSpaces, 3);
-   console.write(",").write(currentError); // Error
-   console.write(",").write(proportional); // P
-   console.write(",").write(integral);     // I
-   console.write(",").write(differential); // D
-   console.write(",").write(instantTemp);  // Instantaneous temperature
-
-//   console.write(",").write(resistance);
-
-   console.writeln();
-   console.resetFormat();
+   console.write(",").write(fCurrentTarget); // Set temperature
+   console.write(",").write(fCurrentOutput); // Drive %
+   console.write(",").write(fCurrentInput);  // Average temperature
+   console.write(",").write(fCurrentError);  // Error
+   console.write(",").write(fProportional);  // P
+   console.write(",").write(fIntegral);      // I
+   console.write(",").write(fDifferential);  // D
 }

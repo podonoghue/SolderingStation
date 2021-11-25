@@ -1,5 +1,5 @@
 /*
- * ControllerX.h
+ * Controller.h
  *
  *  Created on: 2 Jul. 2021
  *      Author: peter
@@ -9,18 +9,16 @@
 #define SOURCES_CONTROLLER_H_
 
 #include "TipSettings.h"
+#include "DutyCycleCounter.h"
 
 class Channel;
 
 /**
  * Base class for controllers
  */
-class Controller {
+class Controller : public DutyCycleCounter {
 
 protected:
-   /// Enable for controller
-   bool        fEnabled        = false;
-
    /// Time in ticks since last enabled
    unsigned    fTickCount      = 0;
 
@@ -34,6 +32,9 @@ protected:
    float       fCurrentOutput  = 0.0;
 
    /// Current error calculation
+   float       fCurrentTarget  = 0.0;
+
+   /// Current error calculation
    float       fCurrentError   = 0.0;
 
    /// Minimum limit for output
@@ -42,18 +43,34 @@ protected:
    /// Maximum limit for output
    const float fOutMax;
 
+
+   /// Enables output i.e. isOn() always returns false if false
+   bool     fEnabled;
+
 public:
-   Controller(float interval, float outMin, float outMax) : fInterval(interval), fOutMin(outMin), fOutMax(outMax) {
+   Controller(float interval, float outMin, float outMax) :
+      DutyCycleCounter(101),
+      fInterval(interval), fOutMin(outMin), fOutMax(outMax), fEnabled(false) {
    }
 
    virtual ~Controller() {}
+
+   /**
+    * Indicates if the output is enabled
+    *
+    * @return True  - Enabled
+    * @return False - Disabled
+    */
+   bool isEnabled() const {
+      return fEnabled;
+   }
 
    /**
     * Get number of seconds since last enabled
     *
     * @return Elapsed time
     */
-   float getElapsedTime() {
+   float getElapsedTime() const {
       return (fTickCount*fInterval);
    }
 
@@ -72,18 +89,16 @@ public:
     *
     * @return Last error calculation
     */
-   float getError() {
+   float getError() const {
       return fCurrentError;
    }
 
    /**
-    * Indicates if the controller is enabled
+    * Set control parameters
     *
-    * @return True => enabled
+    * @param settings Parameter to use
     */
-   bool isEnabled() {
-      return fEnabled;
-   }
+   virtual void setControlParameters(const TipSettings *settings) = 0;
 
    /**
     * Main calculation
@@ -100,16 +115,9 @@ public:
    virtual float newSample(float actualTemperature, float targetTemperature) = 0;
 
    /**
-    * Set control parameters
+    * Enable controller
     *
-    * @param settings Parameter to use
-    */
-   virtual void setControlParameters(const TipSettings *settings) = 0;
-
-   /**
-    * Enable controller\n
-    *
-    * @note: Controller is re-initialised when enabled.
+    * @note: Controller may be re-initialised when enabled.
     * @note: Output is left unchanged when disabled.
     *
     * @param[in] enable True to enable
@@ -119,13 +127,19 @@ public:
    /**
     * Report current situation
     */
-   virtual void report(Channel &ch) = 0;
+   virtual void report() const = 0;
 
    /**
     * Print heading for report()
     */
-   virtual void reportHeading(Channel &ch) = 0;
-
+   virtual void reportHeading(Channel &ch) const = 0;
 };
+
+class PidController;
+class TakeBackHalfController;
+
+//   using TempController = BangBangController;
+   using TempController = PidController;
+//   using TempController = TakeBackHalfController;
 
 #endif /* SOURCES_CONTROLLER_H_ */

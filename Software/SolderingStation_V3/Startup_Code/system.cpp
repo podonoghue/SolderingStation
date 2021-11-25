@@ -22,6 +22,11 @@ uint32_t SystemCoreClock = 20000000;
 __attribute__((__weak__))
 uint32_t SystemBusClock  = 20000000;
 
+#ifdef SIM_CLKDIV1_OUTDIV3_MASK
+__attribute__((__weak__))
+uint32_t SystemFlexbusClock = 20000000;
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -59,7 +64,7 @@ void* __dso_handle;
 #endif
 
 /**
- *  @brief Low-level initialize the system
+ *  @brief Low-level initialise the system
  *
  *  Low level setup of the microcontroller system. \n
  *  Called very early in the initialisation. \n

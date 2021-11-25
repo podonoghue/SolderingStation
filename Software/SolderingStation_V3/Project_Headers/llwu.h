@@ -16,7 +16,7 @@
  * This file is generated automatically.
  * Any manual changes will be lost.
  */
-#include "hardware.h"
+#include "pin_mapping.h"
 
 namespace USBDM {
 
@@ -114,12 +114,17 @@ enum LlwuPin : uint32_t {
 #endif
 
    // Mapped pins
-   LlwuPin_Pta4         = LlwuPin_3,    //!< Mapped pin PTA4
-   LlwuPin_Ptc5         = LlwuPin_9,    //!< Mapped pin PTC5
-   LlwuPin_Ptc6         = LlwuPin_10,   //!< Mapped pin PTC6
-   LlwuPin_Ptd0         = LlwuPin_12,   //!< Mapped pin PTD0
-   LlwuPin_Ptd2         = LlwuPin_13,   //!< Mapped pin PTD2
-   LlwuPin_Ptd4         = LlwuPin_14,   //!< Mapped pin PTD4
+   LlwuPin_Pta4                                       = LlwuPin_3,    ///< Mapped pin PTA4
+   LlwuPin_Ptb0                                       = LlwuPin_5,    ///< Mapped pin PTB0
+   LlwuPin_Ptc1                                       = LlwuPin_6,    ///< Mapped pin PTC1
+   LlwuPin_Ptc3                                       = LlwuPin_7,    ///< Mapped pin PTC3
+   LlwuPin_Ptc4                                       = LlwuPin_8,    ///< Mapped pin PTC4
+   LlwuPin_Ptc5                                       = LlwuPin_9,    ///< Mapped pin PTC5
+   LlwuPin_Ptc6                                       = LlwuPin_10,   ///< Mapped pin PTC6
+   LlwuPin_Ptd0                                       = LlwuPin_12,   ///< Mapped pin PTD0
+   LlwuPin_Ptd2                                       = LlwuPin_13,   ///< Mapped pin PTD2
+   LlwuPin_Ptd4                                       = LlwuPin_14,   ///< Mapped pin PTD4
+   LlwuPin_Ptd6                                       = LlwuPin_15,   ///< Mapped pin PTD6
 
 };
 
@@ -137,13 +142,14 @@ enum LlwuPeripheral : uint32_t {
    LlwuPeripheral_7               = (1<<7), //!< Wake-up peripheral LLWU_M7IF
 
    // Connected peripherals
-   LlwuPeripheral_Lptmr           = LlwuPeripheral_0, //!< LPTMR wake-up
-   LlwuPeripheral_Cmp0            = LlwuPeripheral_1, //!< CMP0 wake-up
-   LlwuPeripheral_Cmp1            = LlwuPeripheral_2, //!< CMP1 wake-up
-   LlwuPeripheral_Cmp2Cmp3        = LlwuPeripheral_3, //!< CMP2/CMP3 wake-up
-   LlwuPeripheral_Tsi0            = LlwuPeripheral_4, //!< TSI0 wake-up
-   LlwuPeripheral_RtcAlarm        = LlwuPeripheral_5, //!< RTC Alarm wake-up
-   LlwuPeripheral_RtcSeconds      = LlwuPeripheral_7, //!< RTC Seconds wake-up
+   LlwuPeripheral_Lptmr0                              = LlwuPeripheral_0, 
+   LlwuPeripheral_Cmp0                                = LlwuPeripheral_1, 
+   LlwuPeripheral_ZeroCrossingComparator              = LlwuPeripheral_1, ///< Mains zero-crossing comparator
+   LlwuPeripheral_Cmp1                                = LlwuPeripheral_2, 
+   LlwuPeripheral_OverCurrentComparator               = LlwuPeripheral_2, ///< Over-current comparator
+   LlwuPeripheral_Tsi                                 = LlwuPeripheral_4, 
+   LlwuPeripheral_RtcAlarm                            = LlwuPeripheral_5, 
+   LlwuPeripheral_RtcSeconds                          = LlwuPeripheral_7, 
 
 };
 
@@ -679,7 +685,6 @@ template<class Info> LlwuCallbackFunction LlwuBase_T<Info>::sCallback = LlwuBase
  * Class representing LLWU
  */
 class Llwu : public LlwuBase_T<LlwuInfo> {};
-
 #endif
 
 /**
