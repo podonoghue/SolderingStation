@@ -21,7 +21,7 @@ TargetOutputMedium=PCB
 VariantName=[No Variations]
 VariantScope=1
 CurrentConfigurationName=
-TargetPrinter=Microsoft Print to PDF
+TargetPrinter=Brother DCP-L3510CDW series
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintJobKind=1|PrintWhat=1
 OutputMedium1=Print Job
 OutputMedium1_Type=Printer
@@ -192,7 +192,7 @@ Configuration9_Name1=OutputConfigurationParameter1
 Configuration9_Item1=Record=Pcb3DPrintView|ResX=150|ResY=150|ViewX=59448821|ViewY=41338588|LookAtX=38355824|LookAtY=31269690|LookAtZ=0|UpX=0|UpY=1|UpZ=0|FOV=0|QuatX=0|QuatY=0|QuatZ=0|QuatW=1|Zoom=4.18679455392395E-5|UnitsPercent=True|UnitsDPI=True|LockResAspect=True|ViewConfigType=.config_3d|CustomCamera=False|ViewFromTop=True|ScreenWidth=0|ScreenHeight=0|ViewConfig=|DocumentPath=Z:\Documents\Development\SolderingStation\PCB_Controller\SolderingStation.PcbDoc
 
 [PublishSettings]
-OutputFilePath2=Z:\Documents\Development\SolderingStation\PCB_Controller_V4\.\SolderingStation_V3.PDF
+OutputFilePath2=Z:\Documents\Development\SolderingStation\PCB_Controller_V4\.\SolderingStation_V4.PDF
 ReleaseManaged2=0
 OutputBasePath2=.\
 OutputPathMedia2=
@@ -219,9 +219,9 @@ ShowComponentParameters2=1
 GlobalBookmarks2=0
 PDFACompliance2=Disabled
 PDFVersion2=Default
-OutputFilePath3=Z:\Documents\Development\SolderingStation\PCB_Controller_V4\SolderingStation \
+OutputFilePath3=Z:\Documents\Development\SolderingStation\PCB_Controller_V4\SolderingStation_V4 \
 ReleaseManaged3=0
-OutputBasePath3=SolderingStation\
+OutputBasePath3=SolderingStation_V4\
 OutputPathMedia3=
 OutputPathMediaValue3=
 OutputPathOutputer3=
@@ -234,9 +234,9 @@ OutputFileNameSpecial3=
 OpenOutput3=0
 
 [GeneratedFilesSettings]
-RelativeOutputPath2=Z:\Documents\Development\SolderingStation\PCB_Controller_V4\.\SolderingStation_V3.PDF
+RelativeOutputPath2=Z:\Documents\Development\SolderingStation\PCB_Controller_V4\.\SolderingStation_V4.PDF
 OpenOutputs2=0
-RelativeOutputPath3=Z:\Documents\Development\SolderingStation\PCB_Controller_V4\SolderingStation \
+RelativeOutputPath3=Z:\Documents\Development\SolderingStation\PCB_Controller_V4\SolderingStation_V4 \
 OpenOutputs3=0
 AddToProject3=0
 TimestampFolder3=1
