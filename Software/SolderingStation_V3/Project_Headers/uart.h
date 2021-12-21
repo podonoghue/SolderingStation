@@ -438,13 +438,58 @@ protected:
    static UARTCallbackFunction lonCallback;
 
 public:
+   // Template _mapPinsOption_on.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with UART
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
+
+   /**
+    * Disabled all mapped pins associated with UART
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of UART
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    */
+   static void enable() {
+   
+      // Enable clock to peripheral
+      Info::enableClock();
+   
+      configureAllPins();
+   }
+
+   /**
+    * Disables the clock to UART and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption_on.xml
+
 
    /**
     * Construct UART interface

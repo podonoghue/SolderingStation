@@ -16,6 +16,7 @@
  * This file is generated automatically.
  * Any manual changes will be lost.
  */
+#include <math.h>
 #include "pin_mapping.h"
 
 namespace USBDM {
@@ -331,36 +332,57 @@ protected:
    static constexpr HardwarePtr<PDB_Type> pdb = Info::baseAddress;
 
 public:
+   // Template _mapPinsOption.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with PDB
     */
    static void configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
-   }
-
-   /**
-    * Basic enable of PDB.
-    * Includes enabling clock and configuring all pins of mapPinsOnEnable is selected on configuration
-    */
-   static void  enable() {
-
-      if (Info::mapPinsOnEnable) {
-         configureAllPins();
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
       }
-      Info::enableClock();
-      __DMB();
    }
 
    /**
-    * Disable PDB
+    * Disabled all mapped pins associated with PDB
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
     */
-   static void  disable() {
-
-      pdb->SC  = 0;
-      Info::disableClock();
-      __DMB();
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
    }
+
+   /**
+    * Basic enable of PDB
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    */
+   static void enable() {
+   
+      // Enable clock to peripheral
+      Info::enableClock();
+   
+      configureAllPins();
+   }
+
+   /**
+    * Disables the clock to PDB and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption.xml
 
    /**
     * Enables PDB and sets to default configuration.

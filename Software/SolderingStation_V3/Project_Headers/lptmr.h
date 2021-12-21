@@ -144,25 +144,58 @@ protected:
    }
 
 public:
+   // Template _mapPinsOption.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with LPTMR
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
 
    /**
-    * Enables the LPTMR clock and configures the pins
+    * Disabled all mapped pins associated with LPTMR
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of LPTMR
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-      configureAllPins();
-
-      // Enable clock
-      Info::enableClock();
-      __DMB();
-   }
    
+      // Enable clock to peripheral
+      Info::enableClock();
+   
+      configureAllPins();
+   }
+
+   /**
+    * Disables the clock to LPTMR and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption.xml
+
    /**
     * Set LPTMR to pulse counting mode.
     * Provides selection of input pin, edge selection and reset mode.\n
@@ -412,16 +445,6 @@ public:
          // Set priority level
          NVIC_SetPriority(Info::irqNums[0], Info::irqLevel);
       }
-   }
-   /**
-    *   Disable the LPTMR
-    */
-   static void disable(void) {
-      // Disable timer
-      Info::enableClock();
-      lptmr->CSR = 0;
-      NVIC_DisableIRQ(Info::irqNums[0]);
-      Info::disableClock();
    }
 
    /**

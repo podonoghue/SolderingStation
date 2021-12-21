@@ -62,10 +62,10 @@ void QuadDecoder::pinIrqCallback(uint32_t eventMask) {
    static DecoderState currentState = DecoderState_Idle;
 
    // Check if interrupt from Quad switch bits
-   if (eventMask && quadPhases.BITMASK) {
+   if (eventMask && QuadPhases::BITMASK) {
 
       // Use current state and state of GPIOs to determine next state
-      DecoderState nextState = nextStateTable[currentState][quadPhases.read()];
+      DecoderState nextState = nextStateTable[currentState][QuadPhases::read()];
 
       // Do transition actions
       if (nextState&Inc) {
@@ -95,9 +95,9 @@ void QuadDecoder::initialise() {
    };
 
    // Configure encoder pins as inputs with dual-edge interrupts
-   quadPhases.setPinCallback(cb);
-   quadPhases.setInput(PinPull_Up, PinAction_IrqEither, PinFilter_Passive);
-   quadPhases.enableNvicInterrupts(NvicPriority_Normal);
+   QuadPhases::setPinCallback(cb);
+   QuadPhases::setInput(PinPull_Up, PinAction_IrqEither, PinFilter_Passive);
+   QuadPhases::enableNvicInterrupts(NvicPriority_Normal);
 }
 
 /**

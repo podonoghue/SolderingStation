@@ -380,25 +380,57 @@ public:
    }
 
 public:
+// Template _mapPinsOption.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with CMP
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
 
    /**
-    * Basic enable CMP.
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected on configuration
+    * Disabled all mapped pins associated with CMP
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of CMP
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-      if (Info::mapPinsOnEnable) {
-         configureAllPins();
-      }
-      // Enable clock to CMP interface
+   
+      // Enable clock to peripheral
       Info::enableClock();
+   
+      configureAllPins();
    }
+
+   /**
+    * Disables the clock to CMP and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption.xml
 
    /**
     * Enable with default settings\n
@@ -667,14 +699,6 @@ public:
    }
 
    /**
-    * Disable Comparator
-    */
-   static void disable() {
-      cmp->CR1 = 0;
-      Info::disableClock();
-   }
-
-   /**
     * Enable interrupts in NVIC
     */
    static void enableNvicInterrupts() {
@@ -864,12 +888,6 @@ public:
     */
    enum Input {
       // Mapped inputs
-      Input_Ptc7                = 1,       ///< Mapped pin PTC7 (p40)
-      Input_ZeroCrossingInput   = 1,       ///< Mapped pin PTC7 (p40)
-      Input_VrefOut             = 5,       ///< Fixed pin  VREF_OUT (p13)
-      Input_Bandgap             = 6,       ///< Fixed pin  BANDGAP (Internal)
-      Input_CmpDac              = 7,       ///< Fixed pin  CMP_DAC (Internal)
-
       Input_0          = 0, //!< CMP0 input 0
       Input_1          = 1, //!< CMP0 input 1
       Input_2          = 2, //!< CMP0 input 2
@@ -878,6 +896,12 @@ public:
       Input_5          = 5, //!< CMP0 input 5
       Input_6          = 6, //!< CMP0 input 6
       Input_7          = 7, //!< CMP0 input 7
+      
+      Input_Ptc7                = Input_1, ///< Mapped pin PTC7(p40)
+      Input_ZeroCrossingInput   = Input_1, ///< Mapped pin PTC7(p40)
+      Input_VrefOut             = Input_5, ///< Fixed pin  VREF_OUT(p13)
+      Input_Bandgap             = Input_6, ///< Fixed pin  BANDGAP(Internal)
+      Input_CmpDac              = Input_7, ///< Fixed pin  CMP_DAC(Internal)
 
    };
 
@@ -934,11 +958,6 @@ public:
     */
    enum Input {
       // Mapped inputs
-      Input_VrefOut             = 5,       ///< Fixed pin  VREF_OUT (p13)
-      Input_Overcurrent         = 5,       ///< Fixed pin  VREF_OUT (p13)
-      Input_Bandgap             = 6,       ///< Fixed pin  BANDGAP (Internal)
-      Input_CmpDac              = 7,       ///< Fixed pin  CMP_DAC (Internal)
-
       Input_0          = 0, //!< CMP1 input 0
       Input_1          = 1, //!< CMP1 input 1
       Input_2          = 2, //!< CMP1 input 2
@@ -947,6 +966,12 @@ public:
       Input_5          = 5, //!< CMP1 input 5
       Input_6          = 6, //!< CMP1 input 6
       Input_7          = 7, //!< CMP1 input 7
+      
+      Input_VrefOut             = Input_5, ///< Fixed pin  VREF_OUT(p13)
+      Input_Overcurrent         = Input_5, ///< Fixed pin  VREF_OUT(p13)
+      Input_Bandgap             = Input_6, ///< Fixed pin  BANDGAP(Internal)
+      Input_CmpDac              = Input_7, ///< Fixed pin  CMP_DAC(Internal)
+
    };
 
 
@@ -1003,7 +1028,6 @@ public:
     */
    enum Input {
       // Mapped inputs
-// None Found
       Input_0          = 0, //!< CMP2 input 0
       Input_1          = 1, //!< CMP2 input 1
       Input_2          = 2, //!< CMP2 input 2
@@ -1012,6 +1036,8 @@ public:
       Input_5          = 5, //!< CMP2 input 5
       Input_6          = 6, //!< CMP2 input 6
       Input_7          = 7, //!< CMP2 input 7
+      
+// None Found
    };
 
    /**
@@ -1067,7 +1093,6 @@ public:
     */
    enum Input {
       // Mapped inputs
-// None Found
       Input_0          = 0, //!< CMP3 input 0
       Input_1          = 1, //!< CMP3 input 1
       Input_2          = 2, //!< CMP3 input 2
@@ -1076,6 +1101,8 @@ public:
       Input_5          = 5, //!< CMP3 input 5
       Input_6          = 6, //!< CMP3 input 6
       Input_7          = 7, //!< CMP3 input 7
+      
+// None Found
    };
 
    /**

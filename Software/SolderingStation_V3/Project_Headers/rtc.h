@@ -194,7 +194,7 @@ public:
     *                        Use nullptr to remove callback.
     */
    static void setAlarmCallback(RtcCallbackFunction callback) {
-      static_assert(Info::irqAlarmHandlerInstalled, "RTC not configure for alarm interrupts");
+      static_assert(Info::irqHandlerInstalled, "RTC not configure for alarm interrupts");
       if (callback == nullptr) {
          callback = unhandledCallback;
       }
@@ -208,7 +208,7 @@ public:
     *                        Use nullptr to remove callback.
     */
    static void setSecondsCallback(RtcCallbackFunction callback) {
-      static_assert(Info::irqSecondsHandlerInstalled, "RTC not configure for seconds interrupts");
+      static_assert(Info::irqHandlerInstalled, "RTC not configure for seconds interrupts");
       if (callback == nullptr) {
          callback = unhandledCallback;
       }
@@ -221,13 +221,58 @@ protected:
    static constexpr HardwarePtr<RTC_Type> rtc = Info::baseAddress;
 
 public:
+   // Template _mapPinsOption_on.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with RTC
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
+
+   /**
+    * Disabled all mapped pins associated with RTC
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of RTC
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    */
+   static void enable() {
+   
+      // Enable clock to peripheral
+      Info::enableClock();
+   
+      configureAllPins();
+   }
+
+   /**
+    * Disables the clock to RTC and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption_on.xml
+
 
    /**
     * Initialise RTC to default settings.
@@ -237,7 +282,7 @@ public:
 
       // Enable clock to RTC interface
       // (RTC used its own clock internally)
-      Info::enableClock();
+      enable();
 
 #ifdef RTC_CR_OSCE_MASK
       if ((Info::cr&RTC_CR_OSCE_MASK) == 0) {

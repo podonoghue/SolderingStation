@@ -66,19 +66,19 @@ enum LlwuPeripheralMode {
  * LLWU pin sources
  */
 enum LlwuPin : uint32_t {
-   LlwuPin_0            =   0,  //!< Wake-up pin LLWU_P0 
-   LlwuPin_1            =   1,  //!< Wake-up pin LLWU_P1 
-   LlwuPin_2            =   2,  //!< Wake-up pin LLWU_P2 
-   LlwuPin_3            =   3,  //!< Wake-up pin LLWU_P3 
+   LlwuPin_0            =   0,  //!< Wake-up pin LLWU_P0
+   LlwuPin_1            =   1,  //!< Wake-up pin LLWU_P1
+   LlwuPin_2            =   2,  //!< Wake-up pin LLWU_P2
+   LlwuPin_3            =   3,  //!< Wake-up pin LLWU_P3
 #ifdef LLWU_PE2_WUPE4_MASK
-   LlwuPin_4            =   4,  //!< Wake-up pin LLWU_P4 
-   LlwuPin_5            =   5,  //!< Wake-up pin LLWU_P5 
-   LlwuPin_6            =   6,  //!< Wake-up pin LLWU_P6 
-   LlwuPin_7            =   7,  //!< Wake-up pin LLWU_P7 
+   LlwuPin_4            =   4,  //!< Wake-up pin LLWU_P4
+   LlwuPin_5            =   5,  //!< Wake-up pin LLWU_P5
+   LlwuPin_6            =   6,  //!< Wake-up pin LLWU_P6
+   LlwuPin_7            =   7,  //!< Wake-up pin LLWU_P7
 #endif
 #ifdef LLWU_PE3_WUPE8_MASK
-   LlwuPin_8            =   8,  //!< Wake-up pin LLWU_P8 
-   LlwuPin_9            =   9,  //!< Wake-up pin LLWU_P9 
+   LlwuPin_8            =   8,  //!< Wake-up pin LLWU_P8
+   LlwuPin_9            =   9,  //!< Wake-up pin LLWU_P9
    LlwuPin_10           =  10,  //!< Wake-up pin LLWU_P10
    LlwuPin_11           =  11,  //!< Wake-up pin LLWU_P11
 #endif
@@ -114,17 +114,17 @@ enum LlwuPin : uint32_t {
 #endif
 
    // Mapped pins
-   LlwuPin_Pta4                                       = LlwuPin_3,    ///< Mapped pin PTA4
-   LlwuPin_Ptb0                                       = LlwuPin_5,    ///< Mapped pin PTB0
-   LlwuPin_Ptc1                                       = LlwuPin_6,    ///< Mapped pin PTC1
-   LlwuPin_Ptc3                                       = LlwuPin_7,    ///< Mapped pin PTC3
-   LlwuPin_Ptc4                                       = LlwuPin_8,    ///< Mapped pin PTC4
-   LlwuPin_Ptc5                                       = LlwuPin_9,    ///< Mapped pin PTC5
-   LlwuPin_Ptc6                                       = LlwuPin_10,   ///< Mapped pin PTC6
-   LlwuPin_Ptd0                                       = LlwuPin_12,   ///< Mapped pin PTD0
-   LlwuPin_Ptd2                                       = LlwuPin_13,   ///< Mapped pin PTD2
-   LlwuPin_Ptd4                                       = LlwuPin_14,   ///< Mapped pin PTD4
-   LlwuPin_Ptd6                                       = LlwuPin_15,   ///< Mapped pin PTD6
+   LlwuPin_Pta4                                       = LlwuPin_3,    ///< Mapped pin PTA4(p21)
+   LlwuPin_Ptb0                                       = LlwuPin_5,    ///< Mapped pin PTB0(p27)
+   LlwuPin_Ptc1                                       = LlwuPin_6,    ///< Mapped pin PTC1(p34)
+   LlwuPin_Ptc3                                       = LlwuPin_7,    ///< Mapped pin PTC3(p36)
+   LlwuPin_Ptc4                                       = LlwuPin_8,    ///< Mapped pin PTC4(p37)
+   LlwuPin_Ptc5                                       = LlwuPin_9,    ///< Mapped pin PTC5(p38)
+   LlwuPin_Ptc6                                       = LlwuPin_10,   ///< Mapped pin PTC6(p39)
+   LlwuPin_Ptd0                                       = LlwuPin_12,   ///< Mapped pin PTD0(p41)
+   LlwuPin_Ptd2                                       = LlwuPin_13,   ///< Mapped pin PTD2(p43)
+   LlwuPin_Ptd4                                       = LlwuPin_14,   ///< Mapped pin PTD4(p45)
+   LlwuPin_Ptd6                                       = LlwuPin_15,   ///< Mapped pin PTD6(p47)
 
 };
 
@@ -185,6 +185,29 @@ enum LlwuResetFilter {
  * Type definition for LLWU interrupt call back
  */
 typedef void (*LlwuCallbackFunction)();
+
+/**
+ * Base class representing a LLWU pin
+ */
+class LlwuPinInfo {
+
+private:
+   LlwuPinInfo(const LlwuPinInfo&) = delete;
+   LlwuPinInfo(LlwuPinInfo&&)      = delete;
+
+
+public:
+   const LlwuPin     fLlwuPin;
+   const LlwuPinMode fLwuPinMode;
+
+   /**
+    * Constructor
+    *
+    * @param llwuPin     Pin being used for wakeup
+    * @param llwuPinMode LLWU pin wake-up mode
+    */
+   constexpr LlwuPinInfo(LlwuPin llwuPin, LlwuPinMode llwuPinMode) : fLlwuPin(llwuPin), fLwuPinMode(llwuPinMode) {}
+};
 
 /**
  * Template class providing interface to Low Leakage Wake-up Unit
@@ -336,22 +359,57 @@ protected:
    static constexpr HardwarePtr<LLWU_Type> llwu = Info::baseAddress;
 
 public:
+   // Template _mapPinsOption.xml
 
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with LLWU
     */
    static void configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
 
    /**
-    * Basic enable of LLWU\n
-    * Includes configuring all pins
+    * Disabled all mapped pins associated with LLWU
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of LLWU
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
+   
+      // Enable clock to peripheral
+      Info::enableClock();
+   
       configureAllPins();
    }
+
+   /**
+    * Disables the clock to LLWU and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption.xml
 
    /**
     * Configure with settings from Configure.usbdmProject.
@@ -423,6 +481,19 @@ public:
       volatile uint8_t &llwuPe = llwu->PE[llwuPin>>2];
       uint8_t mask = masks[llwuPin&3];
       llwuPe = (llwuPe&~mask) | (llwuPinMode&mask);
+   }
+
+   /**
+    * Configure pin as wake-up source
+    *
+    * @param[in] llwuPinInfo   Pin information used to configure source
+    */
+   static void configurePinSource(const LlwuPinInfo &llwuPinInfo) {
+
+      static const uint8_t masks[] = {(0x3<<0),(0x3<<2),(0x3<<4),(0x3<<6)};
+      volatile uint8_t &llwuPe = llwu->PE[llwuPinInfo.fLlwuPin>>2];
+      uint8_t mask = masks[llwuPinInfo.fLlwuPin&3];
+      llwuPe = (llwuPe&~mask) | (llwuPinInfo.fLwuPinMode&mask);
    }
 
    /**
@@ -647,7 +718,11 @@ public:
    }
 
    template<LlwuPin llwuPin>
-   class Pin : public PcrTable_T<Info, llwuPin> {
+   class Pin : public PcrTable_T<Info, llwuPin>, public LlwuPinInfo {
+
+   private:
+      Pin(const LlwuPinInfo&) = delete;
+      Pin(LlwuPinInfo&&) = delete;
 
    private:
       // Checks pin mapping is valid
@@ -658,6 +733,13 @@ public:
 
    public:
       static constexpr LlwuPin  pin = llwuPin;
+
+      /**
+       * Constructor
+       *
+       * @param llwuPinMode LLWU pin wake-up mode
+       */
+      constexpr Pin(LlwuPinMode llwuPinMode=LlwuPinMode_EitherEdge) : LlwuPinInfo(llwuPin, llwuPinMode) {}
 
       /**
        * Set callback for Pin interrupts

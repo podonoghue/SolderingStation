@@ -54,18 +54,66 @@ private:
       static constexpr bool checker = false;
    };
 
+   // Dummy function as no IRQ
+   void disableNvicInterrupts() {}
+
 protected:
    /** Hardware instance */
    static constexpr HardwarePtr<OSC_Type> osc = Info::baseAddress;
 
 public:
+   // Template _mapPinsOption_on.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with OSC
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
+
+   /**
+    * Disabled all mapped pins associated with OSC
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of OSC
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    */
+   static void enable() {
+   
+      // Enable clock to peripheral
+      Info::enableClock();
+   
+      configureAllPins();
+   }
+
+   /**
+    * Disables the clock to OSC and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption_on.xml
+
 
    /**
     * Initialise OSC to default settings.
@@ -73,8 +121,10 @@ public:
     */
    static void defaultConfigure() {
 
-      (void)CheckPinMapped<0>::checker;
-      (void)CheckPinMapped<1>::checker;
+      if constexpr (Osc0Info::cr & OSC_CR_ERCLKEN_MASK) {
+         (void)CheckPinMapped<0>::checker;
+         (void)CheckPinMapped<1>::checker;
+      }
 
       if (Info::mapPinsOnEnable) {
          configureAllPins();

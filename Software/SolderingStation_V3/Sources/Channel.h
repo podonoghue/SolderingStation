@@ -419,9 +419,9 @@ public:
    }
 
    /**
-    * Indicates if the temperature has been changed since a preset was selected.
+    * Indicates if the set temperature is different to the last preset selected.
     *
-    * @return true if temperature has been changed
+    * @return True if temperature differs
     */
    bool isTempModified() const {
       return targetTemperature != nvSettings.presets[preset];

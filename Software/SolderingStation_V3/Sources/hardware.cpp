@@ -24,88 +24,78 @@ namespace USBDM {
  * @{
  */
 
-/// Measurement ADC
-const Adc0                                         measurementADC;                 
-/// ADC channel connected to high gain  amplifier
-const Adc0::Channel<0>                             highGainAdcChannel;             // p7
-const Adc0::Channel<6>                             ch1Identify;                    // p46
-const Adc0::Channel<7>                             ch2Identify;                    // p47
-/// ADC channel connected to low gain  amplifier
-const Adc0::Channel<19>                            lowGainAdcChannel;              // p8
-/// Internal temperature sensor T = (25 - (Tvolts-0.719)/.001715)
-const Adc0::Channel<26>                            chipTemperatureAdcChannel;      // Internal
-/// Mains zero-crossing comparator
-const Cmp0                                         zeroCrossingComparator;         
-/// AC zero Crossing Detector Comparator input
-const Cmp0::Pin<1>                                 zeroCrossingInput;              // p40
-/// Over-current comparator
-const Cmp1                                         overCurrentComparator;          
-/// Over-current Detector Comparator input
-const Cmp1::Pin<5>                                 overcurrent;                    // p13
-/// FTM used for channel drive (optional)
-const Ftm0                                         driveFtm;                       
-/// Spare pin for debugging
-const GpioA<4>                                     debug;                          // p21
-/// Quadrature Encoder pins (Bit Field)
-const GpioBField<1, 0, ActiveLow>                  quadPhases;                     // p27-p28
-/// Stand sensors (Bit Field)
-const GpioBField<17, 16, ActiveLow>                setbacks;                       // p31-p32
-/// Channel 1 Drive  (Bit Field)
-const GpioCField<2, 1, ActiveLow>                  ch1Drive;                       // p34-p35
-/// Channel 1 Selected LED
-const GpioC<0>                                     ch1SelectedLed;                 // p33
-/// Channel 2 Selected LED
-const GpioC<6>                                     ch2SelectedLed;                 // p39
-/// Controls clamp at input of amplifier chain (output of mux)
-const GpioC<5>                                     clamp;                          // p38
-/// Channel 2 Drive (Bit Field)
-const GpioCField<4, 3, ActiveLow>                  ch2Drive;                       // p36-p37
-/// Quadrature encoder centre button
-const GpioD<0, ActiveLow>                          quadButton;                     // p41
-/// Channel 2 Button
-const GpioD<1, ActiveLow>                          ch2Button;                      // p42
-/// All buttons for polling (Bit Field)
-const GpioDField<3, 0, ActiveLow>                  buttons;                        // p41-p44
-/// Channel 1 Button
-const GpioD<2, ActiveLow>                          ch1Button;                      // p43
-/// MenuButton
-const GpioD<3, ActiveLow>                          menuButton;                     // p44
-/// Bias enable on amplifier input
-const GpioD<7>                                     biasEnable;                     // p48
-/// Mux&amplifier control (Bit Field)
-const GpioDField<7, 4, 0b1>                        amplifierControl;               // p45-p48
-/// Gain boost enable on amplifier
-const GpioD<4, ActiveLow>                          highGainEnable;                 // p45
-/// PIT Channel to use for switch polling
-const Pit::Channel<0>                              pollingTimerChannel;            // Internal
-/// PIT Channel to use for sample and control timing
-const Pit::Channel<1>                              controlTimerChannel;            // Internal
+/**
+ * Startup code for C++ classes
+ */
+extern "C" void __attribute__((constructor)) cpp_initialise() {
+   if constexpr (MapAllPinsOnStartup) {
+      mapAllPins();
+   }
+}
+
+/// Channel 1 drive (Bit Field)
+const GpioFieldTable_T<GpioCInfo, 2, 1, ActiveLow>           ch1Drive;                                     // PTC1(p34), PTC2(p35)
+/// Channel 1 selected LED
+const GpioTable_T<GpioCInfo, 0, ActiveHigh>                  ch1SelectedLed;                               // PTC0(p33)
+/// Channel 2 selected LED
+const GpioTable_T<GpioCInfo, 6, ActiveHigh>                  ch2SelectedLed;                               // PTC6(p39)
+/// Channel 2 drive (Bit Field)
+const GpioFieldTable_T<GpioCInfo, 4, 3, ActiveLow>           ch2Drive;                                     // PTC3(p36), PTC4(p37)
+
 
 /**
- * Used to configure pin-mapping before 1st use of peripherals
+ * Map all configured pins to peripheral signals.
+ *
+ * PCRs of allocated pins are set according to settings in Configure.usbdmProject
+ *
+ * @note Only the lower 16-bits of the PCR registers are initialised
  */
 void mapAllPins() {
-#ifdef PCC_PCCn_CGC_MASK
-      PCC->PCC_PORTA = PCC_PCCn_CGC_MASK;
-      PCC->PCC_PORTB = PCC_PCCn_CGC_MASK;
-      PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
-      PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
-#else
-      enablePortClocks(PORTA_CLOCK_MASK|PORTB_CLOCK_MASK|PORTC_CLOCK_MASK|PORTD_CLOCK_MASK);
+#if false
+
+#warning "PCR Not initialised for PTD5       : Multiple signals mapped to pin - ADC0_SE6b, GPIOD_5"
+#warning "PCR Not initialised for PTD6       : Multiple signals mapped to pin - ADC0_SE7b, GPIOD_6/LLWU_P15"
+
 #endif
-      PORTA->GPCHR = 0x0000UL|PORT_GPCHR_GPWE(0x000CUL);
-      PORTA->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0010UL);
-      PORTA->GPCLR = 0x0200UL|PORT_GPCLR_GPWE(0x0006UL);
-      PORTA->GPCLR = 0x0700UL|PORT_GPCLR_GPWE(0x0009UL);
-      PORTB->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0003UL);
-      PORTB->GPCHR = 0x0100UL|PORT_GPCHR_GPWE(0x0003UL);
-      PORTB->GPCLR = 0x0200UL|PORT_GPCLR_GPWE(0x000CUL);
-      PORTC->GPCLR = 0x0000UL|PORT_GPCLR_GPWE(0x0080UL);
-      PORTC->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x007FUL);
-      PORTD->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x009FUL);
+
+
+#if defined(PCC_PCCn_CGC_MASK)
+   PCC->PCC_PORTA = PCC_PCCn_CGC_MASK;
+   PCC->PCC_PORTB = PCC_PCCn_CGC_MASK;
+   PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
+   PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
+   PCC->PCC_PORTE = PCC_PCCn_CGC_MASK;
+#else
+   enablePortClocks(PORTA_CLOCK_MASK|PORTB_CLOCK_MASK|PORTC_CLOCK_MASK|PORTD_CLOCK_MASK|PORTE_CLOCK_MASK);
+#endif
+
+   PORTA->GPCHR = ForceLockedPins|0x0000UL|PORT_GPCHR_GPWE(0x000CUL);
+   PORTA->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0010UL);
+   PORTA->GPCLR = ForceLockedPins|0x0200UL|PORT_GPCLR_GPWE(0x0006UL);
+   PORTA->GPCLR = ForceLockedPins|0x0700UL|PORT_GPCLR_GPWE(0x0009UL);
+   PORTB->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0003UL);
+   PORTB->GPCHR = ForceLockedPins|0x0100UL|PORT_GPCHR_GPWE(0x0003UL);
+   PORTB->GPCLR = ForceLockedPins|0x0220UL|PORT_GPCLR_GPWE(0x000CUL);
+   PORTC->GPCLR = ForceLockedPins|0x0000UL|PORT_GPCLR_GPWE(0x0080UL);
+   PORTC->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0061UL);
+   PORTC->GPCLR = ForceLockedPins|0x0103UL|PORT_GPCLR_GPWE(0x001EUL);
+   PORTD->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x009FUL);
+
+   if constexpr (ForceLockoutUnbondedPins) {
+      PORTA->GPCLR = PinLock_Locked |0x0000UL|PORT_GPCLR_GPWE(0xFFE0UL); // Lockout unavailable pins
+      PORTA->GPCHR = PinLock_Locked |0x0000UL|PORT_GPCHR_GPWE(0xFFF3UL); // Lockout unavailable pins
+      PORTB->GPCLR = PinLock_Locked |0x0000UL|PORT_GPCLR_GPWE(0xFFF0UL); // Lockout unavailable pins
+      PORTB->GPCHR = PinLock_Locked |0x0000UL|PORT_GPCHR_GPWE(0xFFFCUL); // Lockout unavailable pins
+      PORTC->GPCLR = PinLock_Locked |0x0000UL|PORT_GPCLR_GPWE(0xFF00UL); // Lockout unavailable pins
+      PORTC->GPCHR = PinLock_Locked |0x0000UL|PORT_GPCHR_GPWE(0xFFFFUL); // Lockout unavailable pins
+      PORTD->GPCLR = PinLock_Locked |0x0000UL|PORT_GPCLR_GPWE(0xFF00UL); // Lockout unavailable pins
+      PORTD->GPCHR = PinLock_Locked |0x0000UL|PORT_GPCHR_GPWE(0xFFFFUL); // Lockout unavailable pins
+      PORTE->GPCLR = PinLock_Locked |0x0000UL|PORT_GPCLR_GPWE(0xFFFFUL); // Lockout unavailable pins
+      PORTE->GPCHR = PinLock_Locked |0x0000UL|PORT_GPCHR_GPWE(0xFFFFUL); // Lockout unavailable pins
+   }
 
 }
-/** 
+/**
  * End group USBDM_Group
  * @}
  */

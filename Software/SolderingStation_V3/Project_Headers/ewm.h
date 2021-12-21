@@ -219,27 +219,58 @@ public:
    }
 
 public:
+// Template _mapPinsOption.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with EWM
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
 
    /**
-    * Basic enable EWM.
+    * Disabled all mapped pins associated with EWM
     *
-    * Includes enabling clock and configuring all pins of mapPinsOnEnable is selected on configuration
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of EWM
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-      if (Info::mapPinsOnEnable) {
-         configureAllPins();
-      }
-
-      // Enable clock to CMP interface
+   
+      // Enable clock to peripheral
       Info::enableClock();
+   
+      configureAllPins();
    }
+
+   /**
+    * Disables the clock to EWM and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption.xml
+
 
    /**
     * Select watchdog window in LPO cycles.
@@ -330,13 +361,6 @@ public:
    static void configure(EwmInput  ewmInput) {
       enable();
       ewm->CTRL = EWM_CTRL_EWMEN(1)|ewmInput;
-   }
-
-   /**
-    * Disable interface to EWM
-    */
-   static void disable() {
-      Info::disableClock();
    }
 
    /**

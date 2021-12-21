@@ -1,5 +1,5 @@
 /**
- * @file     I2S.h (180.ARM_Peripherals/Project_Headers/I2S.h)
+ * @file     i2s.h (180.ARM_Peripherals/Project_Headers/i2s.h)
  * @brief    I2S interface
  *
  * @version  V4.12.1.80
@@ -47,7 +47,7 @@ protected:
    }
 
    const HardwarePtr<I2S_Type> i2s;                 //!< I2S hardware instance
-   
+
    /**
     * Construct I2S interface
     *
@@ -117,13 +117,58 @@ public:
    }
 
 public:
+   // Template _mapPinsOption_on.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with I2S
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
+
+   /**
+    * Disabled all mapped pins associated with I2S
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of I2S
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    */
+   static void enable() {
+   
+      // Enable clock to peripheral
+      Info::enableClock();
+   
+      configureAllPins();
+   }
+
+   /**
+    * Disables the clock to I2S and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption_on.xml
+
 
    /**
     * Construct I2S interface
@@ -133,7 +178,7 @@ public:
     */
    I2sBase_T(unsigned bps=400000, uint8_t myAddress=0) : I2s(Info::baseAddress) {
    (void)bps; (void)myAddress;
-   
+
 #ifdef DEBUG_BUILD
       // Check pin assignments
 //      static_assert(Info::info[0].gpioBit != UNMAPPED_PCR, "I2Sx_SCL has not been assigned to a pin - Modify Configure.usbdm");

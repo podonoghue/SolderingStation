@@ -494,7 +494,7 @@ public:
       spi->CTAR[spiCtarSelect] = (spi->CTAR[spiCtarSelect]&~(SPI_CTAR_FMSZ_MASK)) |
             SPI_CTAR_FMSZ(numBits-1);
    }
-   
+
    /**
     * Sets up hardware peripheral select (SPI_PCSx) for transfer.
     * Also controls which CTAR is used for the transaction.
@@ -724,8 +724,8 @@ template<class Info>
 class SpiBase_T : public Spi {
 
 public:
-   /** Get reference to SPI hardware as struct */
-   static volatile SPI_Type &spiPtr() { return Info::spi(); }
+   /** Pointer to SPI hardware as struct */
+   static constexpr HardwarePtr<SPI_Type>spi = Info::baseAddress;
 
    /** Get base address of SPI hardware as uint32_t */
    static constexpr uint32_t spiBase() { return Info::baseAddress; }
@@ -766,6 +766,30 @@ public:
          callback = Spi::unhandledCallback;
       }
       sCallback = callback;
+   }
+
+   /**
+    * Enable interrupts in NVIC
+    */
+   static void enableNvicInterrupts() {
+      NVIC_EnableIRQ(Info::irqNums[0]);
+   }
+
+   /**
+    * Enable and set priority of interrupts in NVIC
+    * Any pending NVIC interrupts are first cleared.
+    *
+    * @param[in]  nvicPriority  Interrupt priority
+    */
+   static void enableNvicInterrupts(NvicPriority nvicPriority) {
+      enableNvicInterrupt(Info::irqNums[0], nvicPriority);
+   }
+
+   /**
+    * Disable interrupts in NVIC
+    */
+   static void disableNvicInterrupts() {
+      NVIC_DisableIRQ(Info::irqNums[0]);
    }
 
 #ifdef __CMSIS_RTOS
@@ -866,13 +890,57 @@ public:
    /** SPI SOUT (data out = usually MOSI) Pin */
    using soutGpio = GpioTable_T<Info, 2, ActiveHigh>;
 
+   // Template _mapPinsOption_on.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with SPI
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs(PcrValue(PinPull_Up, PinDriveStrength_High,PinDriveMode_PushPull).value);
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
+
+   /**
+    * Disabled all mapped pins associated with SPI
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of SPI
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    */
+   static void enable() {
+   
+      // Enable clock to peripheral
+      Info::enableClock();
+   
+      configureAllPins();
+   }
+
+   /**
+    * Disables the clock to SPI and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption_on.xml
 
    virtual void enablePins() override {
       configureAllPins();
@@ -914,7 +982,7 @@ public:
 
    /**
     * Calculates the timing aspects of a CTAR value based on frequency
-    
+
     * @param[in]  frequency      => Communication frequency in Hz
     *
     * @return Combined masks for CTAR.BR, CTAR.PBR, CTAR.PCSSCK, CTAR.CSSCK, CTAR.PDT, CTAR.DT, CTAR.PCSSCK and CTAR.CSSCK

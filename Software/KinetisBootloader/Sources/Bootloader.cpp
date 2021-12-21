@@ -24,7 +24,7 @@ static constexpr uint32_t BOOTLOADER_HARDWARE   = HW_SOLDER_STATION_V3;
 static constexpr uint32_t BOOTLOADER_VERSION    = 4;
 
 /** ICP button - checked during boot */
-using IcpButton = GpioD<5,  USBDM::ActiveLow>;
+using IcpButton = GpioD<3,  USBDM::ActiveLow>;
 
 /** Debug pin */
 //using DebugPin  = GpioD<4,  USBDM::ActiveLow>;

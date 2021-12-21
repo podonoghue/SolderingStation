@@ -15,7 +15,7 @@
 /// Resolution used for all ADC conversions.
 constexpr USBDM::AdcResolution ADC_RESOLUTION = USBDM::AdcResolution_16bit_se;
 
-constexpr unsigned ADC_MAXIMUM = USBDM::measurementADC.getSingleEndedMaximum(ADC_RESOLUTION);
+constexpr unsigned ADC_MAXIMUM = USBDM::MeasurementADC::getSingleEndedMaximum(ADC_RESOLUTION);
 
 /// External voltage reference for ADC (Vrefh)
 constexpr float ADC_REF_VOLTAGE = 3.00;

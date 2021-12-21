@@ -138,6 +138,19 @@ template<class Info>
 class CmtBase_T {
 
 protected:
+   /** Class to static check output is mapped to a pin - Assumes existence */
+   template<unsigned index> class CheckOutputIsMapped {
+
+      // Check mapping - no need to check existence
+      static constexpr bool Test1 = (Info::info[index].gpioBit != UNMAPPED_PCR);
+
+      static_assert(Test1, "CMT output is not mapped to a pin - Modify Configure.usbdm");
+
+   public:
+      /** Dummy function to allow convenient in-line checking */
+      static constexpr void check() {}
+   };
+
    /**
     * Callback to catch unhandled interrupt
     */
@@ -147,6 +160,9 @@ protected:
 
    /** Callback function for ISR */
    static CMTCallbackFunction sCallback;
+
+   // Output pin
+   using OutputPin = PcrTable_T<Info, 0>;
 
 public:
    /**
@@ -197,26 +213,58 @@ public:
    }
 
 public:
+// Template _mapPinsOption.xml
+
    /**
-    * Configures all mapped pins associated with this peripheral
+    * Configures all mapped pins associated with CMT
     */
-   static void __attribute__((always_inline)) configureAllPins() {
-      // Configure pins
-      Info::initPCRs();
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
 
    /**
-    * Basic enable CMT.
-    * Includes enabling clock and configuring all pins of mapPinsOnEnable is selected on configuration
+    * Disabled all mapped pins associated with CMT
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of CMT
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-      if (Info::mapPinsOnEnable) {
-         configureAllPins();
-      }
-
-      // Enable clock to CMP interface
+   
+      // Enable clock to peripheral
       Info::enableClock();
+   
+      configureAllPins();
    }
+
+   /**
+    * Disables the clock to CMT and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption.xml
+
 
    /**
     * Enable with default settings.
@@ -234,11 +282,12 @@ public:
     *
     * @param[in] pcrValue PCR value to use in configuring port (excluding MUX value). See pcrValue()
     */
-   static void setOutput(PcrValue pcrValue=Info::defaultPcrValue) {
+   static void setOutput(PcrValue pcrValue=OutputPin::defaultPcrValue) {
+      CheckOutputIsMapped<0>::check();
       using Pcr = PcrTable_T<Info, 0>;
 
       // Enable and map pin to CMP_OUT
-      Pcr::setPCR((pcrValue&~PORT_PCR_MUX_MASK)|(Info::info[0].pcrValue&PORT_PCR_MUX_MASK));
+      Pcr::setPCR(pcrValue);
    }
 
    /**
@@ -418,15 +467,6 @@ public:
       cmt->CMD3 = (uint8_t)(space>>8);
       cmt->CMD4 = (uint8_t)(space);
     }
-
-   /**
-    * Disable CMT
-    */
-   static void disable() {
-      cmt->MSC = 0;
-      disableNvicInterrupts();
-      Info::disableClock();
-   }
 
    /**
     * Enable interrupts in NVIC

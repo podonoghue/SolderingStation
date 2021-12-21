@@ -53,9 +53,16 @@ enum VrefBuffer {
    VrefBuffer_LowPower  = VREF_SC_MODE_LV(2), /**< Low power buffer mode enabled */
 };
 
+/**
+ * Chop oscillator enable.
+ *
+ * Controls the internal chopping operation to minimise the internal analogue offset.
+ * This option is enabled during factory trimming of the VREF voltage.
+ * This should be enabled to achieve the performance stated in the data sheet.
+ */
 enum VrefChop {
-   VrefChop_Disable = VREF_TRM_CHOPEN(0), /**< Chop Disabled */
-   VrefChop_Enable  = VREF_TRM_CHOPEN(1), /**< Chop Enabled */
+   VrefChop_Disable = VREF_TRM_CHOPEN(0), /**< Chop Disabled *//**< VrefChop_Disable */
+   VrefChop_Enable  = VREF_TRM_CHOPEN(1), /**< Chop Enabled */ /**< VrefChop_Enable */
 };
 
 /**
@@ -107,15 +114,58 @@ public:
    };
 
 public:
-   /**
-    * Configures all mapped pins associated with this peripheral
-    */
-   static void __attribute__((always_inline)) configureAllPins() {
-      CheckOutputIsMapped<Info::outputPin>::check();
+   // Template _mapPinsOption.xml
 
-      // Configure pins
-      Info::initPCRs();
+   /**
+    * Configures all mapped pins associated with VREF
+    */
+   static void configureAllPins() {
+   
+      // Configure pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+         Info::initPCRs();
+      }
    }
+
+   /**
+    * Disabled all mapped pins associated with VREF
+    *
+    * @note Only the lower 16-bits of the PCR registers are modified
+    */
+   static void disableAllPins() {
+   
+      // Disable pins if selected and not already locked
+      if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
+      Info::clearPCRs();
+      }
+   }
+
+   /**
+    * Basic enable of VREF
+    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    */
+   static void enable() {
+   
+      // Enable clock to peripheral
+      Info::enableClock();
+   
+      configureAllPins();
+   }
+
+   /**
+    * Disables the clock to VREF and all mappable pins
+    */
+   static void disable() {
+   
+      disableNvicInterrupts();
+      
+      disableAllPins();
+   
+      // Disable clock to peripheral
+      Info::disableClock();
+   }
+// End Template _mapPinsOption.xml
+
 
    /**
     * Enable Vref output pin as Vref output.
@@ -160,6 +210,11 @@ public:
 
    /**
     * Configures the voltage reference
+    *
+    * @param vrefBuffer    Buffer Mode selection
+    * @param vrefReg       Regulator enable
+    * @param VrefIcomp     Second order curvature compensation enable
+    * @param vrefChop      Chop oscillator enable
     */
    static void configure(
          VrefBuffer  vrefBuffer =  VrefBuffer_HighPower,
