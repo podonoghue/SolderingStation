@@ -1,0 +1,3 @@
+Layer Pairs Export File for PCB: Z:\Documents\Development\SolderingStation\PCB_Rectifier\SynchronousRectifier_ASCII.PcbDoc
+LayersSetName=Top_Bot_Thru_Holes|DrillFile=synchronousrectifier_ascii-roundholes.txt|DrillLayers=gtl,gbl
+LayersSetName=Top_Bot_Slot_Holes|DrillFile=synchronousrectifier_ascii-slotholes.txt|DrillLayers=gtl,gbl

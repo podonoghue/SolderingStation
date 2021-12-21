@@ -1,0 +1,10 @@
+Output: Generates pick and place files
+Type  : Pick Place
+From  : Variant [[No Variations]] of PCB Document [SynchronousRectifier_ASCII.PcbDoc]
+   Generated File[Pick Place for SynchronousRectifier_ASCII.csv]
+
+
+Files Generated   : 1
+Documents Printed : 0
+
+Finished Output Generation At 11:32:24 AM On 05-Dec-21

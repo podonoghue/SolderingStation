@@ -1,0 +1,35 @@
+Altium Designer Pick and Place Locations
+Z:\Documents\Development\SolderingStation\PCB_Rectifier\SynchronousRectifier 05-Dec-21 11-32-21 AM\Pick Place for SynchronousRectifier_ASCII.csv
+
+========================================================================================================================
+File Design Information:
+
+Date:       05-12-21
+Time:       11:32
+Revision:   Not in VersionControl
+Variant:    No variations
+Units used: mil
+
+"Designator","Layer","Footprint","Center-X(mil)","Center-Y(mil)","Rotation"
+"F1","TopLayer","FUSE_CLIP_5x20","2218.063","1270.236","270"
+"F2","TopLayer","FUSE_CLIP_5x20","1018.063","1270.236","270"
+"P1","TopLayer","MOLEX-39544-3004","1618.063","2057.638","90"
+"P2","TopLayer","MOLEX-39544-3003","1618.063","482.835","270"
+"Q1","TopLayer","SO-8_M","1843.063","1050.236","0"
+"Q2","TopLayer","SO-8_M","1393.063","1050.236","0"
+"Q3","TopLayer","SO-8_M","1843.063","1490.236","180"
+"Q4","TopLayer","SO-8_M","1393.063","1490.236","180"
+"R1","TopLayer","CR1608-0603_N","1668.063","1125.236","270"
+"R2","TopLayer","CR1608-0603_N","1568.063","1125.236","270"
+"R3","TopLayer","CR1608-0603_N","1668.063","1415.236","270"
+"R4","TopLayer","CR1608-0603_N","1568.063","1415.236","270"
+"RV1","TopLayer","VR3216-1206","1618.063","1270.236","0"
+"SP1","BottomLayer","SPACER-3MM_TAPPED_X_10_MM","2405.465","482.835","180"
+"SP2","BottomLayer","SPACER-3MM_TAPPED_X_10_MM","830.661","482.835","180"
+"SP3","BottomLayer","SPACER-3MM_TAPPED_X_10_MM","830.661","2057.638","180"
+"SP4","BottomLayer","SPACER-3MM_TAPPED_X_10_MM","2405.465","2057.638","180"
+"V12","TopLayer","PCBPIN_-_0.7mm","1618.063","746.257","0"
+"V24","TopLayer","PCBPIN_-_0.7mm","1418.063","746.257","90"
+"Vnn","TopLayer","PCBPIN_-_0.7mm","1818.063","746.257","90"
+"Z1","TopLayer","SOT23_M","1618.063","990.236","90"
+"Z2","TopLayer","SOT23_M","1618.063","1550.236","270"

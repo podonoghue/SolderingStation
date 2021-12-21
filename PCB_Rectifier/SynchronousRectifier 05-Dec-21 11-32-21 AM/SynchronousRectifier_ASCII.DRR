@@ -1,0 +1,19 @@
+----------------------------------------------------------------------------------------------------------------------------------
+NCDrill File Report For: SynchronousRectifier_ASCII.PcbDoc   05-Dec-21  11:32:23 AM
+----------------------------------------------------------------------------------------------------------------------------------
+
+Layer Pair : Top Layer to Bottom Layer
+ASCII RoundHoles File : SynchronousRectifier_ASCII-RoundHoles.TXT
+ASCII SlotHoles File : SynchronousRectifier_ASCII-SlotHoles.TXT
+
+Tool       Hole Size               Hole Tolerance               Hole Type       Hole Count   Plated         Tool Travel
+----------------------------------------------------------------------------------------------------------------------------------
+T1      20mil (0.5mm)                                             Round             12        PTH        1.10inch (27.93mm)
+T2      28mil (0.7mm)                                             Round             3         PTH        0.40inch (10.16mm)
+T3      36mil (0.914mm)                                           Slot              8         PTH        9.46inch (240.35mm)
+T4      59mil (1.5mm)                                             Round             7         PTH        2.78inch (70.56mm)
+T5      120mil (3.05mm)                                           Round             4         NPTH       4.72inch (120.00mm)
+----------------------------------------------------------------------------------------------------------------------------------
+Totals                                                                              34
+
+Total Processing Time (hh:mm:ss) : 00:00:01
