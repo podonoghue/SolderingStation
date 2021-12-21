@@ -1,0 +1,28 @@
+----------------------------------------------------------------------------------------------------------------------------------
+NCDrill File Report For: SolderingStation.PcbDoc   18-Dec-21  5:37:55 PM
+----------------------------------------------------------------------------------------------------------------------------------
+
+Layer Pair : Top Layer to Bottom Layer
+ASCII RoundHoles File : SolderingStation-RoundHoles.TXT
+ASCII SlotHoles File : SolderingStation-SlotHoles.TXT
+
+Tool       Hole Size               Hole Tolerance               Hole Type       Hole Count   Plated         Tool Travel
+----------------------------------------------------------------------------------------------------------------------------------
+T1      12mil (0.3mm)                                             Round             441       PTH        61.90inch (1572.32mm)
+T2      16mil (0.4mm)                                             Round             46        PTH        5.07inch (128.69mm)
+T3      20mil (0.5mm)                                             Round             12        PTH        0.43inch (10.99mm)
+T4      24mil (0.6mm)                                             Round             9         PTH        0.45inch (11.43mm)
+T5      24mil (0.6mm)                                             Slot              4         PTH        1.42inch (36.16mm)
+T6      28mil (0.7mm)                                             Round             2         PTH        0.30inch (7.62mm)
+T7      28mil (0.711mm)                                           Round             4         PTH        0.89inch (22.73mm)
+T8      32mil (0.8mm)                                             Round             8         PTH        1.87inch (47.54mm)
+T9      35mil (0.9mm)                                             Round             43        PTH        15.36inch (390.26mm)
+T10     39mil (1mm)                                               Round             12        PTH        4.68inch (118.80mm)
+T11     40mil (1.02mm)                                            Round             16        PTH        3.16inch (80.25mm)
+T12     47mil (1.2mm)                                             Round             2         PTH        0.60inch (15.24mm)
+T13     59mil (1.5mm)                                             Round             3         PTH        0.40inch (10.16mm)
+T14     81mil (2.05mm)                                            Round             4         PTH        10.20inch (259.20mm)
+----------------------------------------------------------------------------------------------------------------------------------
+Totals                                                                              606
+
+Total Processing Time (hh:mm:ss) : 00:00:00
