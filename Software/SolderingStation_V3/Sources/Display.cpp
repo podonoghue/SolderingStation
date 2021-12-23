@@ -254,12 +254,12 @@ void Display::displayTemperatureMenuItem(const char *description, unsigned tempe
  * Display a menu list with selected item
  *
  * @param [in]     title         Title to display at top of screen
- * @param [in]     items         Array of menu items.  Must have at least MIN_MENU_ENTRIES items.
+ * @param [in]     items         Array of menu items.
  * @param [in]     modifiersUsed Modifiers that may be applied to items (for sizing)
  * @param [inout]  offset        Offset into list for display i.e. first item on visible menu.
  * @param [in]     selection     Selected item index
  */
-void Display::displayMenuList(const char *title, MenuItem const items[], unsigned modifiersUsed, int &offset, int selection) {
+void Display::displayMenuList(const char *title, MenuItem const items[], unsigned modifiersUsed, BoundedMenuState &selection) {
    Font &font = fontSmall;
 
    oled.clearDisplay();
@@ -272,15 +272,7 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
    oled.moveXY(0, oled.getY()+2);
    oled.setFont(font);
 
-   // Make sure selection is visible
-   if (selection < offset) {
-      offset = selection;
-   }
-   else if ((selection-offset) >= MIN_MENU_ENTRIES) {
-      offset = selection-(MIN_MENU_ENTRIES-1);
-   }
-
-   for(int line=0; line<MIN_MENU_ENTRIES; line++) {
+   for(int menuLine=0; menuLine<=min(NUM_MENU_ENTRIES-1, selection.getMax()); menuLine++) {
       char prefix[10] = {0};
       char *p = prefix;
       if (modifiersUsed & MenuItem::CheckBox) {
@@ -291,7 +283,8 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
       if (modifiersUsed & MenuItem::Starred) {
          *p = ' ';
       }
-      auto item = items[line+offset];
+      int itemIndex = selection.getLineIndex(menuLine);
+      auto item = items[itemIndex];
       if (item.name == nullptr) {
          break;
          item = "";
@@ -306,7 +299,8 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
       int menuY = oled.getY();
       oled.write(prefix);
       oled.writeln(item.name);
-      if ((line+offset) == selection) {
+      if (itemIndex == selection) {
+         // Highlight selected item
          oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
       }
    }
@@ -339,7 +333,7 @@ void Display::displayChoice(const char *title, const char *prompt, const char *o
    oled.writeln(prompt);
    oled.moveXY(0, oled.getY()+2);
 
-   for(int line=0; line<MIN_MENU_ENTRIES; line++) {
+   for(int line=0; line<NUM_MENU_ENTRIES; line++) {
       if (options[line] == nullptr) {
          break;
       }
@@ -565,4 +559,3 @@ bool Display::reportSettingsChange(const TipSettings &oldTs, const TipSettings &
 
    return ((event.type == ev_SelRelease) || (event.type == ev_QuadRelease));
 }
-

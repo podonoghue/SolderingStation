@@ -13,6 +13,7 @@
 #include "SettingsData.h"
 #include "BoundedInteger.h"
 #include "Menus.h"
+#include "wdog.h"
 
 using namespace USBDM;
 
@@ -34,12 +35,12 @@ void Control::initialise() {
 
    Debug::setOutput();
 
-   // Configure ADC to use a call-back
+   // Static function to use as ADC call-back
    static AdcCallbackFunction adc_cb = [](uint32_t result, int channel){
       control.adcHandler(result, channel);
    };
 
-   MeasurementADC::configure(
+   FixedGainAdc::configure(
          ADC_RESOLUTION,
          AdcClockSource_Bus,
          AdcSample_20,
@@ -48,14 +49,16 @@ void Control::initialise() {
          AdcClockRange_Normal,
          AdcAsyncClock_Disabled);
 
+   FixedGainAdc::setReference(AdcRefSel_VrefHL);
+
    // Calibrate ADC
    unsigned retry = 10;
-   while ((MeasurementADC::calibrate() != E_NO_ERROR) && (retry-->0)) {
+   while ((FixedGainAdc::calibrate() != E_NO_ERROR) && (retry-->0)) {
       console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
    }
-   MeasurementADC::setAveraging(AdcAveraging_8);
-   MeasurementADC::setCallback(adc_cb);
-   MeasurementADC::enableNvicInterrupts(NvicPriority_MidHigh);
+   FixedGainAdc::setAveraging(AdcAveraging_8);
+   FixedGainAdc::setCallback(adc_cb);
+   FixedGainAdc::enableNvicInterrupts(NvicPriority_MidHigh);
 
    // Configure PIT for use in timing
    ControlTimerChannel::configureIfNeeded();
@@ -113,6 +116,25 @@ void Control::initialise() {
 
    // Enable amplifier input clamp
    Clamp::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
+
+   static auto wdogCallback = []() {
+      ch1Drive.write(0b00);
+      ch2Drive.write(0b00);
+      ch1Drive.setInput();
+      ch2Drive.setInput();
+   };
+
+   Wdog::setCallback(wdogCallback);
+   Wdog::setTimeout(20*ms);
+   Wdog::configure(
+         WdogEnable_Enabled,
+         WdogClock_Lpo,
+         WdogWindow_Disabled,
+         WdogInterrupt_Enabled,
+         WdogEnableInDebug_Disabled,
+         WdogEnableInStop_Enabled,
+         WdogEnableInWait_Enabled);
+   Wdog::writeRefresh(0xA602, 0xB480);
 }
 
 /**
@@ -233,8 +255,8 @@ void Control::zeroCrossingHandler() {
 
    // Get measurements to do
    int sequenceLength = 0;
-   sequenceLength += ch1.measurement->getMeasurementSequence(sequence+sequenceLength, CH1_MASK);
-   sequenceLength += ch2.measurement->getMeasurementSequence(sequence+sequenceLength, CH2_MASK);
+   sequenceLength += ch1.getMeasurementSequence(sequence+sequenceLength, CH1_MASK);
+   sequenceLength += ch2.getMeasurementSequence(sequence+sequenceLength, CH2_MASK);
    sequence[sequenceLength] = MuxSelect_Complete;
 
    // Used to sort measurements according to AMPLIFIER and BIAS settings
@@ -291,23 +313,6 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
       // Delayed to here to allow drive to drop
       Clamp::off();
    }
-   else if (adcChannel == Ch1Identify::CHANNEL) {
-      Ch2Identify::startConversion(AdcInterrupt_Enabled);
-      ch1.setIdValue(result);
-      return;
-   }
-   else if (adcChannel == Ch2Identify::CHANNEL) {
-      ch2.setIdValue(result);
-
-      // Need to configure amplifierControl field as some pins are shared with analogue function
-      // Default to 1st conversion to reduce likelihood of disturbance
-      AmplifierControl::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
-      AmplifierControl::write(sequence[0]);
-
-      // Allow new sequence
-      holdOff = false;
-      return;
-   }
    else {
       switch(lastConversion&(CHANNEL_MASK|AB_MASK)) {
          // For debug breakpoints
@@ -329,12 +334,11 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
       }
       // Process last measurement - pass measurement to correct channel
       uint8_t lastChannelUsed = lastConversion & CHANNEL_MASK;
-      lastConversion = static_cast<MuxSelect>(lastConversion&~CHANNEL_MASK);
       if (lastChannelUsed == CH1_MASK) {
-         ch1.measurement->processMeasurement(lastConversion, result);
+         ch1.processMeasurement(lastConversion, result);
       }
       else {
-         ch2.measurement->processMeasurement(lastConversion, result);
+         ch2.processMeasurement(lastConversion, result);
       }
    }
    // Get conversion to start this cycle
@@ -349,25 +353,15 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
       // Run PID and update drive
       pidHandler();
 
-      // Need to configure amplifierControl field as some pins are shared with analogue function
-      // Default to 1st conversion to reduce likelihood of disturbance
-//      AmplifierControl::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Fast);
-      AmplifierControl::write(sequence[0]);
-
       // Allow new sequence
       holdOff = false;
-
-      // Re-use some multiplexor pins as analogue inputs
-      Ch1Identify::setInput();
-      Ch2Identify::setInput();
-
-      // Start 1st channel ID conversion
-      Ch1Identify::startConversion(AdcInterrupt_Enabled);
+      // Pat the watchdog
+      Wdog::writeRefresh(0xA602, 0xB480);
 
       return;
    }
 
-   // Set up multiplexor, bias and gain boost in hardware
+   // Set up multiplexor, bias and gain boost in external hardware
    AmplifierControl::write(currentConversion);
 
    // Need extra time if bias has changed
@@ -375,6 +369,24 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 
    // Allow extra time for high gain amplifier to settle
    bool isHighGainAmplifier = (currentConversion & AMPLIFIER_MASK);
+
+   // Allow extra settling time on 1st sample
+   unsigned delay = (sequenceIndex == 1)?INITAL_SAMPLE_DELAY:0;
+
+   if (isHighGainAmplifier) {
+      // Set up PGA gain
+      //ProgrammableGainAdc::configurePga(AdcPgaMode_NormalPower, muxPgaGain(currentConversion));
+
+      // Longer settling time for high-gain amplifier
+      delay += HIGH_GAIN_SAMPLE_DELAY;
+   }
+   else {
+      // Standard delay
+      delay += LOW_GAIN_SAMPLE_DELAY;
+   }
+
+   // Longer time for bias turning on
+//   delay += biasHasChange?INITAL_SAMPLE_DELAY:0;
 
    // Last is now current!
    lastConversion = currentConversion;
@@ -390,14 +402,6 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
          LowGainAdcChannel::startConversion(AdcInterrupt_Enabled);
       }
    };
-   // Allow extra settling time on 1st sample
-   unsigned delay = (sequenceIndex == 1)?INITAL_SAMPLE_DELAY:0;
-
-   // Longer settling time for high-gain amplifier
-   delay += isHighGainAmplifier?HIGH_GAIN_SAMPLE_DELAY:LOW_GAIN_SAMPLE_DELAY;
-
-   // Longer time for bias turning on
-//   delay += biasHasChange?INITAL_SAMPLE_DELAY:0;
 
    Clamp::off();
 

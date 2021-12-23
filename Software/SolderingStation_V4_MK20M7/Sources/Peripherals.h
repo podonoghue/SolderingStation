@@ -15,7 +15,7 @@
 /// Resolution used for all ADC conversions.
 constexpr USBDM::AdcResolution ADC_RESOLUTION = USBDM::AdcResolution_16bit_se;
 
-constexpr unsigned ADC_MAXIMUM = USBDM::HighComplianceAdc::getSingleEndedMaximum(ADC_RESOLUTION);
+constexpr unsigned ADC_MAXIMUM = USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
 
 /// External voltage reference for ADC (Vrefh)
 constexpr float ADC_REF_VOLTAGE = 3.00;
@@ -30,32 +30,18 @@ constexpr float LOW_GAIN_RF = 10000;
 constexpr float LOW_GAIN_R1 = 10000;
 
 /// Low Gain op-amp switchable input resistor 1
-constexpr float LOW_GAIN_R2 = 5100;
+constexpr float LOW_GAIN_R2 = 3300;
 
-/// Low Gain op-amp input resistor (R1//R2)
+/// Pre-amplifier op-amp input resistor (R1//R2)
 constexpr float LOW_GAIN_R1_R2 = (LOW_GAIN_R1*LOW_GAIN_R2)/(LOW_GAIN_R1+LOW_GAIN_R2);
 
-/// Low gain measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
+/// Pre-amplifier measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
 /// Amplifier gain is 1 + (LOW_GAIN_RF/LOW_GAIN_RI)
 constexpr float LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF   = LOW_GAIN_R1/(LOW_GAIN_R1+LOW_GAIN_RF);
 
-/// Low gain measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
+/// Pre-amplifier measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
 /// Amplifier gain is 1 + (LOW_GAIN_RF/LOW_GAIN_RI)
 constexpr float LOW_GAIN_MEASUREMENT_RATIO_BOOST_ON   = LOW_GAIN_R1_R2/(LOW_GAIN_R1_R2+LOW_GAIN_RF);
-
-/// High gain op-amp feedback resistor
-constexpr float HIGH_GAIN_RF = 56000;
-
-/// High Gain op-amp input resistor
-constexpr float HIGH_GAIN_RI = 1000;
-
-/// High gain measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
-/// Amplifier gain is 1 + (HIGH_GAIN_RF/HIGH_GAIN_RI)
-constexpr float HIGH_GAIN_MEASUREMENT_RATIO_BOOST_OFF  = LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF*HIGH_GAIN_RI/(HIGH_GAIN_RI+HIGH_GAIN_RF);
-
-/// High gain measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
-/// Amplifier gain is 1 + (HIGH_GAIN_RF/HIGH_GAIN_RI)
-constexpr float HIGH_GAIN_MEASUREMENT_RATIO_BOOST_ON   = LOW_GAIN_MEASUREMENT_RATIO_BOOST_ON*HIGH_GAIN_RI/(HIGH_GAIN_RI+HIGH_GAIN_RF);
 
 /// Bias resistors used for resistance measurement as voltage divider (switched 22K)
 constexpr float BIAS_RESISTOR_VALUE = 22000;
@@ -63,11 +49,20 @@ constexpr float BIAS_RESISTOR_VALUE = 22000;
 /// Voltage used for bias resistor (Vdd ~ 3.3V)
 constexpr float BIAS_VOLTAGE = 3.30;
 
-/// Indicates which tool channel measurement is using
-static constexpr uint8_t CHANNEL_MASK = 0b00000100;
+/// Indicates gain boost (active low)
+constexpr uint8_t GAIN_BOOST_MASK = 0b00000001;
 
 /// Indicates which tool channel measurement is using
 static constexpr uint8_t AB_MASK = 0b00000010;
+
+/// Indicates sub-channel Xa measurement
+static constexpr uint8_t CHA_MASK = 0b00000000;
+
+/// Indicates sub-channel Xb measurement
+static constexpr uint8_t CHB_MASK = AB_MASK;
+
+/// Indicates which tool channel measurement is using
+static constexpr uint8_t CHANNEL_MASK = 0b00000100;
 
 /// Indicates channel 1 measurement
 static constexpr uint8_t CH1_MASK = CHANNEL_MASK;
@@ -78,21 +73,12 @@ static constexpr uint8_t CH2_MASK = 0b00000000;
 /// Enables bias for measurement
 static constexpr uint8_t BIAS_MASK = 0b00001000;
 
-/// Indicates sub-channel Xa measurement
-static constexpr uint8_t CHA_MASK = 0b00000000;
-
-/// Indicates sub-channel Xb measurement
-static constexpr uint8_t CHB_MASK = AB_MASK;
-
-/// Indicates gain boost (active low)
-constexpr uint8_t GAIN_BOOST_MASK = 0b00000001;
-
 /// Indicates use of High/Low gain Amplifier path (indicates to software which ADC channel to use)
 constexpr uint8_t AMPLIFIER_MASK = 0b00010000;
 
 enum ChannelNum    {ChannelNum_1 = 1, ChannelNum_2 = 0, };
 enum SubChannelNum {SubChannelNum_A = 0, SubChannelNum_B = 1, };
-enum AmplifierNum  {AmplifierNum_LowGain = 0, AmplifierNum_HighGain = 1, };
+enum AmplifierNum  {AmplifierNum_LowGain = 0, AmplifierNum_ProgGain = 1, };
 
 /**
  * Constructs mask to control ADC channel (amplifier used), gain boost and multiplexor selection
@@ -128,9 +114,45 @@ static inline constexpr uint8_t muxSelect(ChannelNum channelNum, SubChannelNum s
    return
       ((channelNum==ChannelNum_1)?CH1_MASK:CH2_MASK) |
       ((subChannelNum==SubChannelNum_A)?CHA_MASK:CHB_MASK) |
-      ((amplifierNum==AmplifierNum_HighGain)?AMPLIFIER_HIGH_MASK:AMPLIFIER_LOW_MASK) |
+      ((amplifierNum==AmplifierNum_ProgGain)?AMPLIFIER_HIGH_MASK:AMPLIFIER_LOW_MASK) |
       (bias?BIAS_ON_MASK:BIAS_OFF_MASK) |
       (gainBoost?GAIN_BOOST_ON_MASK:GAIN_BOOST_OFF_MASK);
+}
+
+enum PgaGain {
+   PgaGain_1 = USBDM::AdcPgaGain_1>>ADC_PGA_PGAG_SHIFT,
+   PgaGain_2 = USBDM::AdcPgaGain_2>>ADC_PGA_PGAG_SHIFT,
+   PgaGain_4 = USBDM::AdcPgaGain_4>>ADC_PGA_PGAG_SHIFT,
+   PgaGain_8 = USBDM::AdcPgaGain_8>>ADC_PGA_PGAG_SHIFT,
+   PgaGain_16 = USBDM::AdcPgaGain_16>>ADC_PGA_PGAG_SHIFT,
+   PgaGain_32 = USBDM::AdcPgaGain_32>>ADC_PGA_PGAG_SHIFT,
+   PgaGain_64 = USBDM::AdcPgaGain_64>>ADC_PGA_PGAG_SHIFT,
+};
+
+enum MuxSelect : uint8_t;
+
+/**
+ * Add PGA gain information to mask to control ADC channel (amplifier used), gain boost and multiplexor selection
+ *
+ * @param mux              Multiplexor value excluding PGA gain
+ * @param gain             PGA gain (0-7)
+ *
+ * @return  Mask encoding the above information (maps directly to hardware output
+ */
+static inline constexpr uint8_t muxSelectAddPgaGain(uint8_t mux, PgaGain gain) {
+   return
+      static_cast<MuxSelect>(mux|((gain&0b111)<<5));
+}
+
+/**
+ * Extract PGA gain from mux select value.
+ *
+ * This value may be used directly with Adc::configurePga()
+ *
+ * @param muxSelect
+ */
+static inline constexpr USBDM::AdcPgaGain muxPgaGain(MuxSelect muxSelect) {
+   return static_cast<USBDM::AdcPgaGain>(ADC_PGA_PGAG(muxSelect>>8));
 }
 
 /**
@@ -151,14 +173,14 @@ enum MuxSelect : uint8_t {
    MuxSelect_LowGain                 = MuxSelect_Ch1bLowGain&~(CHANNEL_MASK|AB_MASK),                                 /**< Low gain amp */
 
    // High gain amplifier measurement            Channel       Sub channel      Amplifier path         Bias   Boost
-   MuxSelect_Ch1aHighGain            = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_HighGain, false, false), /**< Channel 1a + High gain amp */
-   MuxSelect_Ch1bHighGain            = muxSelect(ChannelNum_1, SubChannelNum_B, AmplifierNum_HighGain, false, false), /**< Channel 1b + High gain amp */
-   MuxSelect_Ch2aHighGain            = muxSelect(ChannelNum_2, SubChannelNum_A, AmplifierNum_HighGain, false, false), /**< Channel 2a + High gain amp */
-   MuxSelect_Ch2bHighGain            = muxSelect(ChannelNum_2, SubChannelNum_B, AmplifierNum_HighGain, false, false), /**< Channel 2b + High gain amp */
+   MuxSelect_Ch1aProgGain            = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_ProgGain, false, false), /**< Channel 1a + High gain amp */
+   MuxSelect_Ch1bProgGain            = muxSelect(ChannelNum_1, SubChannelNum_B, AmplifierNum_ProgGain, false, false), /**< Channel 1b + High gain amp */
+   MuxSelect_Ch2aProgGain            = muxSelect(ChannelNum_2, SubChannelNum_A, AmplifierNum_ProgGain, false, false), /**< Channel 2a + High gain amp */
+   MuxSelect_Ch2bProgGain            = muxSelect(ChannelNum_2, SubChannelNum_B, AmplifierNum_ProgGain, false, false), /**< Channel 2b + High gain amp */
 
-   MuxSelect_ChaHighGain             = MuxSelect_Ch1aHighGain&~CHANNEL_MASK,                                          /**< Channel A + High gain amp */
-   MuxSelect_ChbHighGain             = MuxSelect_Ch1bHighGain&~CHANNEL_MASK,                                          /**< Channel B + High gain amp */
-   MuxSelect_HighGain                = MuxSelect_Ch1bHighGain&~(CHANNEL_MASK|AB_MASK),                                /**< High gain amp */
+   MuxSelect_ChaProgGain             = MuxSelect_Ch1aProgGain&~CHANNEL_MASK,                                          /**< Channel A + High gain amp */
+   MuxSelect_ChbProgGain             = MuxSelect_Ch1bProgGain&~CHANNEL_MASK,                                          /**< Channel B + High gain amp */
+   MuxSelect_ProgGain                = MuxSelect_Ch1bProgGain&~(CHANNEL_MASK|AB_MASK),                                /**< High gain amp */
 
    // Low gain amplifier measurement + bias      Channel       Sub channel      Amplifier path         Bias   Boost
    MuxSelect_Ch1aLowGainBiased       = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_LowGain,  true,  false), /**< Channel 1a + Low gain amp + bias */
@@ -171,14 +193,14 @@ enum MuxSelect : uint8_t {
    MuxSelect_LowGainBiased           = MuxSelect_Ch1bLowGainBiased&~(CHANNEL_MASK|AB_MASK),                           /**< Low gain amp + bias */
 
    // High gain amplifier measurement + bias     Channel       Sub channel      Amplifier path         Bias   Boost
-   MuxSelect_Ch1aHighGainBiased      = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_HighGain, true,  false), /**< Channel 1a + High gain amp + bias */
-   MuxSelect_Ch1bHighGainBiased      = muxSelect(ChannelNum_1, SubChannelNum_B, AmplifierNum_HighGain, true,  false), /**< Channel 1b + High gain amp + bias */
-   MuxSelect_Ch2aHighGainBiased      = muxSelect(ChannelNum_2, SubChannelNum_A, AmplifierNum_HighGain, true,  false), /**< Channel 2a + High gain amp + bias */
-   MuxSelect_Ch2bHighGainBiased      = muxSelect(ChannelNum_2, SubChannelNum_B, AmplifierNum_HighGain, true,  false), /**< Channel 2b + High gain amp + bias */
+   MuxSelect_Ch1aProgGainBiased      = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_ProgGain, true,  false), /**< Channel 1a + High gain amp + bias */
+   MuxSelect_Ch1bProgGainBiased      = muxSelect(ChannelNum_1, SubChannelNum_B, AmplifierNum_ProgGain, true,  false), /**< Channel 1b + High gain amp + bias */
+   MuxSelect_Ch2aProgGainBiased      = muxSelect(ChannelNum_2, SubChannelNum_A, AmplifierNum_ProgGain, true,  false), /**< Channel 2a + High gain amp + bias */
+   MuxSelect_Ch2bProgGainBiased      = muxSelect(ChannelNum_2, SubChannelNum_B, AmplifierNum_ProgGain, true,  false), /**< Channel 2b + High gain amp + bias */
 
-   MuxSelect_ChaHighGainBiased       = MuxSelect_Ch1aHighGainBiased&~CHANNEL_MASK,                                    /**< Channel A + High gain amp + bias */
-   MuxSelect_ChbHighGainBiased       = MuxSelect_Ch1bHighGainBiased&~CHANNEL_MASK,                                    /**< Channel B + High gain amp + bias */
-   MuxSelect_HighGainBiased          = MuxSelect_Ch1bHighGainBiased&~(CHANNEL_MASK|AB_MASK),                          /**< High gain amp + bias */
+   MuxSelect_ChaProgGainBiased       = MuxSelect_Ch1aProgGainBiased&~CHANNEL_MASK,                                    /**< Channel A + High gain amp + bias */
+   MuxSelect_ChbProgGainBiased       = MuxSelect_Ch1bProgGainBiased&~CHANNEL_MASK,                                    /**< Channel B + High gain amp + bias */
+   MuxSelect_ProgGainBiased          = MuxSelect_Ch1bProgGainBiased&~(CHANNEL_MASK|AB_MASK),                          /**< High gain amp + bias */
 
    // Low gain amplifier measurement             Channel       Sub channel      Amplifier path         Bias   Boost
    MuxSelect_Ch1aLowGainBoost        = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_LowGain,  false, true),  /**< Channel 1a + Low gain amp + Boost */
@@ -191,14 +213,14 @@ enum MuxSelect : uint8_t {
    MuxSelect_LowGainBoost            = MuxSelect_Ch1bLowGainBoost&~(CHANNEL_MASK|AB_MASK),                            /**< Low gain amp + Boost */
 
    // High gain amplifier measurement            Channel       Sub channel      Amplifier path         Bias   Boost
-   MuxSelect_Ch1aHighGainBoost       = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_HighGain, false, true),  /**< Channel 1a + High gain amp + Boost */
-   MuxSelect_Ch1bHighGainBoost       = muxSelect(ChannelNum_1, SubChannelNum_B, AmplifierNum_HighGain, false, true),  /**< Channel 1b + High gain amp + Boost */
-   MuxSelect_Ch2aHighGainBoost       = muxSelect(ChannelNum_2, SubChannelNum_A, AmplifierNum_HighGain, false, true),  /**< Channel 2a + High gain amp + Boost */
-   MuxSelect_Ch2bHighGainBoost       = muxSelect(ChannelNum_2, SubChannelNum_B, AmplifierNum_HighGain, false, true),  /**< Channel 2b + High gain amp + Boost */
+   MuxSelect_Ch1aProgGainBoost       = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_ProgGain, false, true),  /**< Channel 1a + High gain amp + Boost */
+   MuxSelect_Ch1bProgGainBoost       = muxSelect(ChannelNum_1, SubChannelNum_B, AmplifierNum_ProgGain, false, true),  /**< Channel 1b + High gain amp + Boost */
+   MuxSelect_Ch2aProgGainBoost       = muxSelect(ChannelNum_2, SubChannelNum_A, AmplifierNum_ProgGain, false, true),  /**< Channel 2a + High gain amp + Boost */
+   MuxSelect_Ch2bProgGainBoost       = muxSelect(ChannelNum_2, SubChannelNum_B, AmplifierNum_ProgGain, false, true),  /**< Channel 2b + High gain amp + Boost */
 
-   MuxSelect_ChaHighGainBoost        = MuxSelect_Ch1aHighGainBoost&~CHANNEL_MASK,                                     /**< Channel A + High gain amp + Boost */
-   MuxSelect_ChbHighGainBoost        = MuxSelect_Ch1bHighGainBoost&~CHANNEL_MASK,                                     /**< Channel B + High gain amp + Boost */
-   MuxSelect_HighGainBoost           = MuxSelect_Ch1bHighGainBoost&~(CHANNEL_MASK|AB_MASK),                           /**< High gain amp + Boost */
+   MuxSelect_ChaProgGainBoost        = MuxSelect_Ch1aProgGainBoost&~CHANNEL_MASK,                                     /**< Channel A + High gain amp + Boost */
+   MuxSelect_ChbProgGainBoost        = MuxSelect_Ch1bProgGainBoost&~CHANNEL_MASK,                                     /**< Channel B + High gain amp + Boost */
+   MuxSelect_ProgGainBoost           = MuxSelect_Ch1bProgGainBoost&~(CHANNEL_MASK|AB_MASK),                           /**< High gain amp + Boost */
 
    // Low gain amplifier measurement + bias      Channel       Sub channel      Amplifier path         Bias   Boost
    MuxSelect_Ch1aLowGainBoostBiased  = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_LowGain,  true,  true),  /**< Channel 1a + Low gain amp + Boost + bias */
@@ -211,18 +233,31 @@ enum MuxSelect : uint8_t {
    MuxSelect_LowGainBoostBiased      = MuxSelect_Ch1bLowGainBoostBiased&~(CHANNEL_MASK|AB_MASK),                      /**< Low gain amp + Boost + bias */
 
    // High gain amplifier measurement + bias     Channel       Sub channel      Amplifier path         Bias   Boost
-   MuxSelect_Ch1aHighGainBoostBiased = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_HighGain, true,  true),  /**< Channel 1a + High gain amp + Boost + bias */
-   MuxSelect_Ch1bHighGainBoostBiased = muxSelect(ChannelNum_1, SubChannelNum_B, AmplifierNum_HighGain, true,  true),  /**< Channel 1b + High gain amp + Boost + bias */
-   MuxSelect_Ch2aHighGainBoostBiased = muxSelect(ChannelNum_2, SubChannelNum_A, AmplifierNum_HighGain, true,  true),  /**< Channel 2a + High gain amp + Boost + bias */
-   MuxSelect_Ch2bHighGainBoostBiased = muxSelect(ChannelNum_2, SubChannelNum_B, AmplifierNum_HighGain, true,  true),  /**< Channel 2b + High gain amp + Boost + bias */
+   MuxSelect_Ch1aProgGainBoostBiased = muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_ProgGain, true,  true),  /**< Channel 1a + High gain amp + Boost + bias */
+   MuxSelect_Ch1bProgGainBoostBiased = muxSelect(ChannelNum_1, SubChannelNum_B, AmplifierNum_ProgGain, true,  true),  /**< Channel 1b + High gain amp + Boost + bias */
+   MuxSelect_Ch2aProgGainBoostBiased = muxSelect(ChannelNum_2, SubChannelNum_A, AmplifierNum_ProgGain, true,  true),  /**< Channel 2a + High gain amp + Boost + bias */
+   MuxSelect_Ch2bProgGainBoostBiased = muxSelect(ChannelNum_2, SubChannelNum_B, AmplifierNum_ProgGain, true,  true),  /**< Channel 2b + High gain amp + Boost + bias */
 
-   MuxSelect_ChaHighGainBoostBiased  = MuxSelect_Ch1aHighGainBoostBiased&~CHANNEL_MASK,                               /**< Channel A + High gain amp + Boost + bias */
-   MuxSelect_ChbHighGainBoostBiased  = MuxSelect_Ch1bHighGainBoostBiased&~CHANNEL_MASK,                               /**< Channel B + High gain amp + Boost + bias */
-   MuxSelect_HighGainBoostBiased     = MuxSelect_Ch1bHighGainBoostBiased&~(CHANNEL_MASK|AB_MASK),                     /**< High gain amp + Boost + bias */
+   MuxSelect_ChaProgGainBoostBiased  = MuxSelect_Ch1aProgGainBoostBiased&~CHANNEL_MASK,                               /**< Channel A + High gain amp + Boost + bias */
+   MuxSelect_ChbProgGainBoostBiased  = MuxSelect_Ch1bProgGainBoostBiased&~CHANNEL_MASK,                               /**< Channel B + High gain amp + Boost + bias */
+   MuxSelect_ProgGainBoostBiased     = MuxSelect_Ch1bProgGainBoostBiased&~(CHANNEL_MASK|AB_MASK),                     /**< High gain amp + Boost + bias */
 
-   MuxSelect_Idle                    = MuxSelect_Ch1aHighGainBoost,//muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_HighGain,  false, true),  /**< Idle value - disable bias and gain boost */
+   // Identify tool by measuring ID resistor on A sub-channel
+   MuxSelect_Identify                = MuxSelect_ChaLowGainBiased,  /**< Channel Xa + Low gain amp + Bias */
 
-   MuxSelect_Complete = (uint8_t)-1
+   MuxSelect_Idle                    = MuxSelect_Ch1aProgGainBoost,
+   //muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_ProgGain,  false, true),  /**< Idle value - disable bias and gain boost */
+
+   MuxSelect_Complete = (uint8_t)-1,
+
+   // Various PGA settings with Boost
+   MuxSelect_ProgGainBoostx1  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_1),
+   MuxSelect_ProgGainBoostx2  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_2),
+   MuxSelect_ProgGainBoostx4  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_4),
+   MuxSelect_ProgGainBoostx8  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_8),
+   MuxSelect_ProgGainBoostx16 = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_16),
+   MuxSelect_ProgGainBoostx32 = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_32),
+   MuxSelect_ProgGainBoostx64 = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_64),
 };
 
 /**

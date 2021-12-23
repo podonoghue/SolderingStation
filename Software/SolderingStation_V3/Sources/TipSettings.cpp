@@ -15,7 +15,8 @@
 
 using namespace USBDM;
 
-const InitialTipInfo TipSettings::initialTipInfo[NUMBER_OF_TIPS] = {
+const InitialTipInfo TipSettings::initialTipInfo[SIZE_OF_TIP_ARRAY] = {
+      {"NoTip", IronType_Unknown },
       {"B0",    IronType_T12 },
       {"B1",    IronType_T12 },
       {"B2",    IronType_T12 },
@@ -96,16 +97,13 @@ const InitialTipInfo TipSettings::initialTipInfo[NUMBER_OF_TIPS] = {
  * @return TipNameIndex (index into tip name table)
  */
 TipSettings::TipNameIndex TipSettings::getTipNameIndex(const char *tipName) {
-   static_assert(NUMBER_OF_TIPS == (sizeof(initialTipInfo)/sizeof(initialTipInfo[0])), "");
-
-   TipNameIndex index;
-   for(index=0; index<NUMBER_OF_TIPS; index++) {
+   for(TipNameIndex index=FIRST_TIP; index<=LAST_VALID_TIP; inc(index)) {
       if (strcmp(initialTipInfo[index].name, tipName) == 0) {
          return index;
       }
    }
    usbdm_assert(false, "Tip not found");
-   return 0;
+   abort();
 }
 
 /**
@@ -116,10 +114,22 @@ TipSettings::TipNameIndex TipSettings::getTipNameIndex(const char *tipName) {
  * @return Pointer to static string
  */
 const char *TipSettings::getTipName(TipNameIndex index) {
-   if (index >= NUMBER_OF_TIPS) {
+   if (index >= LAST_VALID_TIP) {
       return "----";
    }
    return initialTipInfo[index].name;
+}
+
+const char *TipSettings::getIronTypeName(IronType ironType) {
+   static const char *names[] = {
+         "Unknown",
+         "Weller",
+         "T12",
+   };
+   if (ironType >= USBDM::sizeofArray(names)) {
+      return "----";
+   }
+   return names[ironType];
 }
 
 /**
@@ -128,8 +138,8 @@ const char *TipSettings::getTipName(TipNameIndex index) {
  * @param tipNameIndex  Tip name index for this setting
  */
 void TipSettings::loadDefaultCalibration(TipNameIndex tipNameIndex) {
-   this->tipNameIndex = tipNameIndex;
-   this->flags   = 0;
+   this->nvTipNameIndex = tipNameIndex;
+   this->nvFlags        = 0;
 
    const InitialTipInfo &initInfo = initialTipInfo[tipNameIndex];
    switch(initInfo.type) {
@@ -157,12 +167,10 @@ void TipSettings::report(FormattedIO &io) {
    io.write("Ki     = ").writeln(getKi());
    io.write("Kd     = ").writeln(getKd());
    io.write("iLimit = ").writeln(getILimit());
-   io.write("flags  = 0b").writeln(flags, Radix_2);
+   io.write("flags  = 0b").writeln(nvFlags, Radix_2);
    for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
       io.
          write("T = ").write(getCalibrationTempValue(index)).
          write(", M = ").writeln(getCalibrationMeasurementValue(index));
    }
 }
-
-

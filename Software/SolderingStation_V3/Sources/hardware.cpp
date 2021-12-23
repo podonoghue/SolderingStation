@@ -51,10 +51,8 @@ const GpioFieldTable_T<GpioCInfo, 4, 3, ActiveLow>           ch2Drive;          
  * @note Only the lower 16-bits of the PCR registers are initialised
  */
 void mapAllPins() {
-#if false
+#if true
 
-#warning "PCR Not initialised for PTD5       : Multiple signals mapped to pin - ADC0_SE6b, GPIOD_5"
-#warning "PCR Not initialised for PTD6       : Multiple signals mapped to pin - ADC0_SE7b, GPIOD_6/LLWU_P15"
 
 #endif
 
@@ -73,13 +71,15 @@ void mapAllPins() {
    PORTA->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0010UL);
    PORTA->GPCLR = ForceLockedPins|0x0200UL|PORT_GPCLR_GPWE(0x0006UL);
    PORTA->GPCLR = ForceLockedPins|0x0700UL|PORT_GPCLR_GPWE(0x0009UL);
-   PORTB->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0003UL);
-   PORTB->GPCHR = ForceLockedPins|0x0100UL|PORT_GPCHR_GPWE(0x0003UL);
+   PORTB->GPCLR = ForceLockedPins|0x0113UL|PORT_GPCLR_GPWE(0x0003UL);
+   PORTB->GPCHR = ForceLockedPins|0x0113UL|PORT_GPCHR_GPWE(0x0003UL);
    PORTB->GPCLR = ForceLockedPins|0x0220UL|PORT_GPCLR_GPWE(0x000CUL);
    PORTC->GPCLR = ForceLockedPins|0x0000UL|PORT_GPCLR_GPWE(0x0080UL);
-   PORTC->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0061UL);
+   PORTC->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0020UL);
    PORTC->GPCLR = ForceLockedPins|0x0103UL|PORT_GPCLR_GPWE(0x001EUL);
-   PORTD->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x009FUL);
+   PORTC->GPCLR = ForceLockedPins|0x0140UL|PORT_GPCLR_GPWE(0x0041UL);
+   PORTD->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x00F0UL);
+   PORTD->GPCLR = ForceLockedPins|0x0113UL|PORT_GPCLR_GPWE(0x000FUL);
 
    if constexpr (ForceLockoutUnbondedPins) {
       PORTA->GPCLR = PinLock_Locked |0x0000UL|PORT_GPCLR_GPWE(0xFFE0UL); // Lockout unavailable pins

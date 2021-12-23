@@ -32,7 +32,6 @@ enum CalibrationIndex {
    CalibrationIndex_Number   = 3,  ///< Number of calibration values
 };
 
-
 inline CalibrationIndex operator++(CalibrationIndex &ci) {
    ci = CalibrationIndex(static_cast<unsigned>(ci) + 1);
    return ci;
@@ -45,9 +44,53 @@ class TipSettings {
 
 public:
 
-   /// Type for index into tipNames table
-   using TipNameIndex = uint8_t;
+   /// Number of tip settings available on on-volatile storage
+   static constexpr unsigned NUM_TIP_SETTINGS = 20;
 
+   /// Type for index into initialTipInfo table in ROM
+   enum TipNameIndex : uint8_t {
+      /// Indicates a failed result (Invalid tip - dummy entry)
+      NO_TIP = 0,
+
+      /// Total number of tips available for selection (excludes NO_TIP)
+      NUMBER_OF_VALID_TIPS   = 70,
+
+      /// Indicates unused entry in calibration table
+      /// Corresponds to default flash value (0xFFFF)
+      FREE_ENTRY    = (TipNameIndex)-1,
+   };
+
+   /// First real tip in initialTipInfo array
+   static const enum TipNameIndex FIRST_VALID_TIP = (TipNameIndex)1;
+
+   /// Last real tip in initialTipInfo array
+   static const enum TipNameIndex LAST_VALID_TIP = NUMBER_OF_VALID_TIPS;
+
+private:
+
+   /// First tip in initialTipInfo array
+   static const enum TipNameIndex FIRST_TIP = (TipNameIndex)1;
+
+   /// Size of initialTipInfo array
+   static const enum TipNameIndex SIZE_OF_TIP_ARRAY = (TipNameIndex)(LAST_VALID_TIP + FIRST_VALID_TIP);
+
+public:
+   /**
+    * Convert an integer to TipNameIndex
+    *
+    * @param index Index to convert
+    *
+    * @return Resulting TipNameIndex
+    */
+   static TipNameIndex tipNameIndex(int index) {
+      usbdm_assert((static_cast<unsigned>(index)<=LAST_VALID_TIP), "Range error on conversion to TipNameIndex");
+      return TipNameIndex(index);
+   }
+
+   static TipNameIndex &inc(TipNameIndex &index) {
+      index = static_cast<TipNameIndex>(index+1);
+      return index;
+   }
    /**
     * Get the temperature for calibration at the given calibration point
     *
@@ -60,21 +103,8 @@ public:
       return calibrationTemperatures[index];
    }
 
-   /// Number of tip settings available
-   static constexpr unsigned NUM_TIP_SETTINGS = 20;
-
-   /// Total number of tips available for selection
-   static constexpr unsigned NUMBER_OF_TIPS   = 70;
-
    /// Names of all tips
-   static const InitialTipInfo initialTipInfo[NUMBER_OF_TIPS];
-
-   /// Indicates unused entry in calibration table
-   /// Corresponds to default flash value (0xFFFF)
-   static constexpr TipNameIndex FREE_ENTRY    = (TipNameIndex)-1;
-
-   /// Default tip (name) to use
-   static constexpr TipNameIndex DEFAULT_ENTRY = (TipNameIndex)0;
+   static const InitialTipInfo initialTipInfo[SIZE_OF_TIP_ARRAY];
 
    /// Indicates thermocouple and coldJunction values have been calibrated
    static constexpr uint16_t TEMP_CALIBRATED = 1<<0;
@@ -96,28 +126,28 @@ public:
 
 private:
    /// First calibration value for each calibration point
-   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>calibrationMeasurementValue;
+   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>nvCalibrationMeasurementValue;
 
    /// Second calibration value for each calibration point
-   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>calibrationTemperatureValue;
+   USBDM::NonvolatileArray<uint16_t, CalibrationIndex_Number>nvCalibrationTemperatureValue;
 
    /// PID parameter - proportional constant
-   USBDM::Nonvolatile<uint16_t> kp;
+   USBDM::Nonvolatile<uint16_t> nvKp;
 
    /// PID parameter - integral constant
-   USBDM::Nonvolatile<uint16_t> ki;
+   USBDM::Nonvolatile<uint16_t> nvKi;
 
    /// PID parameter - differential constant
-   USBDM::Nonvolatile<uint16_t> kd;
+   USBDM::Nonvolatile<uint16_t> nvKd;
 
    /// PID parameter - limit on integral accumulation
-   USBDM::Nonvolatile<uint16_t> iLimit;
+   USBDM::Nonvolatile<uint16_t> nvILimit;
 
    /// Flags for this entry
-   USBDM::Nonvolatile<uint16_t>     flags;
+   USBDM::Nonvolatile<uint16_t>     nvFlags;
 
    /// Index into tip name table for this entry
-   USBDM::Nonvolatile<TipNameIndex>    tipNameIndex;
+   USBDM::Nonvolatile<TipNameIndex>    nvTipNameIndex;
 
 //   TipSettings(TipSettings &&other) = delete;
 //   TipSettings& operator=(TipSettings &&other) = delete;
@@ -128,18 +158,23 @@ public:
    ~TipSettings() {}
 
    TipSettings& operator=(const TipSettings &other) = default;
+
+   /**
+    * The is intended to allow creating a RAM-based copy of a non-volatile settings object.
+    *
+    * It does not correctly copy to flash!
+    *
+    * @param other
+    */
    TipSettings(const TipSettings &other) = default;
-//   {
-//      this->kp           = other.kp;
-//      this->ki           = other.ki;
-//      this->kd           = other.kd;
-//      this->iLimit       = other.iLimit;
-//      this->flags        = other.flags;
-//      this->tipNameIndex = other.tipNameIndex;
-//      calibrationMeasurementValue = other.calibrationMeasurementValue;
-//      calibrationTemperatureValue = other.calibrationTemperatureValue;
-//      return *this;
-//   }
+
+   TipSettings(TipNameIndex tipNameIndex) {
+      this->setTipNameIndex(tipNameIndex);
+   }
+
+   bool isNoTip() {
+      return nvTipNameIndex == NO_TIP;
+   }
 
    /**
     * Report settings object
@@ -166,20 +201,22 @@ public:
     */
    static const char *getTipName(TipNameIndex index);
 
+   static const char *getIronTypeName(IronType ironType);
+
    /**
     * Indicates if this entry is free
     *
     * @return
     */
    bool isFree() const {
-      return tipNameIndex == FREE_ENTRY;
+      return nvTipNameIndex == FREE_ENTRY;
    }
 
    /**
     * Frees this entry for re-use
     */
    void freeEntry() {
-      tipNameIndex = FREE_ENTRY;
+      nvTipNameIndex = FREE_ENTRY;
    }
 
    /**
@@ -187,7 +224,7 @@ public:
     *
     * @param tipNameIndex  Tip name index for this setting
     */
-   void loadDefaultCalibration(TipNameIndex tipNameIndex = DEFAULT_ENTRY);
+   void loadDefaultCalibration(TipNameIndex tipNameIndex);
 
    /**
     * Get PID Kp value
@@ -195,7 +232,7 @@ public:
     * @return Kp value
     */
    float getKp() const {
-      return kp/FLOAT_SCALE_FACTOR_F;
+      return nvKp/FLOAT_SCALE_FACTOR_F;
    }
 
    /**
@@ -204,7 +241,7 @@ public:
     * @return Ki value
     */
    float getKi() const {
-      return ki/FLOAT_SCALE_FACTOR_F;
+      return nvKi/FLOAT_SCALE_FACTOR_F;
    }
 
    /**
@@ -213,7 +250,7 @@ public:
     * @return Kd value
     */
    float getKd() const {
-      return kd/FLOAT_SCALE_FACTOR_F;
+      return nvKd/FLOAT_SCALE_FACTOR_F;
    }
 
    /**
@@ -222,7 +259,7 @@ public:
     * @return I limit value
     */
    float getILimit() const {
-      return iLimit/FLOAT_SCALE_FACTOR_F;
+      return nvILimit/FLOAT_SCALE_FACTOR_F;
    }
 
    /**
@@ -231,7 +268,7 @@ public:
     * @return Scaled Kp value (internal format)
     */
    float getRawKp() const {
-      return kp;
+      return nvKp;
    }
 
    /**
@@ -240,7 +277,7 @@ public:
     * @return Scaled Ki value (internal format)
     */
    float getRawKi() const {
-      return ki;
+      return nvKi;
    }
 
    /**
@@ -249,7 +286,7 @@ public:
     * @return Scaled Kd value (internal format)
     */
    float getRawKd() const {
-      return kd;
+      return nvKd;
    }
 
    /**
@@ -258,7 +295,7 @@ public:
     * @return Scaled I limit value (internal format)
     */
    float getRawILimit() const {
-      return iLimit;
+      return nvILimit;
    }
 
    /**
@@ -270,11 +307,11 @@ public:
     * @param iLimit  Scaled ILimit value (internal format)
     */
    void setRawPidControlValues(int kp, int ki, int kd, int iLimit) {
-      flags = flags | PID_CALIBRATED;
-      this->kp     = kp;
-      this->ki     = ki;
-      this->kd     = kd;
-      this->iLimit = iLimit;
+      nvFlags = nvFlags | PID_CALIBRATED;
+      nvKp     = kp;
+      nvKi     = ki;
+      nvKd     = kd;
+      nvILimit = iLimit;
    }
 
    /**
@@ -283,9 +320,9 @@ public:
     * @param other Dummy Tips-settings containing measurements
     */
    void setThermisterCalibration(TipSettings &other) {
-      flags = flags | TEMP_CALIBRATED;
-      calibrationMeasurementValue = other.calibrationMeasurementValue;
-      calibrationTemperatureValue = other.calibrationTemperatureValue;
+      nvFlags = nvFlags | TEMP_CALIBRATED;
+      nvCalibrationMeasurementValue = other.nvCalibrationMeasurementValue;
+      nvCalibrationTemperatureValue = other.nvCalibrationTemperatureValue;
    }
 
    /**
@@ -294,11 +331,11 @@ public:
     * @param other Dummy Tip-settings containing measurements
     */
    void setPidControlValues(TipSettings &other) {
-      flags  = flags | PID_CALIBRATED;
-      kp     = other.kp;
-      ki     = other.ki;
-      kd     = other.kd;
-      iLimit = other.iLimit;
+      nvFlags  = nvFlags | PID_CALIBRATED;
+      nvKp     = other.nvKp;
+      nvKi     = other.nvKi;
+      nvKd     = other.nvKd;
+      nvILimit = other.nvILimit;
    }
 
    /**
@@ -310,10 +347,10 @@ public:
     * @param iLimit
     */
    void setInitialPidControlValues(float kp, float ki, float kd, float iLimit) {
-      this->kp     = round(kp * FLOAT_SCALE_FACTOR);
-      this->ki     = round(ki * FLOAT_SCALE_FACTOR);
-      this->kd     = round(kd * FLOAT_SCALE_FACTOR);
-      this->iLimit = round(iLimit * FLOAT_SCALE_FACTOR);
+      nvKp     = round(kp * FLOAT_SCALE_FACTOR);
+      nvKi     = round(ki * FLOAT_SCALE_FACTOR);
+      nvKd     = round(kd * FLOAT_SCALE_FACTOR);
+      nvILimit = round(iLimit * FLOAT_SCALE_FACTOR);
    }
 
    /**
@@ -324,8 +361,8 @@ public:
     * @param measurement      Measurement value e.g. thermocouple voltage or PTC resistance
     */
    void setCalibrationPoint(CalibrationIndex calibrationIndex, float temperature, float measurement) {
-      this->calibrationTemperatureValue.set(calibrationIndex, round(temperature*TEMP_SCALE_FACTOR));
-      this->calibrationMeasurementValue.set(calibrationIndex, round(measurement*FLOAT_SCALE_FACTOR));
+      this->nvCalibrationTemperatureValue.set(calibrationIndex, round(temperature*TEMP_SCALE_FACTOR));
+      this->nvCalibrationMeasurementValue.set(calibrationIndex, round(measurement*FLOAT_SCALE_FACTOR));
    }
 
    /**
@@ -336,7 +373,7 @@ public:
     * @return Measurement value e.g. thermocouple voltage or PTC resistance
     */
    float getCalibrationMeasurementValue(CalibrationIndex index) const {
-      return calibrationMeasurementValue[index]/FLOAT_SCALE_FACTOR_F;
+      return nvCalibrationMeasurementValue[index]/FLOAT_SCALE_FACTOR_F;
    }
 
    /**
@@ -347,7 +384,7 @@ public:
     * @return Measurement temperature
     */
    float getCalibrationTempValue(CalibrationIndex index) const {
-      return calibrationTemperatureValue[index]/TEMP_SCALE_FACTOR_F;
+      return nvCalibrationTemperatureValue[index]/TEMP_SCALE_FACTOR_F;
    }
 
    /**
@@ -356,7 +393,7 @@ public:
     * @return TipNameIndex
     */
    TipNameIndex getTipNameIndex() const {
-      return tipNameIndex;
+      return nvTipNameIndex;
    }
 
    /**
@@ -365,7 +402,23 @@ public:
     * @param tipNameIndex
     */
    void setTipNameIndex(TipNameIndex tipNameIndex) {
-      this->tipNameIndex = tipNameIndex;
+      nvTipNameIndex = tipNameIndex;
+   }
+
+   /**
+    * Get TipNameIndex for 1st entry applicable to this iron type
+    *
+    * @param ironType
+    *
+    * @return Index of entry found or NO_TIP if not found
+    */
+   static TipNameIndex getDefaultTipForIron(IronType ironType) {
+      for (TipNameIndex index=FIRST_VALID_TIP; index<=LAST_VALID_TIP; inc(index)) {
+         if (initialTipInfo[index].type == ironType) {
+            return index;
+         }
+      }
+      return NO_TIP;
    }
 
    /**
@@ -374,10 +427,10 @@ public:
     * @return Pointer to tip name as static object
     */
    const char *getTipName() const {
-      if (tipNameIndex == FREE_ENTRY) {
-         return "Unallocated";
+      if (nvTipNameIndex == FREE_ENTRY) {
+         return initialTipInfo[NO_TIP].name;
       }
-      return initialTipInfo[tipNameIndex].name;
+      return initialTipInfo[nvTipNameIndex].name;
    }
 
    /**
@@ -386,10 +439,10 @@ public:
     * @return Pointer to tip name as static object
     */
    IronType getIronType() const {
-      if (tipNameIndex == FREE_ENTRY) {
-         return IronType_T12;
+      if (nvTipNameIndex == FREE_ENTRY) {
+         return IronType_Unknown;
       }
-      return initialTipInfo[tipNameIndex].type;
+      return initialTipInfo[nvTipNameIndex].type;
    }
 
    /**
@@ -399,7 +452,7 @@ public:
     * @return False - Values are defaults.
     */
    bool isTemperatureCalibrated() const {
-      return (flags & TEMP_CALIBRATED) != 0;
+      return (nvFlags & TEMP_CALIBRATED) != 0;
    }
 
    /**
@@ -409,7 +462,7 @@ public:
     * @return False - Values are defaults.
     */
    bool isPidCalibrated() const {
-      return (flags & PID_CALIBRATED) != 0;
+      return (nvFlags & PID_CALIBRATED) != 0;
    }
 };
 

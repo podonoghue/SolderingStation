@@ -14,6 +14,7 @@
 #include "Oled.h"
 #include "SwitchPolling.h"
 #include "TipSettings.h"
+#include "BoundedInteger.h"
 
 class Channel;
 
@@ -26,10 +27,9 @@ public:
    const char *name;
    unsigned modifiers;
    union {
-      void *object;
-      TipSettings *tipSettings;
-      const void *cobject;
-      int  intValue;
+      const TipSettings *constTipSettings;
+      TipSettings       *nvTipSettings;
+      int                intValue;
    };
    MenuItem() : name(nullptr), modifiers(0), intValue(0) {}
    MenuItem(const char *name) : name(name), modifiers(0), intValue(0) {}
@@ -45,6 +45,8 @@ public:
       qsort(items, size, sizeof(MenuItem), compare);
    }
 };
+
+class BoundedMenuState;
 
 class Display {
 
@@ -68,7 +70,7 @@ private:
 public:
 
    /// Minimum number of Menu items for display (arrays must be at least this size)
-   static constexpr int MIN_MENU_ENTRIES = 6;
+   static constexpr int NUM_MENU_ENTRIES = 6;
 
    /**
     * Constructor
@@ -130,46 +132,46 @@ public:
     * Display a menu list with selected item
     *
     * @param [in]     title         Title to display at top of screen
-    * @param [in]     items         Array of menu items.  Must have at least MIN_MENU_ENTRIES items.
+    * @param [in]     items         Array of menu items.
     * @param [in]     modifiersUsed Modifiers that may be applied to items (for sizing)
     * @param [inout]  offset        Offset into list for display i.e. first item on visible menu.
     * @param [in]     selection     Selected item index
     */
-   void displayMenuList(const char *title, MenuItem const items[], unsigned modifiersUsed, int &offset, int selection);
+   void displayMenuList(const char *title, MenuItem const items[], unsigned modifiersUsed, BoundedMenuState &selection);
 
    /**
     * Display a menu list with selected item
     *
-    * @param [in]     items         Array of menu items.  Must have at least MIN_MENU_ENTRIES items.
+    * @param [in]     items         Array of menu items.
     * @param [in]     modifiersUsed Modifiers that may be applied to items (for sizing)
     * @param [inout]  offset        Offset into list for display i.e. first item on menu
     * @param [in]     selection     Selected item index
     */
-   void displayMenuList(MenuItem const items[], unsigned modifiersUsed, int &offset, int selection) {
-      displayMenuList(nullptr, items, modifiersUsed, offset, selection);
+   void displayMenuList(MenuItem const items[], unsigned modifiersUsed, BoundedMenuState &selection) {
+      displayMenuList(nullptr, items, modifiersUsed, selection);
    }
 
    /**
     * Display a menu list with selected item
     *
-    * @param [in]     items         Array of menu items.  Must have at least MIN_MENU_ENTRIES items.
+    * @param [in]     items         Array of menu items.
     * @param [inout]  offset        Offset into list for display i.e. first item on visible menu.
     * @param [in]     selection     Selected item index
     */
-   void displayMenuList(MenuItem const items[], int &offset, int selection) {
-      displayMenuList(nullptr, items, 0, offset, selection);
+   void displayMenuList(MenuItem const items[], BoundedMenuState &selection) {
+      displayMenuList(nullptr, items, 0, selection);
    }
 
    /**
     * Display a menu list with selected item
     *
     * @param [in]     title         Title to display at top of screen
-    * @param [in]     items         Array of menu items.  Must have at least MIN_MENU_ENTRIES items.
+    * @param [in]     items         Array of menu items.
     * @param [inout]  offset        Offset into list for display i.e. first item on visible menu.
     * @param [in]     selection     Selected item index
     */
-   void displayMenuList(const char *title, MenuItem const items[], int &offset, int selection) {
-      displayMenuList(title, items, 0, offset, selection);
+   void displayMenuList(const char *title, MenuItem const items[], BoundedMenuState &selection) {
+      displayMenuList(title, items, 0, selection);
    }
 
    /**
@@ -242,6 +244,84 @@ public:
     */
    bool reportSettingsChange(const TipSettings &oldTs, const TipSettings &newTs);
 };
+
+class BoundedMenuState : public BoundedInteger {
+
+protected:
+   int offset = 0;
+
+public:
+   using BoundedInteger::BoundedInteger;
+
+   /**
+    * Get offset of screen for scrolling
+    */
+   int getOffset() {
+      return offset;
+   }
+
+   /**
+    * Map display menu line to menu item index
+    *
+    * @param displayLineNum Line on screen
+    *
+    * @return Menu item index
+    */
+   int getLineIndex(int displayLineNum) {
+      return (displayLineNum+offset)%(max+1);
+   }
+
+   /**
+    * Limit value to acceptable range
+    */
+   virtual void limit() override {
+      // Keep value in range
+      if (value>max) {
+         value = max;
+      }
+      if (value<min) {
+         value = min;
+      }
+
+      // Make sure selection is visible i.e. scroll screen
+      if (value < offset) {
+         offset = value;
+      }
+      else if ((value-offset) >= Display::NUM_MENU_ENTRIES) {
+         offset = value-(Display::NUM_MENU_ENTRIES-1);
+      }
+   }
+};
+
+class CircularMenuState : public BoundedMenuState {
+
+public:
+   using BoundedMenuState::BoundedMenuState;
+
+protected:
+
+   /**
+    * Limit value to acceptable range
+    */
+   virtual void limit() override {
+      // Keep value in range
+      if (value>max) {
+         value = min  + (value - max - 1);
+      }
+      if (value<min) {
+         value = max - (min - value - 1);
+      }
+
+      // Make sure selection is visible i.e. scroll screen
+      if (value < offset) {
+         offset = value;
+      }
+      else if ((value-offset) >= Display::NUM_MENU_ENTRIES) {
+         offset = value-(Display::NUM_MENU_ENTRIES-1);
+      }
+   }
+};
+
 
 extern Display display;
 

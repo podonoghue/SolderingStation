@@ -81,10 +81,6 @@ typedef enum {
   UART1_Error_IRQn              =  48,   /**<  64 Serial Communication Interface                                                   */
   UART2_RxTx_IRQn               =  49,   /**<  65 Serial Communication Interface                                                   */
   UART2_Error_IRQn              =  50,   /**<  66 Serial Communication Interface                                                   */
-  UART3_RxTx_IRQn               =  51,   /**<  67 Serial Communication Interface                                                   */
-  UART3_Error_IRQn              =  52,   /**<  68 Serial Communication Interface                                                   */
-  UART4_RxTx_IRQn               =  53,   /**<  69 Serial Communication Interface                                                   */
-  UART4_Error_IRQn              =  54,   /**<  70 Serial Communication Interface                                                   */
   ADC0_IRQn                     =  57,   /**<  73 Analogue to Digital Converter                                                    */
   ADC1_IRQn                     =  58,   /**<  74 Analogue to Digital Converter                                                    */
   CMP0_IRQn                     =  59,   /**<  75 High-Speed Comparator                                                            */
@@ -174,10 +170,6 @@ extern void UART1_RxTx_IRQHandler(void);             /**< Serial Communication I
 extern void UART1_Error_IRQHandler(void);            /**< Serial Communication Interface                                                   */
 extern void UART2_RxTx_IRQHandler(void);             /**< Serial Communication Interface                                                   */
 extern void UART2_Error_IRQHandler(void);            /**< Serial Communication Interface                                                   */
-extern void UART3_RxTx_IRQHandler(void);             /**< Serial Communication Interface                                                   */
-extern void UART3_Error_IRQHandler(void);            /**< Serial Communication Interface                                                   */
-extern void UART4_RxTx_IRQHandler(void);             /**< Serial Communication Interface                                                   */
-extern void UART4_Error_IRQHandler(void);            /**< Serial Communication Interface                                                   */
 extern void ADC0_IRQHandler(void);                   /**< Analogue to Digital Converter                                                    */
 extern void ADC1_IRQHandler(void);                   /**< Analogue to Digital Converter                                                    */
 extern void CMP0_IRQHandler(void);                   /**< High-Speed Comparator                                                            */
@@ -3056,129 +3048,6 @@ typedef struct EWM_Type {
 
 /**
  * @} */ /* End group EWM_Peripheral_access_layer_GROUP 
- */
-/**
-* @addtogroup FLEXBUS_Peripheral_access_layer_GROUP FLEXBUS Peripheral Access Layer
-* @brief C Struct for FLEXBUS
-* @{
-*/
-
-/* ================================================================================ */
-/* ================           FLEXBUS (file:FLEXBUS)               ================ */
-/* ================================================================================ */
-
-/**
- * @brief FlexBus external bus interface
- */
-#define FLEXBUS_MEMORY_REGIONS_COUNT 6  /**< Number of Select Regions                           */
-/**
-* @addtogroup FLEXBUS_structs_GROUP FLEXBUS struct
-* @brief Struct for FLEXBUS
-* @{
-*/
-typedef struct FLEXBUS_Type {
-   struct {
-      __IO uint32_t  CSAR;                      /**< 0000: Chip Select Address Register                                 */
-      __IO uint32_t  CSMR;                      /**< 0004: Chip Select Mask Register                                    */
-      __IO uint32_t  CSCR;                      /**< 0008: Chip Select Control Register                                 */
-   } CS[FLEXBUS_MEMORY_REGIONS_COUNT];          /**< 0000: (cluster: size=0x0048, 72)                                   */
-        uint8_t   RESERVED_1[24];               /**< 0048: 0x18 bytes                                                   */
-   __IO uint32_t  CSPMCR;                       /**< 0060: Chip Select port Multiplexing Control Register               */
-} FLEXBUS_Type;
-
-/**
- * @} */ /* End group FLEXBUS_structs_GROUP 
- */
-
-/* -------------------------------------------------------------------------------- */
-/* -----------     'FLEXBUS' Position & Mask macros                     ----------- */
-/* -------------------------------------------------------------------------------- */
-
-/**
-* @addtogroup FLEXBUS_Register_Masks_GROUP FLEXBUS Register Masks
-* @brief Register Masks for FLEXBUS
-* @{
-*/
-/* ------- CSAR Bit Fields                          ------ */
-#define FLEXBUS_CSAR_BA_MASK                     (0xFFFF0000U)                                       /*!< FLEXBUS_CSAR.BA Mask                    */
-#define FLEXBUS_CSAR_BA_SHIFT                    (16U)                                               /*!< FLEXBUS_CSAR.BA Position                */
-#define FLEXBUS_CSAR_BA(x)                       (((uint32_t)(((uint32_t)(x))<<16U))&0xFFFF0000UL)   /*!< FLEXBUS_CSAR.BA Field                   */
-/* ------- CSMR Bit Fields                          ------ */
-#define FLEXBUS_CSMR_V_MASK                      (0x1U)                                              /*!< FLEXBUS_CSMR.V Mask                     */
-#define FLEXBUS_CSMR_V_SHIFT                     (0U)                                                /*!< FLEXBUS_CSMR.V Position                 */
-#define FLEXBUS_CSMR_V(x)                        (((uint32_t)(((uint32_t)(x))<<0U))&0x1UL)           /*!< FLEXBUS_CSMR.V Field                    */
-#define FLEXBUS_CSMR_WP_MASK                     (0x100U)                                            /*!< FLEXBUS_CSMR.WP Mask                    */
-#define FLEXBUS_CSMR_WP_SHIFT                    (8U)                                                /*!< FLEXBUS_CSMR.WP Position                */
-#define FLEXBUS_CSMR_WP(x)                       (((uint32_t)(((uint32_t)(x))<<8U))&0x100UL)         /*!< FLEXBUS_CSMR.WP Field                   */
-#define FLEXBUS_CSMR_BAM_MASK                    (0xFFFF0000U)                                       /*!< FLEXBUS_CSMR.BAM Mask                   */
-#define FLEXBUS_CSMR_BAM_SHIFT                   (16U)                                               /*!< FLEXBUS_CSMR.BAM Position               */
-#define FLEXBUS_CSMR_BAM(x)                      (((uint32_t)(((uint32_t)(x))<<16U))&0xFFFF0000UL)   /*!< FLEXBUS_CSMR.BAM Field                  */
-/* ------- CSCR Bit Fields                          ------ */
-#define FLEXBUS_CSCR_BSTW_MASK                   (0x8U)                                              /*!< FLEXBUS_CSCR.BSTW Mask                  */
-#define FLEXBUS_CSCR_BSTW_SHIFT                  (3U)                                                /*!< FLEXBUS_CSCR.BSTW Position              */
-#define FLEXBUS_CSCR_BSTW(x)                     (((uint32_t)(((uint32_t)(x))<<3U))&0x8UL)           /*!< FLEXBUS_CSCR.BSTW Field                 */
-#define FLEXBUS_CSCR_BSTR_MASK                   (0x10U)                                             /*!< FLEXBUS_CSCR.BSTR Mask                  */
-#define FLEXBUS_CSCR_BSTR_SHIFT                  (4U)                                                /*!< FLEXBUS_CSCR.BSTR Position              */
-#define FLEXBUS_CSCR_BSTR(x)                     (((uint32_t)(((uint32_t)(x))<<4U))&0x10UL)          /*!< FLEXBUS_CSCR.BSTR Field                 */
-#define FLEXBUS_CSCR_BEM_MASK                    (0x20U)                                             /*!< FLEXBUS_CSCR.BEM Mask                   */
-#define FLEXBUS_CSCR_BEM_SHIFT                   (5U)                                                /*!< FLEXBUS_CSCR.BEM Position               */
-#define FLEXBUS_CSCR_BEM(x)                      (((uint32_t)(((uint32_t)(x))<<5U))&0x20UL)          /*!< FLEXBUS_CSCR.BEM Field                  */
-#define FLEXBUS_CSCR_PS_MASK                     (0xC0U)                                             /*!< FLEXBUS_CSCR.PS Mask                    */
-#define FLEXBUS_CSCR_PS_SHIFT                    (6U)                                                /*!< FLEXBUS_CSCR.PS Position                */
-#define FLEXBUS_CSCR_PS(x)                       (((uint32_t)(((uint32_t)(x))<<6U))&0xC0UL)          /*!< FLEXBUS_CSCR.PS Field                   */
-#define FLEXBUS_CSCR_AA_MASK                     (0x100U)                                            /*!< FLEXBUS_CSCR.AA Mask                    */
-#define FLEXBUS_CSCR_AA_SHIFT                    (8U)                                                /*!< FLEXBUS_CSCR.AA Position                */
-#define FLEXBUS_CSCR_AA(x)                       (((uint32_t)(((uint32_t)(x))<<8U))&0x100UL)         /*!< FLEXBUS_CSCR.AA Field                   */
-#define FLEXBUS_CSCR_BLS_MASK                    (0x200U)                                            /*!< FLEXBUS_CSCR.BLS Mask                   */
-#define FLEXBUS_CSCR_BLS_SHIFT                   (9U)                                                /*!< FLEXBUS_CSCR.BLS Position               */
-#define FLEXBUS_CSCR_BLS(x)                      (((uint32_t)(((uint32_t)(x))<<9U))&0x200UL)         /*!< FLEXBUS_CSCR.BLS Field                  */
-#define FLEXBUS_CSCR_WS_MASK                     (0xFC00U)                                           /*!< FLEXBUS_CSCR.WS Mask                    */
-#define FLEXBUS_CSCR_WS_SHIFT                    (10U)                                               /*!< FLEXBUS_CSCR.WS Position                */
-#define FLEXBUS_CSCR_WS(x)                       (((uint32_t)(((uint32_t)(x))<<10U))&0xFC00UL)       /*!< FLEXBUS_CSCR.WS Field                   */
-#define FLEXBUS_CSCR_WRAH_MASK                   (0x30000U)                                          /*!< FLEXBUS_CSCR.WRAH Mask                  */
-#define FLEXBUS_CSCR_WRAH_SHIFT                  (16U)                                               /*!< FLEXBUS_CSCR.WRAH Position              */
-#define FLEXBUS_CSCR_WRAH(x)                     (((uint32_t)(((uint32_t)(x))<<16U))&0x30000UL)      /*!< FLEXBUS_CSCR.WRAH Field                 */
-#define FLEXBUS_CSCR_RDAH_MASK                   (0xC0000U)                                          /*!< FLEXBUS_CSCR.RDAH Mask                  */
-#define FLEXBUS_CSCR_RDAH_SHIFT                  (18U)                                               /*!< FLEXBUS_CSCR.RDAH Position              */
-#define FLEXBUS_CSCR_RDAH(x)                     (((uint32_t)(((uint32_t)(x))<<18U))&0xC0000UL)      /*!< FLEXBUS_CSCR.RDAH Field                 */
-#define FLEXBUS_CSCR_ASET_MASK                   (0x300000U)                                         /*!< FLEXBUS_CSCR.ASET Mask                  */
-#define FLEXBUS_CSCR_ASET_SHIFT                  (20U)                                               /*!< FLEXBUS_CSCR.ASET Position              */
-#define FLEXBUS_CSCR_ASET(x)                     (((uint32_t)(((uint32_t)(x))<<20U))&0x300000UL)     /*!< FLEXBUS_CSCR.ASET Field                 */
-#define FLEXBUS_CSCR_EXTS_MASK                   (0x400000U)                                         /*!< FLEXBUS_CSCR.EXTS Mask                  */
-#define FLEXBUS_CSCR_EXTS_SHIFT                  (22U)                                               /*!< FLEXBUS_CSCR.EXTS Position              */
-#define FLEXBUS_CSCR_EXTS(x)                     (((uint32_t)(((uint32_t)(x))<<22U))&0x400000UL)     /*!< FLEXBUS_CSCR.EXTS Field                 */
-#define FLEXBUS_CSCR_SWSEN_MASK                  (0x800000U)                                         /*!< FLEXBUS_CSCR.SWSEN Mask                 */
-#define FLEXBUS_CSCR_SWSEN_SHIFT                 (23U)                                               /*!< FLEXBUS_CSCR.SWSEN Position             */
-#define FLEXBUS_CSCR_SWSEN(x)                    (((uint32_t)(((uint32_t)(x))<<23U))&0x800000UL)     /*!< FLEXBUS_CSCR.SWSEN Field                */
-#define FLEXBUS_CSCR_SWS_MASK                    (0xFC000000U)                                       /*!< FLEXBUS_CSCR.SWS Mask                   */
-#define FLEXBUS_CSCR_SWS_SHIFT                   (26U)                                               /*!< FLEXBUS_CSCR.SWS Position               */
-#define FLEXBUS_CSCR_SWS(x)                      (((uint32_t)(((uint32_t)(x))<<26U))&0xFC000000UL)   /*!< FLEXBUS_CSCR.SWS Field                  */
-/* ------- CSPMCR Bit Fields                        ------ */
-#define FLEXBUS_CSPMCR_GROUP5_MASK               (0xF000U)                                           /*!< FLEXBUS_CSPMCR.GROUP5 Mask              */
-#define FLEXBUS_CSPMCR_GROUP5_SHIFT              (12U)                                               /*!< FLEXBUS_CSPMCR.GROUP5 Position          */
-#define FLEXBUS_CSPMCR_GROUP5(x)                 (((uint32_t)(((uint32_t)(x))<<12U))&0xF000UL)       /*!< FLEXBUS_CSPMCR.GROUP5 Field             */
-#define FLEXBUS_CSPMCR_GROUP4_MASK               (0xF0000U)                                          /*!< FLEXBUS_CSPMCR.GROUP4 Mask              */
-#define FLEXBUS_CSPMCR_GROUP4_SHIFT              (16U)                                               /*!< FLEXBUS_CSPMCR.GROUP4 Position          */
-#define FLEXBUS_CSPMCR_GROUP4(x)                 (((uint32_t)(((uint32_t)(x))<<16U))&0xF0000UL)      /*!< FLEXBUS_CSPMCR.GROUP4 Field             */
-#define FLEXBUS_CSPMCR_GROUP3_MASK               (0xF00000U)                                         /*!< FLEXBUS_CSPMCR.GROUP3 Mask              */
-#define FLEXBUS_CSPMCR_GROUP3_SHIFT              (20U)                                               /*!< FLEXBUS_CSPMCR.GROUP3 Position          */
-#define FLEXBUS_CSPMCR_GROUP3(x)                 (((uint32_t)(((uint32_t)(x))<<20U))&0xF00000UL)     /*!< FLEXBUS_CSPMCR.GROUP3 Field             */
-#define FLEXBUS_CSPMCR_GROUP2_MASK               (0xF000000U)                                        /*!< FLEXBUS_CSPMCR.GROUP2 Mask              */
-#define FLEXBUS_CSPMCR_GROUP2_SHIFT              (24U)                                               /*!< FLEXBUS_CSPMCR.GROUP2 Position          */
-#define FLEXBUS_CSPMCR_GROUP2(x)                 (((uint32_t)(((uint32_t)(x))<<24U))&0xF000000UL)    /*!< FLEXBUS_CSPMCR.GROUP2 Field             */
-#define FLEXBUS_CSPMCR_GROUP1_MASK               (0xF0000000U)                                       /*!< FLEXBUS_CSPMCR.GROUP1 Mask              */
-#define FLEXBUS_CSPMCR_GROUP1_SHIFT              (28U)                                               /*!< FLEXBUS_CSPMCR.GROUP1 Position          */
-#define FLEXBUS_CSPMCR_GROUP1(x)                 (((uint32_t)(((uint32_t)(x))<<28U))&0xF0000000UL)   /*!< FLEXBUS_CSPMCR.GROUP1 Field             */
-/**
- * @} */ /* End group FLEXBUS_Register_Masks_GROUP 
- */
-
-/* FLEXBUS - Peripheral instance base addresses */
-#define FLEXBUS_BasePtr                0x4000C000UL //!< Peripheral base address
-#define FLEXBUS                        ((FLEXBUS_Type *) FLEXBUS_BasePtr) //!< Freescale base pointer
-#define FLEXBUS_BASE_PTR               (FLEXBUS) //!< Freescale style base pointer
-/**
- * @} */ /* End group FLEXBUS_Peripheral_access_layer_GROUP 
  */
 /**
 * @addtogroup FMC_Peripheral_access_layer_GROUP FMC Peripheral Access Layer
@@ -7149,9 +7018,6 @@ typedef struct SIM_Type {
 #define SIM_SOPT2_CLKOUTSEL_MASK                 (0xE0U)                                             /*!< SIM_SOPT2.CLKOUTSEL Mask                */
 #define SIM_SOPT2_CLKOUTSEL_SHIFT                (5U)                                                /*!< SIM_SOPT2.CLKOUTSEL Position            */
 #define SIM_SOPT2_CLKOUTSEL(x)                   (((uint32_t)(((uint32_t)(x))<<5U))&0xE0UL)          /*!< SIM_SOPT2.CLKOUTSEL Field               */
-#define SIM_SOPT2_FBSL_MASK                      (0x300U)                                            /*!< SIM_SOPT2.FBSL Mask                     */
-#define SIM_SOPT2_FBSL_SHIFT                     (8U)                                                /*!< SIM_SOPT2.FBSL Position                 */
-#define SIM_SOPT2_FBSL(x)                        (((uint32_t)(((uint32_t)(x))<<8U))&0x300UL)         /*!< SIM_SOPT2.FBSL Field                    */
 #define SIM_SOPT2_PTD7PAD_MASK                   (0x800U)                                            /*!< SIM_SOPT2.PTD7PAD Mask                  */
 #define SIM_SOPT2_PTD7PAD_SHIFT                  (11U)                                               /*!< SIM_SOPT2.PTD7PAD Position              */
 #define SIM_SOPT2_PTD7PAD(x)                     (((uint32_t)(((uint32_t)(x))<<11U))&0x800UL)        /*!< SIM_SOPT2.PTD7PAD Field                 */
@@ -7244,9 +7110,6 @@ typedef struct SIM_Type {
 #define SIM_SDID_REVID_SHIFT                     (12U)                                               /*!< SIM_SDID.REVID Position                 */
 #define SIM_SDID_REVID(x)                        (((uint32_t)(((uint32_t)(x))<<12U))&0xF000UL)       /*!< SIM_SDID.REVID Field                    */
 /* ------- SCGC1 Bit Fields                         ------ */
-#define SIM_SCGC1_UART4_MASK                     (0x400U)                                            /*!< SIM_SCGC1.UART4 Mask                    */
-#define SIM_SCGC1_UART4_SHIFT                    (10U)                                               /*!< SIM_SCGC1.UART4 Position                */
-#define SIM_SCGC1_UART4(x)                       (((uint32_t)(((uint32_t)(x))<<10U))&0x400UL)        /*!< SIM_SCGC1.UART4 Field                   */
 /* ------- SCGC2 Bit Fields                         ------ */
 #define SIM_SCGC2_DAC0_MASK                      (0x1000U)                                           /*!< SIM_SCGC2.DAC0 Mask                     */
 #define SIM_SCGC2_DAC0_SHIFT                     (12U)                                               /*!< SIM_SCGC2.DAC0 Position                 */
@@ -7280,9 +7143,6 @@ typedef struct SIM_Type {
 #define SIM_SCGC4_UART2_MASK                     (0x1000U)                                           /*!< SIM_SCGC4.UART2 Mask                    */
 #define SIM_SCGC4_UART2_SHIFT                    (12U)                                               /*!< SIM_SCGC4.UART2 Position                */
 #define SIM_SCGC4_UART2(x)                       (((uint32_t)(((uint32_t)(x))<<12U))&0x1000UL)       /*!< SIM_SCGC4.UART2 Field                   */
-#define SIM_SCGC4_UART3_MASK                     (0x2000U)                                           /*!< SIM_SCGC4.UART3 Mask                    */
-#define SIM_SCGC4_UART3_SHIFT                    (13U)                                               /*!< SIM_SCGC4.UART3 Position                */
-#define SIM_SCGC4_UART3(x)                       (((uint32_t)(((uint32_t)(x))<<13U))&0x2000UL)       /*!< SIM_SCGC4.UART3 Field                   */
 #define SIM_SCGC4_USBOTG_MASK                    (0x40000U)                                          /*!< SIM_SCGC4.USBOTG Mask                   */
 #define SIM_SCGC4_USBOTG_SHIFT                   (18U)                                               /*!< SIM_SCGC4.USBOTG Position               */
 #define SIM_SCGC4_USBOTG(x)                      (((uint32_t)(((uint32_t)(x))<<18U))&0x40000UL)      /*!< SIM_SCGC4.USBOTG Field                  */
@@ -7358,9 +7218,6 @@ typedef struct SIM_Type {
 #define SIM_SCGC6_RTC_SHIFT                      (29U)                                               /*!< SIM_SCGC6.RTC Position                  */
 #define SIM_SCGC6_RTC(x)                         (((uint32_t)(((uint32_t)(x))<<29U))&0x20000000UL)   /*!< SIM_SCGC6.RTC Field                     */
 /* ------- SCGC7 Bit Fields                         ------ */
-#define SIM_SCGC7_FLEXBUS_MASK                   (0x1U)                                              /*!< SIM_SCGC7.FLEXBUS Mask                  */
-#define SIM_SCGC7_FLEXBUS_SHIFT                  (0U)                                                /*!< SIM_SCGC7.FLEXBUS Position              */
-#define SIM_SCGC7_FLEXBUS(x)                     (((uint32_t)(((uint32_t)(x))<<0U))&0x1UL)           /*!< SIM_SCGC7.FLEXBUS Field                 */
 #define SIM_SCGC7_DMA_MASK                       (0x2U)                                              /*!< SIM_SCGC7.DMA Mask                      */
 #define SIM_SCGC7_DMA_SHIFT                      (1U)                                                /*!< SIM_SCGC7.DMA Position                  */
 #define SIM_SCGC7_DMA(x)                         (((uint32_t)(((uint32_t)(x))<<1U))&0x2UL)           /*!< SIM_SCGC7.DMA Field                     */
@@ -7368,9 +7225,6 @@ typedef struct SIM_Type {
 #define SIM_CLKDIV1_OUTDIV4_MASK                 (0xF0000U)                                          /*!< SIM_CLKDIV1.OUTDIV4 Mask                */
 #define SIM_CLKDIV1_OUTDIV4_SHIFT                (16U)                                               /*!< SIM_CLKDIV1.OUTDIV4 Position            */
 #define SIM_CLKDIV1_OUTDIV4(x)                   (((uint32_t)(((uint32_t)(x))<<16U))&0xF0000UL)      /*!< SIM_CLKDIV1.OUTDIV4 Field               */
-#define SIM_CLKDIV1_OUTDIV3_MASK                 (0xF00000U)                                         /*!< SIM_CLKDIV1.OUTDIV3 Mask                */
-#define SIM_CLKDIV1_OUTDIV3_SHIFT                (20U)                                               /*!< SIM_CLKDIV1.OUTDIV3 Position            */
-#define SIM_CLKDIV1_OUTDIV3(x)                   (((uint32_t)(((uint32_t)(x))<<20U))&0xF00000UL)     /*!< SIM_CLKDIV1.OUTDIV3 Field               */
 #define SIM_CLKDIV1_OUTDIV2_MASK                 (0xF000000U)                                        /*!< SIM_CLKDIV1.OUTDIV2 Mask                */
 #define SIM_CLKDIV1_OUTDIV2_SHIFT                (24U)                                               /*!< SIM_CLKDIV1.OUTDIV2 Position            */
 #define SIM_CLKDIV1_OUTDIV2(x)                   (((uint32_t)(((uint32_t)(x))<<24U))&0xF000000UL)    /*!< SIM_CLKDIV1.OUTDIV2 Field               */
@@ -8911,52 +8765,6 @@ typedef struct UART1_Type {
 #define UART2                          ((UART1_Type *) UART2_BasePtr) //!< Freescale base pointer
 #define UART2_BASE_PTR                 (UART2) //!< Freescale style base pointer
 #define UART2_IRQS { UART2_RxTx_IRQn, UART2_Error_IRQn,  }
-
-/**
- * @} */ /* End group UART_Peripheral_access_layer_GROUP 
- */
-/**
-* @addtogroup UART_Peripheral_access_layer_GROUP UART Peripheral Access Layer
-* @brief C Struct for UART
-* @{
-*/
-
-/* ================================================================================ */
-/* ================           UART3 (derived from UART1)           ================ */
-/* ================================================================================ */
-
-/**
- * @brief Universal Asynchronous Receiver/Transmitter
- */
-
-/* UART3 - Peripheral instance base addresses */
-#define UART3_BasePtr                  0x4006D000UL //!< Peripheral base address
-#define UART3                          ((UART1_Type *) UART3_BasePtr) //!< Freescale base pointer
-#define UART3_BASE_PTR                 (UART3) //!< Freescale style base pointer
-#define UART3_IRQS { UART3_RxTx_IRQn, UART3_Error_IRQn,  }
-
-/**
- * @} */ /* End group UART_Peripheral_access_layer_GROUP 
- */
-/**
-* @addtogroup UART_Peripheral_access_layer_GROUP UART Peripheral Access Layer
-* @brief C Struct for UART
-* @{
-*/
-
-/* ================================================================================ */
-/* ================           UART4 (derived from UART1)           ================ */
-/* ================================================================================ */
-
-/**
- * @brief Universal Asynchronous Receiver/Transmitter
- */
-
-/* UART4 - Peripheral instance base addresses */
-#define UART4_BasePtr                  0x400EA000UL //!< Peripheral base address
-#define UART4                          ((UART1_Type *) UART4_BasePtr) //!< Freescale base pointer
-#define UART4_BASE_PTR                 (UART4) //!< Freescale style base pointer
-#define UART4_IRQS { UART4_RxTx_IRQn, UART4_Error_IRQn,  }
 
 /**
  * @} */ /* End group UART_Peripheral_access_layer_GROUP 

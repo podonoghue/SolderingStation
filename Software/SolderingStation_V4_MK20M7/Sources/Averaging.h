@@ -33,7 +33,7 @@ public:
     */
    static constexpr float convertToAdcVoltage(float adcValue) {
       // Convert ADC value to voltage
-      return adcValue * (ADC_REF_VOLTAGE/USBDM::HighComplianceAdc::getSingleEndedMaximum(ADC_RESOLUTION));
+      return adcValue * (ADC_REF_VOLTAGE/USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION));
    }
 
    /**
@@ -357,8 +357,8 @@ private:
     */
    float convertAdcVoltageToNtcResistance(float voltage) const {
 
-      /// Gain of measurement path
-      const float gain  = nvinit.hardwareCalibration.lowGainNoBoost;
+      /// Gain of measurement path - Pre-amplifier x5 
+      const float gain  = nvinit.hardwareCalibration.preAmplifierNoBoost;
 
       if (voltage>2.99) {
          // Assume ADC at maximum => open resistor
@@ -459,8 +459,8 @@ private:
    // Thermocouple voltage calibration values
    float calibrationVoltages[3];
 
-   /// Measurement path being used
-   static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGainBoost;
+   /// Measurement path being used - Pre-amplifier x5 + PGA x64 = 320
+   static constexpr MuxSelect MEASUREMENT = MuxSelect_ProgGainBoostx64;
 
 public:
 
@@ -474,8 +474,8 @@ public:
     */
    static float convertAdcVoltageToThermocoupleVoltage(float voltage) {
 
-      /// Gain of measurement path
-      const float gain  = nvinit.hardwareCalibration.highGainWithBoost;
+      /// Gain of measurement path - Pre-amplifier x5 + PGA x64 = 320 
+      const float gain  = nvinit.hardwareCalibration.preAmplifierWithBoost*64;
 
       return voltage * gain;
    }
@@ -626,8 +626,8 @@ class WellerThermistorAverage : public TemperatureAverage {
 
 private:
 
-   /// Measurement path being used
-   static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGainBoostBiased;
+   /// Measurement path being used - Pre-amplifier x5 + PGA x64 = 320
+   static constexpr MuxSelect MEASUREMENT = MuxSelect_ProgGainBoostBiasedx64;
 
    // Temperature calibration values
    float calibrationTemperatures[3];
@@ -647,8 +647,8 @@ private:
     */
    static float convertAdcVoltageToPtcResistance(float voltage) {
 
-      /// Gain of measurement path
-      const float gain  = nvinit.hardwareCalibration.highGainWithBoost;
+      /// Gain of measurement path - Pre-amplifier x5 + PGA x64 = 320
+      const float gain  = nvinit.hardwareCalibration.preAmplifierWithBoost*64;
 
       if (voltage>2.99) {
          // Assume ADC at maximum => open resistor

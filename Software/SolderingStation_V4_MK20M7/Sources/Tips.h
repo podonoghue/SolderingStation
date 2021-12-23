@@ -10,6 +10,7 @@
 
 #include "TipSettings.h"
 #include "Display.h"
+#include "BoundedInteger.h"
 
 class MenuItem;
 
@@ -22,13 +23,18 @@ public:
    /// Index into tip settings array
    using TipSettingsIndex         = uint8_t;
 
+   static constexpr TipSettingsIndex INVALID_TIP_INDEX = (TipSettingsIndex)-1;
+
+   // Tip settings used for "NO_TIP"
+   static const TipSettings NoTipSettings;
+
 private:
    Tips(const Tips &other) = delete;
    Tips(Tips &&other) = delete;
    Tips& operator=(const Tips &other) = delete;
    Tips& operator=(Tips &&other) = delete;
 
-   /// Nonvolatile arrays of calibration data for tips
+   /// Nonvolatile arrays of calibration data for available tips as selected by user
    TipSettingsArray  &tipSettings;
 
 public:
@@ -42,12 +48,46 @@ public:
    void initialiseTipSettings() {
       static const char * const defaultTips[] = {
             "B0",
-            "WT50L"
+            "B1",
+            "WT50S",
+            "WT50M",
+            "WT50L",
       };
       for (unsigned index=0; index<(sizeof(defaultTips)/sizeof(defaultTips[0])); index++) {
          TipSettings::TipNameIndex tipIndex = TipSettings::getTipNameIndex(defaultTips[index]);
          tipSettings[index].loadDefaultCalibration(tipIndex);
       }
+   }
+
+   /**
+    * Get default tip settings for given iron type
+    *
+    * @param ironType Iron type to look for
+    *
+    * @return Settings describing this tip or nullptr if none available
+    */
+   TipSettings *getAvailableTipForIron(IronType ironType) {
+      if (ironType == IronType_Unknown) {
+         return const_cast<TipSettings *>(&NoTipSettings);
+      }
+      for (unsigned index=0; index<USBDM::sizeofArray(tipSettings); index++) {
+         TipSettings *ts = &tipSettings[index];
+         if (ts->isFree()) {
+            continue;
+         }
+         if (ts->getIronType() == ironType) {
+            return ts;
+         }
+      }
+      // Try to allocate a suitable tip
+      TipSettings *tipSettings = findFreeTipSettings();
+      if (tipSettings != nullptr) {
+         TipSettings::TipNameIndex tipNameIndex = TipSettings::getDefaultTipForIron(ironType);
+         if (tipNameIndex != TipSettings::FREE_ENTRY) {
+            tipSettings->loadDefaultCalibration(tipNameIndex);
+         }
+      }
+      return tipSettings;
    }
 
    /**
@@ -74,14 +114,34 @@ public:
 
       // Get sorted list of tips available
       MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS];
-      unsigned availableTips = populateSelectedTips(menuItems, nullptr);
+      int availableTips = populateSelectedTips(menuItems, nullptr);
 
-      // Locate exiting tip
-      int tipIndex = findTipInMenu(selectedTip, menuItems, availableTips);
+      // Get direction to move
+      int direction = (delta>0)?1:-1;
 
-      tipIndex += delta;
-      tipIndex %= availableTips;
-      return menuItems[tipIndex].tipSettings;
+      // Can't move further than size of array
+      delta %= availableTips;
+      delta = abs(delta);
+
+      // Locate existing tip
+      int initialIndex = findTipInMenu(selectedTip, menuItems, availableTips);
+      CircularInteger index{0, availableTips-1, initialIndex};
+      IronType ironType = selectedTip->getIronType();
+
+      do {
+         index += direction;
+         if (index == initialIndex) {
+            // Wrapped around
+            break;
+         }
+         if (menuItems[index].constTipSettings->getIronType() == ironType) {
+            delta--;
+            if (delta == 0) {
+               break;
+            }
+         }
+      } while (true);
+      return menuItems[index].constTipSettings;
    }
 
    /**
@@ -103,7 +163,7 @@ public:
     *
     * @return Pointer to free entry, nullptr if none available.
     */
-   TipSettings *findFreeTipSettings() {
+   TipSettings *findFreeTipSettings() const {
       for (unsigned index=0; index<(sizeof(tipSettings)/sizeof(tipSettings[0])); index++) {
          if (tipSettings[index].isFree()) {
             return tipSettings+index;
@@ -118,6 +178,9 @@ public:
     * @return Pointer to existing entry or nullptr if not found
     */
    TipSettings *findTipSettings(TipSettings::TipNameIndex tipNameIndex) {
+      if (tipNameIndex == TipSettings::NO_TIP) {
+         return const_cast<TipSettings *>(&NoTipSettings);
+      }
       for (unsigned index=0; index<(sizeof(tipSettings)/sizeof(tipSettings[0])); index++) {
          if (tipSettings[index].getTipNameIndex() == tipNameIndex) {
             return tipSettings+index;
@@ -170,7 +233,7 @@ public:
     * @param[inout]  menuItems      Array to populate with data
     * @param[in]     checkModifier  Class function to check for set attributes
     */
-   unsigned populateSelectedTips(
+   int populateSelectedTips(
          MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS],
          bool (TipSettings::*checkModifier)() const);
 
@@ -187,11 +250,13 @@ public:
 
    /**
     * Fill menu array with all tips available.
+    *
     * The array is sorted.
+    * The "NO_TIP" is not included.
     *
     * @param [inout] tipMenuItems      Array to populate with data
     */
-   void populateTips(MenuItem tipMenuItems[TipSettings::NUMBER_OF_TIPS]);
+   void populateTips(MenuItem (&tipMenuItems)[TipSettings::NUMBER_OF_VALID_TIPS]);
 
 };
 

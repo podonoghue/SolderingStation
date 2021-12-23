@@ -15,9 +15,9 @@ protected:
    const int max;
    int value;
 
-public:
+protected:
    /**
-    * Constructor for a bounded integer
+    * Constructor for a limited integer
     *
     * @param min           Minimum value
     * @param max           Maximum value
@@ -27,13 +27,14 @@ public:
    }
 
    /**
-    * Constructor for a bounded integer
+    * Constructor for a limited integer
     * The minimum value defaults to zero
     *
     * @param max           Maximum value
     * @param initialValue  Initial value
     */
    LimitedInteger(int max, int initialValue) : min(0), max(max), value(initialValue) {
+      usbdm_assert((min<=value)&&(value<=max), "Invalid parameters!");
    }
 
    virtual ~LimitedInteger() {}
@@ -43,6 +44,7 @@ public:
     */
    virtual void limit() = 0;
 
+public:
    /**
     * Add delta to current value
     *
@@ -94,7 +96,7 @@ public:
    /**
     * Get current value
     */
-   operator int() {
+   operator int() const {
       return value;
    }
 
@@ -109,6 +111,14 @@ public:
       this->value = value;
       limit();
       return *this;
+   }
+
+   int getMax() const {
+      return max;
+   }
+
+   int getMin() const {
+      return min;
    }
 };
 
@@ -135,6 +145,7 @@ public:
    BoundedInteger(int max, int initialValue) : LimitedInteger(max, initialValue) {
    }
 
+private:
    /**
     * Limit value to acceptable range
     */
@@ -171,6 +182,7 @@ public:
    CircularInteger(int max, int initialValue) : LimitedInteger(max, initialValue) {
    }
 
+private:
    /**
     * Limit value to acceptable range
     */

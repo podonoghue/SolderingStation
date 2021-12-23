@@ -52,7 +52,7 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          SIM_CLKDIV1_OUTDIV2(1)|  // Bus clock
          SIM_CLKDIV1_OUTDIV1(1),  // Core/system clock
 
-   #ifdef SIM_CLKDIV3_PLLFLLDIV
+   #if defined(SIM_CLKDIV3_PLLFLLDIV)
          //! SIM CLKDIV3 System Clock Divider Register 3
          0,
    #endif
@@ -96,9 +96,22 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          MCG_C7_OSCSEL(0), // OSCSEL MCG OSC Clock Select
 
          //! Control Register 8
+   #if defined(MCG_C8_LOCRE1) || defined(MCG_C8_LOLRE) || defined(MCG_C8_CME1)
          MCG_C8_LOCRE1(0) | // LOCRE1 RTC Loss of Clock Reset Enable
          MCG_C8_LOLRE(0)  | // LOLRE  PLL Loss of Lock Reset Enable
          MCG_C8_CME1(0),    // CME1   Clock Monitor Enable 1
+   #endif
+
+   #if defined(MCG_C9_PLL_CME) || defined(MCG_C9_PLL_LOCRE)
+         //! Control Register 9
+         MCG_C9_PLL_CME(0)   | // PLL_CME MCG External PLL Clock Monitor Enable
+         MCG_C9_PLL_LOCRE(0),  // PLL_LOCRE   MCG External PLL Loss of Clock Reset Enable
+   #endif
+
+   #if defined(MCG_C11_PLLCS)
+         //! Control Register 11
+         MCG_C11_PLLCS(0), // PLLCS PLL Clock Select
+   #endif
       },
       {  // ClockConfig_BLPE_4MHz (ClockMode_BLPE)
          
@@ -108,7 +121,7 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          SIM_CLKDIV1_OUTDIV2(3)|  // Bus clock
          SIM_CLKDIV1_OUTDIV1(3),  // Core/system clock
 
-   #ifdef SIM_CLKDIV3_PLLFLLDIV
+   #if defined(SIM_CLKDIV3_PLLFLLDIV)
          //! SIM CLKDIV3 System Clock Divider Register 3
          0,
    #endif
@@ -152,9 +165,22 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          MCG_C7_OSCSEL(0), // OSCSEL MCG OSC Clock Select
 
          //! Control Register 8
+   #if defined(MCG_C8_LOCRE1) || defined(MCG_C8_LOLRE) || defined(MCG_C8_CME1)
          MCG_C8_LOCRE1(0) | // LOCRE1 RTC Loss of Clock Reset Enable
          MCG_C8_LOLRE(0)  | // LOLRE  PLL Loss of Lock Reset Enable
          MCG_C8_CME1(0),    // CME1   Clock Monitor Enable 1
+   #endif
+
+   #if defined(MCG_C9_PLL_CME) || defined(MCG_C9_PLL_LOCRE)
+         //! Control Register 9
+         MCG_C9_PLL_CME(0)   | // PLL_CME MCG External PLL Clock Monitor Enable
+         MCG_C9_PLL_LOCRE(0),  // PLL_LOCRE   MCG External PLL Loss of Clock Reset Enable
+   #endif
+
+   #if defined(MCG_C11_PLLCS)
+         //! Control Register 11
+         MCG_C11_PLLCS(0), // PLLCS PLL Clock Select
+   #endif
       },
       {  // ClockConfig_FEE_40MHz (ClockMode_FEE)
          
@@ -164,7 +190,7 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          SIM_CLKDIV1_OUTDIV2(1)|  // Bus clock
          SIM_CLKDIV1_OUTDIV1(1),  // Core/system clock
 
-   #ifdef SIM_CLKDIV3_PLLFLLDIV
+   #if defined(SIM_CLKDIV3_PLLFLLDIV)
          //! SIM CLKDIV3 System Clock Divider Register 3
          0,
    #endif
@@ -208,9 +234,22 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          MCG_C7_OSCSEL(0), // OSCSEL MCG OSC Clock Select
 
          //! Control Register 8
+   #if defined(MCG_C8_LOCRE1) || defined(MCG_C8_LOLRE) || defined(MCG_C8_CME1)
          MCG_C8_LOCRE1(0) | // LOCRE1 RTC Loss of Clock Reset Enable
          MCG_C8_LOLRE(0)  | // LOLRE  PLL Loss of Lock Reset Enable
          MCG_C8_CME1(0),    // CME1   Clock Monitor Enable 1
+   #endif
+
+   #if defined(MCG_C9_PLL_CME) || defined(MCG_C9_PLL_LOCRE)
+         //! Control Register 9
+         MCG_C9_PLL_CME(0)   | // PLL_CME MCG External PLL Clock Monitor Enable
+         MCG_C9_PLL_LOCRE(0),  // PLL_LOCRE   MCG External PLL Loss of Clock Reset Enable
+   #endif
+
+   #if defined(MCG_C11_PLLCS)
+         //! Control Register 11
+         MCG_C11_PLLCS(0), // PLLCS PLL Clock Select
+   #endif
       },
 
 };

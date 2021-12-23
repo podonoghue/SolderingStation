@@ -304,18 +304,13 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
 //   Ch1Drive::setIn();
 //   Ch2Drive::setIn();
 
-   Channel &channel = channels[1];
-   // Save current tip setting for channel
-   const TipSettings *originalTs = channel.getTip();
-
    static constexpr unsigned modifiers = MenuItem::Starred;
 
    MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS] = {0};
 
    int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isTemperatureCalibrated);
 
-   int  offset    = 0;
-   BoundedInteger  selection{0, tipsAllocated-1, Tips::findTipInMenu(channels[1].getTip(), menuItems, tipsAllocated)};
+   BoundedMenuState selection{tipsAllocated-1, 0};
 
    bool refresh  = true;
    enum {working, complete, fail} loopControl = working;
@@ -323,7 +318,7 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
 
    do {
       if (refresh) {
-         display.displayMenuList("Temp Calibration", menuItems, modifiers, offset, selection);
+         display.displayMenuList("Temp Calibration", menuItems, modifiers, selection);
          refresh = false;
       }
 
@@ -339,9 +334,30 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
 
          case ev_SelRelease:
          case ev_QuadRelease: {
-            if (menuItems[selection].name == nullptr) {
+
+            // This is the original settings in nv-storage to be mnodified
+            TipSettings &nvTipSettings = *menuItems[selection].nvTipSettings;
+
+            // This is a dummy settings object that is NOT in nv-storage i.e. RAM
+            TipSettings workingTipSettings(*menuItems[selection].nvTipSettings);
+
+            // Find channel to use for calibration
+            Channel *channel;
+            if (workingTipSettings.getIronType() == channels[1].getIronType()) {
+               channel = &channels[1];
+            }
+            else if (workingTipSettings.getIronType() == channels[2].getIronType()) {
+               channel = &channels[2];
+            }
+            else {
+               display.displayMessage(
+                     "Calibration Fail",
+                     "\n No suitable tool"
+                     "\n connected to allow"
+                     "\n calibration of tip.");
                break;
             }
+
             Event ev = display.displayMessage(
                   "Calibrate",
                   "Using an external\n"
@@ -351,33 +367,37 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
                   "- Press to accept.\n"
                   "- Long press to abort");
 
-            if (ev.isSelRelease()) {
-               // This is original settings in nv-storage
-               TipSettings &oldTs = *menuItems[selection].tipSettings;
+            if (!ev.isSelRelease()) {
+               continue;
+            }
 
-               // This is a dummy settings object that is NOT in nv-storage
-               TipSettings newTs(*menuItems[selection].tipSettings);
+            // Save current tip setting for channel used for calibration
+            const TipSettings *channelOriginalTipSettings = channel->getTip();
 
-               // Change settings to RAM copy
-               channel.setTip(&newTs);
+            // Temporarily change channel settings to RAM copy while calibrating this tip
+            channel->setTip(&workingTipSettings);
 
-               bool success =
-                     calibrateTipTemp(channel, newTs, CalibrationIndex_250) &&
-                     calibrateTipTemp(channel, newTs, CalibrationIndex_325) &&
-                     calibrateTipTemp(channel, newTs, CalibrationIndex_400) &&
-                     display.reportSettingsChange(oldTs, newTs);
+            bool success =
+                  calibrateTipTemp(*channel, workingTipSettings, CalibrationIndex_250) &&
+                  calibrateTipTemp(*channel, workingTipSettings, CalibrationIndex_325) &&
+                  calibrateTipTemp(*channel, workingTipSettings, CalibrationIndex_400) &&
+                  display.reportSettingsChange(nvTipSettings, workingTipSettings);
 
-               // Restore original settings (in nv-storage!)
-               channel.setTip(originalTs);
+            // Restore original channel settings
+            channel->setTip(channelOriginalTipSettings);
 
-               if (success) {
-                  // Update settings in nv-storage
-                  oldTs.setThermisterCalibration(newTs);
-                  menuItems[selection].modifiers |= MenuItem::Starred;
-               }
-               else {
-                  display.displayMessage("Calibration Fail", "\n Calibration values\n were out of range\n or sequence was\n aborted.");
-               }
+            if (success) {
+               // Update settings in nv-storage
+               nvTipSettings.setThermisterCalibration(workingTipSettings);
+               menuItems[selection].modifiers |= MenuItem::Starred;
+            }
+            else {
+               display.displayMessage(
+                     "Calibration Fail",
+                     "\n Calibration values"
+                     "\n were out of range"
+                     "\n or sequence was"
+                     "\n aborted.");
             }
          }
          break;
@@ -409,20 +429,20 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
 /**
  * Edit a non-volatile tip calibration setting.
  *
- * @param tipSettings Data describing setting to change
+ * @param nvTipSettings Data describing setting to change
  *
  * @return Exiting event
  */
-bool Menus::editPidSetting(TipSettings &tipSettings) {
+bool Menus::editPidSetting(TipSettings &nvTipSettings) {
 
    // Max value truncated to nearest 100 (0.1 as float)
    static constexpr int MAX_VALUE = UINT16_MAX-UINT16_MAX%100;
 
    // Work with raw integer values  (internal format)
-   BoundedInteger kp(    0, MAX_VALUE,    tipSettings.getRawKp());
-   BoundedInteger ki(    0, MAX_VALUE,    tipSettings.getRawKi());
-   BoundedInteger kd(    0, MAX_VALUE,    tipSettings.getRawKd());
-   BoundedInteger iLimit(0, MAX_VALUE,    tipSettings.getRawILimit());
+   BoundedInteger kp(    0, MAX_VALUE,    nvTipSettings.getRawKp());
+   BoundedInteger ki(    0, MAX_VALUE,    nvTipSettings.getRawKi());
+   BoundedInteger kd(    0, MAX_VALUE,    nvTipSettings.getRawKd());
+   BoundedInteger iLimit(0, MAX_VALUE,    nvTipSettings.getRawILimit());
 
    int scratchKp     = kp;
    int scratchKi     = ki;
@@ -439,7 +459,7 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
    do {
       if (refresh) {
          char stars[4] = {kp == scratchKp?' ':'*', ki == scratchKi?' ':'*', kd == scratchKd?' ':'*', iLimit == scratchILimit?' ':'*'};
-         display.displayPidSettings(tipSettings.getTipName(), selection, stars, kp, ki, kd, iLimit);
+         display.displayPidSettings(nvTipSettings.getTipName(), selection, stars, kp, ki, kd, iLimit);
          refresh = false;
       }
 
@@ -531,7 +551,7 @@ bool Menus::editPidSetting(TipSettings &tipSettings) {
 
    if (modified) {
       // Only update nonvolatile data as needed
-      tipSettings.setRawPidControlValues(scratchKp, scratchKi, scratchKd, scratchILimit);
+      nvTipSettings.setRawPidControlValues(scratchKp, scratchKi, scratchKd, scratchILimit);
    }
    return modified;
 }
@@ -549,8 +569,7 @@ EventType Menus::editPidSettings(const SettingsData &) {
 
    int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isPidCalibrated);
 
-   int  offset    = 0;
-   BoundedInteger  selection{0, tipsAllocated-1, Tips::findTipInMenu(channels[1].getTip(), menuItems, tipsAllocated)};
+   BoundedMenuState selection{tipsAllocated-1, 0};
 
    bool refresh  = true;
    enum {working, complete, fail} loopControl = working;
@@ -558,7 +577,7 @@ EventType Menus::editPidSettings(const SettingsData &) {
 
    do {
       if (refresh) {
-         display.displayMenuList("PID Settings", menuItems, modifiers, offset, selection);
+         display.displayMenuList("PID Settings", menuItems, modifiers, selection);
          refresh = false;
       }
 
@@ -577,7 +596,7 @@ EventType Menus::editPidSettings(const SettingsData &) {
             if (menuItems[selection].name == nullptr) {
                break;
             }
-            TipSettings *ts = menuItems[selection].tipSettings;
+            TipSettings *ts = menuItems[selection].nvTipSettings;
             bool modified = editPidSetting(*ts);
 
             if (modified) {
@@ -626,8 +645,7 @@ EventType Menus::stepResponse(const SettingsData &) {
 
    int tipsAllocated = tips.populateSelectedTips(menuItems, &TipSettings::isPidCalibrated);
 
-   int  offset    = 0;
-   BoundedInteger  selection{0, tipsAllocated-1, Tips::findTipInMenu(channels[1].getTip(), menuItems, tipsAllocated)};
+   BoundedMenuState selection{tipsAllocated-1, 0};
 
    bool refresh  = true;
    enum {working, complete, fail} loopControl = working;
@@ -635,7 +653,7 @@ EventType Menus::stepResponse(const SettingsData &) {
 
    do {
       if (refresh) {
-         display.displayMenuList("Step Response", menuItems, modifiers, offset, selection);
+         display.displayMenuList("Step Response", menuItems, modifiers, selection);
          refresh = false;
       }
 
@@ -661,9 +679,9 @@ EventType Menus::stepResponse(const SettingsData &) {
                   "power for a period.\n\n"
                   "Press to start/end");
             if (ev.isSelRelease()) {
-               TipSettings *settings = menuItems[selection].tipSettings;
+               TipSettings const *nvTipSettings = menuItems[selection].constTipSettings;
                Channel &channel = channels[1];
-               channel.setTip(settings);
+               channel.setTip(nvTipSettings);
                StepResponseDriver driver(channels[1]);
                driver.run(30);
             }
@@ -704,108 +722,93 @@ EventType Menus::stepResponse(const SettingsData &) {
  */
 EventType Menus::selectAvailableTips(const SettingsData &) {
 
-   static int  offset    = 0;
-   static CircularInteger selection{0,TipSettings::NUMBER_OF_TIPS-1, 0};
+   static CircularMenuState selection{TipSettings::NUMBER_OF_VALID_TIPS-1, 0};
 
    static constexpr unsigned modifiers = MenuItem::CheckBox|MenuItem::Starred;
 
-   MenuItem tipMenuItems[TipSettings::NUMBER_OF_TIPS];
-
-   bool         anyTipsSelected = false;
-   TipSettings *defaultTip      = nullptr;
+   MenuItem tipMenuItems[TipSettings::NUMBER_OF_VALID_TIPS];
 
    Event event;
 
-   while (!anyTipsSelected) {
+   // Load available tips
+   tips.populateTips(tipMenuItems);
 
-      // Load available tips
-      tips.populateTips(tipMenuItems);
+   bool refresh = true;
+   enum {working, complete} loopControl = working;
 
-      bool refresh = true;
-      enum {working, complete} loopControl = working;
-
-      do {
-         if (refresh) {
-            display.displayMenuList("  Enable tips", tipMenuItems, modifiers, offset, selection);
-            refresh = false;
-         }
-         event = switchPolling.getEvent();
-         if (event.type == ev_None) {
-            continue;
-         }
-
-         // Assume refresh required
-         refresh = true;
-
-         switch (event.type) {
-
-            case ev_SelRelease:
-            case ev_QuadRelease: {
-               MenuItem &mi = tipMenuItems[selection];
-               mi.modifiers ^= MenuItem::CheckBoxSelected;
-               if (((mi.modifiers&MenuItem::CheckBoxSelected) != 0) != (mi.object != nullptr)) {
-                  mi.modifiers |= MenuItem::Starred;
-               }
-               else {
-                  mi.modifiers &= ~MenuItem::Starred;
-               }
-               break;
-            }
-
-            case ev_QuadRotate:
-               selection += event.change;
-               break;
-
-            case ev_QuadHold:
-            case ev_SelHold:
-               event.type = ev_None;
-               loopControl = complete;
-               break;
-
-            case ev_Ch1Release:
-            case ev_Ch2Release:
-               loopControl = complete;
-               break;
-
-            default:
-               refresh = false;
-               break;
-         }
-      } while (loopControl == working);
-
-      // Create or delete non-volatile tip settings as needed
-      anyTipsSelected = false;
-      for(unsigned index=0; index<TipSettings::NUMBER_OF_TIPS; index++) {
-         TipSettings *tip = nullptr;
-         if ((tipMenuItems[index].modifiers & MenuItem::CheckBoxSelected) != 0) {
-            // Make sure setting has been allocated for this tip
-            tip = tips.findOrAllocateTipSettings(tipMenuItems[index].name);
-         }
-         else {
-            // Delete existing setting if necessary
-            tip = tips.findTipSettings(tipMenuItems[index].name);
-            if (tip != nullptr) {
-               StringFormatter_T<40> prompt;
-               prompt.write("Delete calibration\ndata for ").write(tip->getTipName()).write(" ?");
-
-               if (!(tip->isTemperatureCalibrated() || tip->isPidCalibrated()) || confirmAction(prompt.toString())) {
-                  // Deleting this tip
-                  tip->freeEntry();
-                  tip = nullptr;
-               }
-            }
-         }
-         if ((tip != nullptr) && !anyTipsSelected) {
-            defaultTip = tip;
-            anyTipsSelected = true;
-         }
+   do {
+      if (refresh) {
+         display.displayMenuList("  Enable tips", tipMenuItems, modifiers, selection);
+         refresh = false;
       }
-      if (!anyTipsSelected) {
-         display.displayMessage("Error", "At least 1 tip must\nbe selected");
+      event = switchPolling.getEvent();
+      if (event.type == ev_None) {
+         continue;
+      }
+
+      // Assume refresh required
+      refresh = true;
+
+      switch (event.type) {
+
+         case ev_SelRelease:
+         case ev_QuadRelease: {
+            MenuItem &mi = tipMenuItems[selection];
+            mi.modifiers ^= MenuItem::CheckBoxSelected;
+            if (((mi.modifiers&MenuItem::CheckBoxSelected) != 0) != (mi.constTipSettings != nullptr)) {
+               mi.modifiers |= MenuItem::Starred;
+            }
+            else {
+               mi.modifiers &= ~MenuItem::Starred;
+            }
+            break;
+         }
+
+         case ev_QuadRotate:
+            selection += event.change;
+            break;
+
+         case ev_QuadHold:
+         case ev_SelHold:
+            event.type = ev_None;
+            loopControl = complete;
+            break;
+
+         case ev_Ch1Release:
+         case ev_Ch2Release:
+            loopControl = complete;
+            break;
+
+         default:
+            refresh = false;
+            break;
+      }
+   } while (loopControl == working);
+
+   // Create or delete non-volatile tip settings as needed
+   for(unsigned index=0; index<TipSettings::NUMBER_OF_VALID_TIPS; index++) {
+      TipSettings *tip = nullptr;
+      if ((tipMenuItems[index].modifiers & MenuItem::CheckBoxSelected) != 0) {
+         // Make sure setting has been allocated for this tip
+         tip = tips.findOrAllocateTipSettings(tipMenuItems[index].name);
+      }
+      else {
+         // Delete existing setting if necessary
+         tip = tips.findTipSettings(tipMenuItems[index].name);
+         if (tip != nullptr) {
+            StringFormatter_T<40> prompt;
+            prompt.write("Delete calibration\ndata for ").write(tip->getTipName()).write(" ?");
+
+            if (!(tip->isTemperatureCalibrated() || tip->isPidCalibrated()) || confirmAction(prompt.toString())) {
+               // Deleting this tip
+               tip->freeEntry();
+               tip = nullptr;
+            }
+         }
       }
    }
-   channels[1].checkTipSelected(defaultTip);
-   channels[2].checkTipSelected(defaultTip);
+   channels[1].checkTipSelected();
+   channels[2].checkTipSelected();
 
    return event.type;
 }
@@ -942,13 +945,12 @@ void Menus::settingsMenu() {
    //   console.write("Size    = ").writeln(sizeof(settingsData));
    //   console.write("Address = ").writeln(&settingsData);
 
-   int  offset    = 0;
-   CircularInteger selection{0,(int)(sizeof(settingsData)/sizeof(settingsData[0])-1), 0};
+   CircularMenuState selection{(int)USBDM::sizeofArray(settingsData)-1, 0};
 
    bool refresh = true;
    for (;;) {
       if (refresh) {
-         display.displayMenuList("  Settings", items, offset, selection);
+         display.displayMenuList("  Settings", items, selection);
          refresh = false;
       }
       Event event = switchPolling.getEvent();

@@ -33,7 +33,7 @@ public:
     */
    static constexpr float convertToAdcVoltage(float adcValue) {
       // Convert ADC value to voltage
-      return adcValue * (ADC_REF_VOLTAGE/USBDM::MeasurementADC::getSingleEndedMaximum(ADC_RESOLUTION));
+      return adcValue * (ADC_REF_VOLTAGE/USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION));
    }
 
    /**

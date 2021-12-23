@@ -402,7 +402,7 @@ public:
    
       // Disable pins if selected and not already locked
       if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
-      Info::clearPCRs();
+         Info::clearPCRs();
       }
    }
 

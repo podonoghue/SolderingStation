@@ -43,13 +43,13 @@ namespace USBDM {
 extern void mapAllPins();
 
 /// ADC connected to Vrefh = 3.0V
-typedef const Adc0                                           HighComplianceAdc;                            
+typedef const Adc0                                           FixedGainAdc;                                 
 
 /// ADC channel for channel 1 ID pin
 typedef const Adc0::Channel<0>                               Ch1Identify;                                  // PGA0_DP(p9)
 
 /// ADC channel with external amplifier
-typedef const Adc0::Channel<3>                               LowGainAmpAdcChannel;                         // PGA1_DP(p11)
+typedef const Adc0::Channel<3>                               FixedGainAdcChannel;                          // PGA1_DP(p11)
 
 /// ADC channel direct to sample point
 typedef const Adc0::Channel<19>                              LowGainDirectAdcChannel;                      // PGA0_DM(p10)
@@ -61,10 +61,10 @@ typedef const Adc0::Channel<21>                              Ch2Identify;       
 typedef const Adc0::Channel<26>                              ChipTemperatureAdcChannel;                    // TEMP_SENSOR(Internal)
 
 /// ADC connected to Vrefout ~1.2V
-typedef const Adc1                                           LowComplianceAdc;                             
+typedef const Adc1                                           ProgrammableGainAdc;                          
 
 /// ADC channel with external amplifier (Programmable gain amplifier)
-typedef const Adc1::PgaChannel                               HighGainAmpAdcChannel;                        // PGA1_DP(p11)
+typedef const Adc1::PgaChannel                               ProgrammableGainAdcChannel;                   // PGA1_DP(p11)
 
 /// CMP, Analogue Comparator
 typedef const Cmp0                                           ZeroCrossingComparator;                       
@@ -140,6 +140,12 @@ typedef const GpioTable_T<GpioDInfo, 1, ActiveLow>           Ch1Button;         
 
 /// Select button
 typedef const GpioTable_T<GpioDInfo, 3, ActiveLow>           MenuButton;                                   // PTD3(p60)
+
+/// Spare 4
+typedef const GpioTable_T<GpioEInfo, 0, ActiveHigh>          Spare4;                                       // PTE0(p1)
+
+/// Spare 5
+typedef const GpioTable_T<GpioEInfo, 1, ActiveHigh>          Spare5;                                       // PTE1(p2)
 
 /// PIT channel to use for switch polling
 typedef const Pit::Channel<0>                                PollingTimerChannel;                          // PIT_CH0(Internal)

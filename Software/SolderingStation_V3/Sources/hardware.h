@@ -44,14 +44,10 @@ namespace USBDM {
 extern void mapAllPins();
 
 /// Measurement ADC
-typedef const Adc0                                           MeasurementADC;                               
+typedef const Adc0                                           FixedGainAdc;                                 
 
 /// ADC channel connected to high gain  amplifier
 typedef const Adc0::Channel<0>                               HighGainAdcChannel;                           // ADC0_DP0(p7)
-
-typedef const Adc0::Channel<6>                               Ch1Identify;                                  // PTD5(p46)
-
-typedef const Adc0::Channel<7>                               Ch2Identify;                                  // PTD6(p47)
 
 /// ADC channel connected to low gain  amplifier
 typedef const Adc0::Channel<19>                              LowGainAdcChannel;                            // ADC0_DM0(p8)
@@ -113,14 +109,8 @@ typedef const GpioTable_T<GpioDInfo, 2, ActiveLow>           Ch1Button;         
 /// MenuButton
 typedef const GpioTable_T<GpioDInfo, 3, ActiveLow>           MenuButton;                                   // PTD3(p44)
 
-/// Bias enable on amplifier input
-typedef const GpioTable_T<GpioDInfo, 7, ActiveHigh>          BiasEnable;                                   // PTD7(p48)
-
 /// Mux&amplifier control (Bit Field)
 typedef const GpioFieldTable_T<GpioDInfo, 7, 4, 0b1>         AmplifierControl;                             // PTD4(p45), PTD5(p46), PTD6(p47), PTD7(p48)
-
-/// Gain boost enable on amplifier
-typedef const GpioTable_T<GpioDInfo, 4, ActiveLow>           HighGainEnable;                               // PTD4(p45)
 
 /// PIT channel to use for switch polling
 typedef const Pit::Channel<0>                                PollingTimerChannel;                          // PIT_CH0(Internal)

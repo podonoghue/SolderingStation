@@ -8,9 +8,9 @@
    <item key="$$DeviceInfo_Device_Variant"                 value="MK20DX256VLH7" />
    <item key="$$DeviceInfo_SubFamily"                      value="MK20D7" />
    <item key="$$Hardware_Source_Filename"                  value="MK20D7.usbdmHardware" />
-   <item key="$peripheral$ADC0_codeIdentifier"             value="HighComplianceAdc" />
+   <item key="$peripheral$ADC0_codeIdentifier"             value="FixedGainAdc" />
    <item key="$peripheral$ADC0_userDescription"            value="ADC connected to Vrefh = 3.0V" />
-   <item key="$peripheral$ADC1_codeIdentifier"             value="LowComplianceAdc" />
+   <item key="$peripheral$ADC1_codeIdentifier"             value="ProgrammableGainAdc" />
    <item key="$peripheral$ADC1_userDescription"            value="ADC connected to Vrefout ~1.2V" />
    <item key="$peripheral$CMP0_codeIdentifier"             value="ZeroCrossingComparator" />
    <item key="$peripheral$CMP2_codeIdentifier"             value="OverCurrentComparator" />
@@ -53,6 +53,8 @@
    <item key="$pin$PTD5_pcrSetting_1"                      value="100" />
    <item key="$pin$PTD6_pcrSetting_1"                      value="100" />
    <item key="$pin$PTD7_pcrSetting_1"                      value="100" />
+   <item key="$pin$PTE0_pcrSetting_1"                      value="100" />
+   <item key="$pin$PTE1_pcrSetting_1"                      value="100" />
    <item key="$signal$ADC0_SE0_codeIdentifier"             value="Ch1Identify" />
    <item key="$signal$ADC0_SE0_descriptionSetting"         value="ADC channel for channel 1 ID pin" />
    <item key="$signal$ADC0_SE19_codeIdentifier"            value="LowGainDirectAdcChannel" />
@@ -61,7 +63,7 @@
    <item key="$signal$ADC0_SE21_descriptionSetting"        value="ADC channel for channel 2 ID pin" />
    <item key="$signal$ADC0_SE26_codeIdentifier"            value="ChipTemperatureAdcChannel" />
    <item key="$signal$ADC0_SE26_descriptionSetting"        value="Internal temperature sensor" />
-   <item key="$signal$ADC0_SE3_codeIdentifier"             value="LowGainAmpAdcChannel" />
+   <item key="$signal$ADC0_SE3_codeIdentifier"             value="FixedGainAdcChannel" />
    <item key="$signal$ADC0_SE3_descriptionSetting"         value="ADC channel with external amplifier" />
    <item key="$signal$CMP0_IN1_codeIdentifier"             value="ZeroCrossingInput" />
    <item key="$signal$CMP0_IN1_descriptionSetting"         value="Mains zero crossing detector" />
@@ -126,10 +128,14 @@
    <item key="$signal$GPIOD_6_descriptionSetting"          value="Channel 1 voltage select/Channel 1 voltage select (12V)" />
    <item key="$signal$GPIOD_7_codeIdentifier"              value="Ch1VoltageSelect" />
    <item key="$signal$GPIOD_7_descriptionSetting"          value="Channel 1 voltage select (24V)" />
-   <item key="$signal$I2C0_SCL_descriptionSetting"         value="I2C Clock" />
-   <item key="$signal$I2C0_SDA_descriptionSetting"         value="I2C Data" />
+   <item key="$signal$GPIOE_0_codeIdentifier"              value="Spare4" />
+   <item key="$signal$GPIOE_0_descriptionSetting"          value="Spare 4" />
+   <item key="$signal$GPIOE_1_codeIdentifier"              value="Spare5" />
+   <item key="$signal$GPIOE_1_descriptionSetting"          value="Spare 5" />
+   <item key="$signal$I2C0_SCL_descriptionSetting"         value="I2C Clock (OLED)" />
+   <item key="$signal$I2C0_SDA_descriptionSetting"         value="I2C Data (OLED)" />
    <item key="$signal$PGA1_DP_createInstance"              value="true" />
-   <item key="$signal$PGA1_codeIdentifier"                 value="HighGainAmpAdcChannel" />
+   <item key="$signal$PGA1_codeIdentifier"                 value="ProgrammableGainAdcChannel" />
    <item key="$signal$PGA1_descriptionSetting"             value="ADC channel with external amplifier" />
    <item key="$signal$PIT_CH0_codeIdentifier"              value="PollingTimerChannel" />
    <item key="$signal$PIT_CH0_descriptionSetting"          value="PIT channel to use for switch polling" />
@@ -153,13 +159,24 @@
    <item key="$signal$VSSA_descriptionSetting"             value="Gnd" />
    <item key="$signal$VSS_descriptionSetting"              value="Gnd" />
    <item key="$signal$XTAL0_descriptionSetting"            value="16MHz Crystal" />
-   <item key="/ADC0/adc_cfg1_adiclk"                       value="0" />
-   <item key="/ADC0/adc_cfg1_adiv"                         value="3" />
+   <item key="/ADC0/adc_cfg1_adiclk"                       value="2" />
+   <item key="/ADC0/adc_cfg1_adiv"                         value="1" />
+   <item key="/ADC0/adc_cfg1_adlsmp"                       value="true" />
    <item key="/ADC0/adc_cfg1_mode"                         value="3" />
    <item key="/ADC0/irqHandlingMethod"                     value="$ClassMethod" />
+   <item key="/ADC0/irqLevel"                              value="NvicPriority_High" />
+   <item key="/ADC1/adc_cfg1_adiclk"                       value="2" />
+   <item key="/ADC1/adc_cfg1_adiv"                         value="1" />
+   <item key="/ADC1/adc_cfg1_adlsmp"                       value="true" />
+   <item key="/ADC1/adc_cfg1_mode"                         value="3" />
+   <item key="/ADC1/adc_sc2_refsel"                        value="1" />
    <item key="/ADC1/irqHandlingMethod"                     value="$ClassMethod" />
+   <item key="/ADC1/irqLevel"                              value="NvicPriority_High" />
    <item key="/CMP0/irqHandlingMethod"                     value="$ClassMethod" />
+   <item key="/CMP0/irqLevel"                              value="NvicPriority_High" />
    <item key="/CMP2/irqHandlingMethod"                     value="$ClassMethod" />
+   <item key="/CMP2/irqLevel"                              value="NvicPriority_VeryHigh" />
+   <item key="/DAC0/dac_c0_dactrgsel"                      value="false" />
    <item key="/FTFL/peripheral_file"                       value="ftfl_32k_flexrom" />
    <item key="/GPIOB/irqHandlingMethod"                    value="$ClassMethod" />
    <item key="/GPIOD/irqHandlingMethod"                    value="$ClassMethod" />
@@ -168,6 +185,9 @@
    <item key="/MCG/ClockConfig[0]"                         value="ClockConfig_PEE_60MHz" />
    <item key="/MCG/ClockConfig[1]"                         value="ClockConfig_BLPE_4MHz" />
    <item key="/MCG/ClockConfig[2]"                         value="ClockConfig_PEE_48MHz" />
+   <item key="/MCG/DummyClockConfig[0]"                    value="ClockConfig_0" />
+   <item key="/MCG/DummyClockConfig[1]"                    value="ClockConfig_1" />
+   <item key="/MCG/DummyClockConfig[2]"                    value="ClockConfig_2" />
    <item key="/MCG/clock_mode[0]"                          value="ClockMode_PEE" />
    <item key="/MCG/clock_mode[1]"                          value="ClockMode_BLPE" />
    <item key="/MCG/clock_mode[2]"                          value="ClockMode_PEE" />
@@ -180,6 +200,7 @@
    <item key="/SIM/ClockConfig[1]"                         value="" />
    <item key="/SIM/ClockConfig[2]"                         value="" />
    <item key="/SIM/sim_clkdiv2_usb"                        value="9" />
+   <item key="/SIM/sim_sopt1_osc32ksel"                    value="3" />
    <item key="/SIM/sim_sopt2_pllfllsel[0]"                 value="1" />
    <item key="/SIM/sim_sopt2_pllfllsel[2]"                 value="1" />
    <item key="/SIM/system_bus_clock[0]"                    value="30000000" />
@@ -190,4 +211,5 @@
    <item key="/SIM/system_core_clock[2]"                   value="48000000" />
    <item key="/SIM/system_flash_clock[0]"                  value="20000000" />
    <item key="/SIM/system_flash_clock[1]"                  value="1000000" />
+   <item key="/WDOG/irqHandlingMethod"                     value="$ClassMethod" />
 </section>

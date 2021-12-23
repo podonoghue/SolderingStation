@@ -384,8 +384,8 @@ public:
    static constexpr PinInfo  info[] = {
 
          //      Signal                 Pin                                  portInfo    gpioBit                 PCR value
-         /*   0: GPIOB_0              = PTB0(p27)                      */  { PortBInfo,  0,            (PcrValue)0x00100UL  },
-         /*   1: GPIOB_1              = PTB1(p28)                      */  { PortBInfo,  1,            (PcrValue)0x00100UL  },
+         /*   0: GPIOB_0              = PTB0(p27)                      */  { PortBInfo,  0,            (PcrValue)0x00113UL  },
+         /*   1: GPIOB_1              = PTB1(p28)                      */  { PortBInfo,  1,            (PcrValue)0x00113UL  },
          /*   2: GPIOB_2              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*   3: GPIOB_3              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*   4: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
@@ -400,8 +400,8 @@ public:
          /*  13: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
          /*  14: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
          /*  15: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  16: GPIOB_16             = PTB16(p31)                     */  { PortBInfo,  16,           (PcrValue)0x00100UL  },
-         /*  17: GPIOB_17             = PTB17(p32)                     */  { PortBInfo,  17,           (PcrValue)0x00100UL  },
+         /*  16: GPIOB_16             = PTB16(p31)                     */  { PortBInfo,  16,           (PcrValue)0x00113UL  },
+         /*  17: GPIOB_17             = PTB17(p32)                     */  { PortBInfo,  17,           (PcrValue)0x00113UL  },
          /*  18: GPIOB_18             = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*  19: GPIOB_19             = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
    };
@@ -419,8 +419,8 @@ PCC->PCC_PORTB = PCC_PCCn_CGC_MASK;
 enablePortClocks(PORTB_CLOCK_MASK);
 #endif
 
-PORTB->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0003UL);
-PORTB->GPCHR = 0x0100UL|PORT_GPCHR_GPWE(0x0003UL);
+PORTB->GPCLR = 0x0113UL|PORT_GPCLR_GPWE(0x0003UL);
+PORTB->GPCHR = 0x0113UL|PORT_GPCHR_GPWE(0x0003UL);
    }
 
    /**
@@ -476,13 +476,13 @@ public:
    static constexpr PinInfo  info[] = {
 
          //      Signal                 Pin                                  portInfo    gpioBit                 PCR value
-         /*   0: GPIOC_0              = PTC0(p33)                      */  { PortCInfo,  0,            (PcrValue)0x00100UL  },
+         /*   0: GPIOC_0              = PTC0(p33)                      */  { PortCInfo,  0,            (PcrValue)0x00140UL  },
          /*   1: GPIOC_1              = PTC1(p34)                      */  { PortCInfo,  1,            (PcrValue)0x00103UL  },
          /*   2: GPIOC_2              = PTC2(p35)                      */  { PortCInfo,  2,            (PcrValue)0x00103UL  },
          /*   3: GPIOC_3              = PTC3(p36)                      */  { PortCInfo,  3,            (PcrValue)0x00103UL  },
          /*   4: GPIOC_4              = PTC4(p37)                      */  { PortCInfo,  4,            (PcrValue)0x00103UL  },
          /*   5: GPIOC_5              = PTC5(p38)                      */  { PortCInfo,  5,            (PcrValue)0x00100UL  },
-         /*   6: GPIOC_6              = PTC6(p39)                      */  { PortCInfo,  6,            (PcrValue)0x00100UL  },
+         /*   6: GPIOC_6              = PTC6(p39)                      */  { PortCInfo,  6,            (PcrValue)0x00140UL  },
          /*   7: GPIOC_7              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*   8: GPIOC_8              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*   9: GPIOC_9              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
@@ -503,8 +503,9 @@ PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
 enablePortClocks(PORTC_CLOCK_MASK);
 #endif
 
-PORTC->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0061UL);
+PORTC->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0020UL);
 PORTC->GPCLR = 0x0103UL|PORT_GPCLR_GPWE(0x001EUL);
+PORTC->GPCLR = 0x0140UL|PORT_GPCLR_GPWE(0x0041UL);
    }
 
    /**
@@ -559,10 +560,10 @@ public:
    static constexpr PinInfo  info[] = {
 
          //      Signal                 Pin                                  portInfo    gpioBit                 PCR value
-         /*   0: GPIOD_0              = PTD0(p41)                      */  { PortDInfo,  0,            (PcrValue)0x00100UL  },
-         /*   1: GPIOD_1              = PTD1(p42)                      */  { PortDInfo,  1,            (PcrValue)0x00100UL  },
-         /*   2: GPIOD_2              = PTD2(p43)                      */  { PortDInfo,  2,            (PcrValue)0x00100UL  },
-         /*   3: GPIOD_3              = PTD3(p44)                      */  { PortDInfo,  3,            (PcrValue)0x00100UL  },
+         /*   0: GPIOD_0              = PTD0(p41)                      */  { PortDInfo,  0,            (PcrValue)0x00113UL  },
+         /*   1: GPIOD_1              = PTD1(p42)                      */  { PortDInfo,  1,            (PcrValue)0x00113UL  },
+         /*   2: GPIOD_2              = PTD2(p43)                      */  { PortDInfo,  2,            (PcrValue)0x00113UL  },
+         /*   3: GPIOD_3              = PTD3(p44)                      */  { PortDInfo,  3,            (PcrValue)0x00113UL  },
          /*   4: GPIOD_4              = PTD4(p45)                      */  { PortDInfo,  4,            (PcrValue)0x00100UL  },
          /*   5: GPIOD_5              = PTD5(p46)                      */  { PortDInfo,  5,            (PcrValue)0x00100UL  },
          /*   6: GPIOD_6              = PTD6(p47)                      */  { PortDInfo,  6,            (PcrValue)0x00100UL  },
@@ -582,7 +583,8 @@ PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
 enablePortClocks(PORTD_CLOCK_MASK);
 #endif
 
-PORTD->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x00FFUL);
+PORTD->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x00F0UL);
+PORTD->GPCLR = 0x0113UL|PORT_GPCLR_GPWE(0x000FUL);
    }
 
    /**
@@ -1005,6 +1007,11 @@ public:
       ClockMode_PEE,
    };
 
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+   //! Frequency of Internal 48MHz Clock
+   static constexpr uint32_t irc48m_clock = 0UL;
+   #endif
+
    //! Frequency of Slow Internal Reference Clock [~32kHz]
    static constexpr uint32_t system_slow_irc_clock = 32768UL;
 
@@ -1049,6 +1056,14 @@ public:
       const uint8_t c7;
       //! Control Register 8 - LOCRE1, LOLRE, CME1
       const uint8_t c8;
+   #ifdef MCG_C9_PLL_CME
+      //! Control Register 9
+      const uint8_t c9;
+   #endif
+   #ifdef MCG_C11_PLLCS
+      //! Control Register 11
+      const uint8_t c11;
+   #endif
    };
 
    /**
@@ -1061,7 +1076,12 @@ public:
       switch((mcg->C7&MCG_C7_OSCSEL_MASK)) {
          default               : return 0;
          case MCG_C7_OSCSEL(0) : return Osc0Info::getOscClock();
+   #if defined(SIM_SOPT1_OSC32KSEL)
          case MCG_C7_OSCSEL(1) : return RtcInfo::getInternalClock();
+   #endif
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+         case MCG_C7_OSCSEL(2) : return McgInfo::irc48m_clock;
+   #endif
       }
    }
 
@@ -1154,6 +1174,8 @@ public:
    enum SimUsbFullSpeedClockSource {
       SimUsbFullSpeedClockSource_External   = SIM_SOPT2_USBSRC(0), //!< External bypass clock (USB_CLKIN)
       SimUsbFullSpeedClockSource_Peripheral = SIM_SOPT2_USBSRC(1), //!< Peripheral clock selected by SIM.SOPT2[PLLFLLSEL] divided by SIM.CLKDIV2
+   //   SimUsbFullSpeedClockSource_McgFll = SIM_SOPT2_USBSRC(0), //!< External bypass clock (USB_CLKIN)
+   //   SimUsbFullSpeedClockSource_McgPll = SIM_SOPT2_USBSRC(1), //!< Peripheral clock selected by SIM.SOPT2[PLLFLLSEL] divided by SIM.CLKDIV2
    };
    #endif
 
@@ -1235,6 +1257,18 @@ public:
       SimTpmClockSource_Peripheral = SIM_SOPT2_TPMSRC(1), //!< Peripheral clock selected by SIM.SOPT2[PLLFLLSEL] divided by SIM.CLKDIV3
       SimTpmClockSource_OscerClk   = SIM_SOPT2_TPMSRC(2), //!< OSCERCLK clock
       SimTpmClockSource_McgIrClk   = SIM_SOPT2_TPMSRC(3), //!< MCG Internal Reference clock
+   };
+   #endif
+
+   #if defined(SIM_SOPT2_EMVSIMSRC)
+   /**
+    * EMVSIMSRC Clock sources
+    */
+   enum SimEmvsimClockSource {
+      SimEmvsimClockSource_Disabled   = SIM_SOPT2_EMVSIMSRC(0), //!< Disabled
+      SimEmvsimClockSource_Peripheral = SIM_SOPT2_EMVSIMSRC(1), //!< Peripheral clock selected by SIM.SOPT2[PLLFLLSEL] divided by SIM.CLKDIV3
+      SimEmvsimClockSource_OscerClk   = SIM_SOPT2_EMVSIMSRC(2), //!< OSCERCLK clock
+      SimEmvsimClockSource_McgIrClk   = SIM_SOPT2_EMVSIMSRC(3), //!< MCG Internal Reference clock
    };
    #endif
 
@@ -2013,6 +2047,9 @@ public:
    #ifdef SIM_SOPT2_TPMSRC
          SIM_SOPT2_TPMSRC(-1) |        // TPM clock source select
    #endif
+   #ifdef SIM_SOPT2_EMVSIMSRC
+         SIM_SOPT2_EMVSIMSRC(-1) | // EMVSIMSRC clock source select
+   #endif
    #ifdef SIM_SOPT2_USBSRC
          SIM_SOPT2_USBSRC(1) |        // USB clock source select
    #endif
@@ -2076,6 +2113,33 @@ public:
       case SIM_SOPT2_TPMSRC(1): return getDividedPeripheralClock();
       case SIM_SOPT2_TPMSRC(2): return Osc0Info::getOscerClock();
       case SIM_SOPT2_TPMSRC(3): return McgInfo::getMcgIrClock();
+      }
+   }
+   #endif
+
+   #if defined(SIM_SOPT2_EMVSIMSRC)
+   /**
+    * Set EMVSIMSRC input clock source
+    *
+    * @param simEmvsimClockSource Clock source for EMVSIMSRC
+    */
+   static void setEmvsimClock(SimEmvsimClockSource simEmvsimClockSource) {
+      sim->SOPT2 = (sim->SOPT2&~SIM_SOPT2_EMVSIMSRC_MASK) | simEmvsimClockSource;
+   }
+
+   /**
+    * Get EMVSIMSRC input clock frequency
+    *
+    * @return EMVSIMSRC input clock frequency as a uint32_t in Hz
+    */
+   static uint32_t getEmvsimClock() {
+      
+      switch(sim->SOPT2&SIM_SOPT2_EMVSIMSRC_MASK) {
+      default:
+      case SIM_SOPT2_EMVSIMSRC(0): return 0;
+      case SIM_SOPT2_EMVSIMSRC(1): return getDividedPeripheralClock();
+      case SIM_SOPT2_EMVSIMSRC(2): return Osc0Info::getOscerClock();
+      case SIM_SOPT2_EMVSIMSRC(3): return McgInfo::getMcgIrClock();
       }
    }
    #endif
@@ -2595,7 +2659,11 @@ public:
     */
    enum AdcClockSource {
       AdcClockSource_Bus      = ADC_CFG1_ADICLK(0), //!< Bus Clock
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+      AdcClockSource_Irc48m   = ADC_CFG1_ADICLK(1), //!< IRC 48MHz clock
+   #else
       AdcClockSource_Busdiv2  = ADC_CFG1_ADICLK(1), //!< Bus Clock / 2
+   #endif
       AdcClockSource_Alt      = ADC_CFG1_ADICLK(2), //!< Alternate clock (ALTCLK)
       AdcClockSource_Asynch   = ADC_CFG1_ADICLK(3), //!< Asynchronous clock (ADACK Internal ADC clock source)
       AdcClockSource_Default  = AdcClockSource_Asynch
@@ -2640,8 +2708,13 @@ public:
       switch (adcClockSource) {
          case AdcClockSource_Bus:
             return SystemBusClock;
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+         case AdcClockSource_Irc48m:
+            return McgInfo::irc48m_clock;
+   #else
          case AdcClockSource_Busdiv2:
             return SystemBusClock/2;
+   #endif
          case AdcClockSource_Alt:
             return  Osc0Info::getOscerClock();;
          case AdcClockSource_Asynch:
@@ -2728,8 +2801,8 @@ public:
          /*   3: ADC0_SE3             = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*   4: ADC0_SE4b            = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*   5: ADC0_SE5b            = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*   6: ADC0_SE6b            = PTD5(p46)                      */  { PortDInfo,  5,            (PcrValue)0x00000UL  },
-         /*   7: ADC0_SE7b            = PTD6(p47)                      */  { PortDInfo,  6,            (PcrValue)0x00000UL  },
+         /*   6: ADC0_SE6b            = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
+         /*   7: ADC0_SE7b            = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*   8: ADC0_SE8             = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*   9: ADC0_SE9             = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
          /*  10: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
@@ -2758,14 +2831,6 @@ public:
     * @note Only the lower 16-bits of the PCR registers are affected
     */
    static void initPCRs() {
-
-#if defined(PCC_PCCn_CGC_MASK)
-PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
-#else
-enablePortClocks(PORTD_CLOCK_MASK);
-#endif
-
-PORTD->GPCLR = 0x0000UL|PORT_GPCLR_GPWE(0x0060UL);
    }
 
    /**
@@ -2774,14 +2839,6 @@ PORTD->GPCLR = 0x0000UL|PORT_GPCLR_GPWE(0x0060UL);
     * @note Only the lower 16-bits of the PCR registers are affected
     */
    static void clearPCRs() {
-
-#if defined(PCC_PCCn_CGC_MASK)
-PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
-#else
-enablePortClocks(PORTD_CLOCK_MASK);
-#endif
-
-PORTD->GPCLR = PinMux_Disabled|PORT_GPCLR_GPWE(0x0U);
    }
 
 #define USBDM_ADC0_INFODP_IS_DEFINED
@@ -4496,15 +4553,15 @@ public:
          /*   2: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
          /*   3: LLWU_P3              = PTA4(p21)                      */  { PortAInfo,  4,            (PcrValue)0x00100UL  },
          /*   4: LLWU_P4              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*   5: LLWU_P5              = PTB0(p27)                      */  { PortBInfo,  0,            (PcrValue)0x00100UL  },
+         /*   5: LLWU_P5              = PTB0(p27)                      */  { PortBInfo,  0,            (PcrValue)0x00113UL  },
          /*   6: LLWU_P6              = PTC1(p34)                      */  { PortCInfo,  1,            (PcrValue)0x00103UL  },
          /*   7: LLWU_P7              = PTC3(p36)                      */  { PortCInfo,  3,            (PcrValue)0x00103UL  },
          /*   8: LLWU_P8              = PTC4(p37)                      */  { PortCInfo,  4,            (PcrValue)0x00103UL  },
          /*   9: LLWU_P9              = PTC5(p38)                      */  { PortCInfo,  5,            (PcrValue)0x00100UL  },
-         /*  10: LLWU_P10             = PTC6(p39)                      */  { PortCInfo,  6,            (PcrValue)0x00100UL  },
+         /*  10: LLWU_P10             = PTC6(p39)                      */  { PortCInfo,  6,            (PcrValue)0x00140UL  },
          /*  11: LLWU_P11             = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  12: LLWU_P12             = PTD0(p41)                      */  { PortDInfo,  0,            (PcrValue)0x00100UL  },
-         /*  13: LLWU_P13             = PTD2(p43)                      */  { PortDInfo,  2,            (PcrValue)0x00100UL  },
+         /*  12: LLWU_P12             = PTD0(p41)                      */  { PortDInfo,  0,            (PcrValue)0x00113UL  },
+         /*  13: LLWU_P13             = PTD2(p43)                      */  { PortDInfo,  2,            (PcrValue)0x00113UL  },
          /*  14: LLWU_P14             = PTD4(p45)                      */  { PortDInfo,  4,            (PcrValue)0x00100UL  },
          /*  15: LLWU_P15             = PTD6(p47)                      */  { PortDInfo,  6,            (PcrValue)0x00100UL  },
    };
@@ -4526,10 +4583,12 @@ enablePortClocks(PORTA_CLOCK_MASK|PORTB_CLOCK_MASK|PORTC_CLOCK_MASK|PORTD_CLOCK_
 #endif
 
 PORTA->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0010UL);
-PORTB->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0001UL);
-PORTC->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0060UL);
+PORTB->GPCLR = 0x0113UL|PORT_GPCLR_GPWE(0x0001UL);
+PORTC->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0020UL);
 PORTC->GPCLR = 0x0103UL|PORT_GPCLR_GPWE(0x001AUL);
-PORTD->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0055UL);
+PORTC->GPCLR = 0x0140UL|PORT_GPCLR_GPWE(0x0040UL);
+PORTD->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0050UL);
+PORTD->GPCLR = 0x0113UL|PORT_GPCLR_GPWE(0x0005UL);
    }
 
    /**
@@ -6052,10 +6111,10 @@ public:
    static constexpr uint32_t irqCount  = sizeofArray(irqNums);
 
    //! Class based callback handler has been installed in vector table
-   static constexpr bool irqHandlerInstalled = 0;
+   static constexpr bool irqHandlerInstalled = 1;
 
    //! Default IRQ level
-   static constexpr NvicPriority irqLevel =  NvicPriority_NotInstalled;
+   static constexpr NvicPriority irqLevel =  NvicPriority_Normal;
 
    /**
     * Get input clock frequency
@@ -6097,13 +6156,20 @@ public:
 ///  -------------- | ------------------------------|--------------------------------------------------- | ------------------------- | ----------------------------------------------------
 ///  ADC0_DM0       | lowGainAdcChannel             | ADC0_SE19                                          | p8                        | ADC channel connected to low gain  amplifier
 ///  ADC0_DP0       | highGainAdcChannel            | ADC0_SE0                                           | p7                        | ADC channel connected to high gain  amplifier
+///  EXTAL32        | -                             | EXTAL32                                            | p15                       | N/C
 ///  PIT_CH0        | PollingTimerChannel           | PIT_CH0                                            | Internal                  | PIT channel to use for switch polling
 ///  PIT_CH1        | ControlTimerChannel           | PIT_CH1                                            | Internal                  | PIT channel to use for sample and control timing
-///  PTA0           | -                             | SWD_CLK                                            | p17                       | SWD_CLK
-///  PTA3           | -                             | SWD_DIO                                            | p20                       | SWD_DIO
+///  PTA0           |                               | SWD_CLK                                            | p17                       | SWD_CLK
+///  PTA1           | -                             | UART0_RX                                           | p18                       | SWD_Rx
+///  PTA2           | -                             | UART0_TX                                           | p19                       | SWD_Tx
+///  PTA3           |                               | SWD_DIO                                            | p20                       | SWD_DIO
 ///  PTA4           | debug                         | GPIOA_4                                            | p21                       | Spare pin for debugging
+///  PTA18          | -                             | EXTAL0                                             | p24                       | EXTAL_16MHz
+///  PTA19          | -                             | XTAL0                                              | p25                       | XTAL_16MHz
 ///  PTB0           | QuadPhases                    | GPIOB_0                                            | p27                       | Quadrature Encoder pins
 ///  PTB1           | QuadPhases                    | GPIOB_1                                            | p28                       | Quadrature Encoder pins
+///  PTB2           | -                             | I2C0_SCL                                           | p29                       | I2C SCL (oled)
+///  PTB3           | -                             | I2C0_SDA                                           | p30                       | I2C SDA (oled)
 ///  PTB16          | Setbacks                      | GPIOB_16                                           | p31                       | Stand sensors
 ///  PTB17          | Setbacks                      | GPIOB_17                                           | p32                       | Stand sensors
 ///  PTC0           | Ch1SelectedLed                | GPIOC_0                                            | p33                       | Channel 1 selected LED
@@ -6118,15 +6184,27 @@ public:
 ///  PTD1           | Ch2Button/Buttons             | GPIOD_1                                            | p42                       | Channel 2 Button
 ///  PTD2           | Ch1Button/Buttons             | GPIOD_2                                            | p43                       | Channel 1 Button
 ///  PTD3           | MenuButton/Buttons            | GPIOD_3                                            | p44                       | MenuButton
-///  PTD4           | amplifierControl/highGainEnable| GPIOD_4                                            | p45                       | Mux&amplifier control/Gain boost enable on amplifier
-///  PTD5           | Ch1Identify                   | ADC0_SE6b                                          | p46                       | -
-///  PTD5           | amplifierControl              | GPIOD_5                                            | p46                       | MUX_SEL0/ID1
-///  PTD6           | Ch2Identify                   | ADC0_SE7b                                          | p47                       | -
-///  PTD6           | amplifierControl              | GPIOD_6                                            | p47                       | MUX_SEL1/ID2
-///  PTD7           | amplifierControl/biasEnable   | GPIOD_7                                            | p48                       | /Bias enable on amplifier input
-///  RESET_b        | -                             | RESET_b                                            | p26                       | Reset_b
+///  PTD4           | amplifierControl              | GPIOD_4                                            | p45                       | Mux&amplifier control/Gain boost enable on amplifier
+///  PTD5           | amplifierControl              | GPIOD_5                                            | p46                       | Mux select 0
+///  PTD6           | amplifierControl              | GPIOD_6                                            | p47                       | Mux select 1
+///  PTD7           | amplifierControl              | GPIOD_7                                            | p48                       | Bias enable on amplifier input
+///  RESET_b        |                               | RESET_b                                            | p26                       | Reset_b
 ///  TEMP_SENSOR    | chipTemperatureAdcChannel     | ADC0_SE26                                          | Internal                  | Internal temperature sensor T = (25 - (Tvolts-0.719)/.001715)
+///  USB0_DM        | -                             | USB0_DM                                            | p4                        | USB_DM
+///  USB0_DP        | -                             | USB0_DP                                            | p3                        | USB_DP
+///  VBAT           | -                             | VBAT                                               | p16                       | +3V3
+///  VDD1           | -                             | VDD1                                               | p1                        | +3V3
+///  VDD2           | -                             | VDD2                                               | p22                       | +3V3
+///  VDDA           | -                             | VDDA                                               | p9                        | +3V3
+///  VOUT33         | -                             | VOUT33                                             | p5                        | +3V3
+///  VREFH          | -                             | VREFH                                              | p10                       | 3.00 V Reference
+///  VREFL          | -                             | VREFL                                              | p11                       | Gnd
 ///  VREF_OUT       | Overcurrent                   | CMP1_IN5                                           | p13                       | Over-current Detector Comparator input
+///  VREGIN         | -                             | VREGIN                                             | p6                        | +3V3
+///  VSS1           | -                             | VSS1                                               | p2                        | Gnd
+///  VSS2           | -                             | VSS2                                               | p23                       | Gnd
+///  VSSA           | -                             | VSSA                                               | p12                       | Gnd
+///  XTAL32         | -                             | XTAL32                                             | p14                       | N/C
 ///
 ///
 /// @section PinsByLocation Pins by Location
@@ -6136,15 +6214,36 @@ public:
 ///  PIT_CH0        | PollingTimerChannel           | PIT_CH0                                            | Internal                  | PIT channel to use for switch polling
 ///  PIT_CH1        | ControlTimerChannel           | PIT_CH1                                            | Internal                  | PIT channel to use for sample and control timing
 ///  TEMP_SENSOR    | chipTemperatureAdcChannel     | ADC0_SE26                                          | Internal                  | Internal temperature sensor T = (25 - (Tvolts-0.719)/.001715)
+///  VDD1           | -                             | VDD1                                               | p1                        | +3V3
+///  VSS1           | -                             | VSS1                                               | p2                        | Gnd
+///  USB0_DP        | -                             | USB0_DP                                            | p3                        | USB_DP
+///  USB0_DM        | -                             | USB0_DM                                            | p4                        | USB_DM
+///  VOUT33         | -                             | VOUT33                                             | p5                        | +3V3
+///  VREGIN         | -                             | VREGIN                                             | p6                        | +3V3
 ///  ADC0_DP0       | highGainAdcChannel            | ADC0_SE0                                           | p7                        | ADC channel connected to high gain  amplifier
 ///  ADC0_DM0       | lowGainAdcChannel             | ADC0_SE19                                          | p8                        | ADC channel connected to low gain  amplifier
+///  VDDA           | -                             | VDDA                                               | p9                        | +3V3
+///  VREFH          | -                             | VREFH                                              | p10                       | 3.00 V Reference
+///  VREFL          | -                             | VREFL                                              | p11                       | Gnd
+///  VSSA           | -                             | VSSA                                               | p12                       | Gnd
 ///  VREF_OUT       | Overcurrent                   | CMP1_IN5                                           | p13                       | Over-current Detector Comparator input
-///  PTA0           | -                             | SWD_CLK                                            | p17                       | SWD_CLK
-///  PTA3           | -                             | SWD_DIO                                            | p20                       | SWD_DIO
+///  XTAL32         | -                             | XTAL32                                             | p14                       | N/C
+///  EXTAL32        | -                             | EXTAL32                                            | p15                       | N/C
+///  VBAT           | -                             | VBAT                                               | p16                       | +3V3
+///  PTA0           |                               | SWD_CLK                                            | p17                       | SWD_CLK
+///  PTA1           | -                             | UART0_RX                                           | p18                       | SWD_Rx
+///  PTA2           | -                             | UART0_TX                                           | p19                       | SWD_Tx
+///  PTA3           |                               | SWD_DIO                                            | p20                       | SWD_DIO
 ///  PTA4           | debug                         | GPIOA_4                                            | p21                       | Spare pin for debugging
-///  RESET_b        | -                             | RESET_b                                            | p26                       | Reset_b
+///  VDD2           | -                             | VDD2                                               | p22                       | +3V3
+///  VSS2           | -                             | VSS2                                               | p23                       | Gnd
+///  PTA18          | -                             | EXTAL0                                             | p24                       | EXTAL_16MHz
+///  PTA19          | -                             | XTAL0                                              | p25                       | XTAL_16MHz
+///  RESET_b        |                               | RESET_b                                            | p26                       | Reset_b
 ///  PTB0           | QuadPhases                    | GPIOB_0                                            | p27                       | Quadrature Encoder pins
 ///  PTB1           | QuadPhases                    | GPIOB_1                                            | p28                       | Quadrature Encoder pins
+///  PTB2           | -                             | I2C0_SCL                                           | p29                       | I2C SCL (oled)
+///  PTB3           | -                             | I2C0_SDA                                           | p30                       | I2C SDA (oled)
 ///  PTB16          | Setbacks                      | GPIOB_16                                           | p31                       | Stand sensors
 ///  PTB17          | Setbacks                      | GPIOB_17                                           | p32                       | Stand sensors
 ///  PTC0           | Ch1SelectedLed                | GPIOC_0                                            | p33                       | Channel 1 selected LED
@@ -6159,12 +6258,10 @@ public:
 ///  PTD1           | Ch2Button/Buttons             | GPIOD_1                                            | p42                       | Channel 2 Button
 ///  PTD2           | Ch1Button/Buttons             | GPIOD_2                                            | p43                       | Channel 1 Button
 ///  PTD3           | MenuButton/Buttons            | GPIOD_3                                            | p44                       | MenuButton
-///  PTD4           | amplifierControl/highGainEnable| GPIOD_4                                            | p45                       | Mux&amplifier control/Gain boost enable on amplifier
-///  PTD5           | Ch1Identify                   | ADC0_SE6b                                          | p46                       | -
-///  PTD5           | amplifierControl              | GPIOD_5                                            | p46                       | MUX_SEL0/ID1
-///  PTD6           | Ch2Identify                   | ADC0_SE7b                                          | p47                       | -
-///  PTD6           | amplifierControl              | GPIOD_6                                            | p47                       | MUX_SEL1/ID2
-///  PTD7           | amplifierControl/biasEnable   | GPIOD_7                                            | p48                       | /Bias enable on amplifier input
+///  PTD4           | amplifierControl              | GPIOD_4                                            | p45                       | Mux&amplifier control/Gain boost enable on amplifier
+///  PTD5           | amplifierControl              | GPIOD_5                                            | p46                       | Mux select 0
+///  PTD6           | amplifierControl              | GPIOD_6                                            | p47                       | Mux select 1
+///  PTD7           | amplifierControl              | GPIOD_7                                            | p48                       | Bias enable on amplifier input
 ///
 ///
 /// @section PinsByFunction Pins by Peripheral
@@ -6174,10 +6271,10 @@ public:
 ///  ADC0_DP0       | highGainAdcChannel            | ADC0_SE0                                           | p7                        | ADC channel connected to high gain  amplifier
 ///  ADC0_DM0       | lowGainAdcChannel             | ADC0_SE19                                          | p8                        | ADC channel connected to low gain  amplifier
 ///  TEMP_SENSOR    | chipTemperatureAdcChannel     | ADC0_SE26                                          | Internal                  | Internal temperature sensor T = (25 - (Tvolts-0.719)/.001715)
-///  PTD5           | Ch1Identify                   | ADC0_SE6b                                          | p46                       | -
-///  PTD6           | Ch2Identify                   | ADC0_SE7b                                          | p47                       | -
 ///  PTC7           | ZeroCrossingInput             | CMP0_IN1                                           | p40                       | AC zero Crossing Detector Comparator input
 ///  VREF_OUT       | Overcurrent                   | CMP1_IN5                                           | p13                       | Over-current Detector Comparator input
+///  PTA18          | -                             | EXTAL0                                             | p24                       | EXTAL_16MHz
+///  EXTAL32        | -                             | EXTAL32                                            | p15                       | N/C
 ///  PTA4           | debug                         | GPIOA_4                                            | p21                       | Spare pin for debugging
 ///  PTB0           | QuadPhases                    | GPIOB_0                                            | p27                       | Quadrature Encoder pins
 ///  PTB1           | QuadPhases                    | GPIOB_1                                            | p28                       | Quadrature Encoder pins
@@ -6194,15 +6291,34 @@ public:
 ///  PTD1           | Ch2Button/Buttons             | GPIOD_1                                            | p42                       | Channel 2 Button
 ///  PTD2           | Ch1Button/Buttons             | GPIOD_2                                            | p43                       | Channel 1 Button
 ///  PTD3           | MenuButton/Buttons            | GPIOD_3                                            | p44                       | MenuButton
-///  PTD4           | amplifierControl/highGainEnable| GPIOD_4                                            | p45                       | Mux&amplifier control/Gain boost enable on amplifier
-///  PTD5           | amplifierControl              | GPIOD_5                                            | p46                       | MUX_SEL0/ID1
-///  PTD6           | amplifierControl              | GPIOD_6                                            | p47                       | MUX_SEL1/ID2
-///  PTD7           | amplifierControl/biasEnable   | GPIOD_7                                            | p48                       | /Bias enable on amplifier input
+///  PTD4           | amplifierControl              | GPIOD_4                                            | p45                       | Mux&amplifier control/Gain boost enable on amplifier
+///  PTD5           | amplifierControl              | GPIOD_5                                            | p46                       | Mux select 0
+///  PTD6           | amplifierControl              | GPIOD_6                                            | p47                       | Mux select 1
+///  PTD7           | amplifierControl              | GPIOD_7                                            | p48                       | Bias enable on amplifier input
+///  PTB2           | -                             | I2C0_SCL                                           | p29                       | I2C SCL (oled)
+///  PTB3           | -                             | I2C0_SDA                                           | p30                       | I2C SDA (oled)
 ///  PIT_CH0        | PollingTimerChannel           | PIT_CH0                                            | Internal                  | PIT channel to use for switch polling
 ///  PIT_CH1        | ControlTimerChannel           | PIT_CH1                                            | Internal                  | PIT channel to use for sample and control timing
-///  RESET_b        | -                             | RESET_b                                            | p26                       | Reset_b
-///  PTA0           | -                             | SWD_CLK                                            | p17                       | SWD_CLK
-///  PTA3           | -                             | SWD_DIO                                            | p20                       | SWD_DIO
+///  RESET_b        |                               | RESET_b                                            | p26                       | Reset_b
+///  PTA0           |                               | SWD_CLK                                            | p17                       | SWD_CLK
+///  PTA3           |                               | SWD_DIO                                            | p20                       | SWD_DIO
+///  PTA1           | -                             | UART0_RX                                           | p18                       | SWD_Rx
+///  PTA2           | -                             | UART0_TX                                           | p19                       | SWD_Tx
+///  USB0_DM        | -                             | USB0_DM                                            | p4                        | USB_DM
+///  USB0_DP        | -                             | USB0_DP                                            | p3                        | USB_DP
+///  VBAT           | -                             | VBAT                                               | p16                       | +3V3
+///  VDD1           | -                             | VDD1                                               | p1                        | +3V3
+///  VDD2           | -                             | VDD2                                               | p22                       | +3V3
+///  VDDA           | -                             | VDDA                                               | p9                        | +3V3
+///  VOUT33         | -                             | VOUT33                                             | p5                        | +3V3
+///  VREFH          | -                             | VREFH                                              | p10                       | 3.00 V Reference
+///  VREFL          | -                             | VREFL                                              | p11                       | Gnd
+///  VREGIN         | -                             | VREGIN                                             | p6                        | +3V3
+///  VSS1           | -                             | VSS1                                               | p2                        | Gnd
+///  VSS2           | -                             | VSS2                                               | p23                       | Gnd
+///  VSSA           | -                             | VSSA                                               | p12                       | Gnd
+///  PTA19          | -                             | XTAL0                                              | p25                       | XTAL_16MHz
+///  XTAL32         | -                             | XTAL32                                             | p14                       | N/C
 ///
 ///
 

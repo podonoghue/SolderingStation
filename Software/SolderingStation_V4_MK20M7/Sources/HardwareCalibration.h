@@ -14,20 +14,16 @@ class HardwareCalibration {
 public:
 
    USBDM::Nonvolatile<float> vccValue;
-   USBDM::Nonvolatile<float> lowGainNoBoost;
-   USBDM::Nonvolatile<float> lowGainWithBoost;
-   USBDM::Nonvolatile<float> highGainNoBoost;
-   USBDM::Nonvolatile<float> highGainWithBoost;
+   USBDM::Nonvolatile<float> preAmplifierNoBoost;
+   USBDM::Nonvolatile<float> preAmplifierWithBoost;
 
    HardwareCalibration() {}
    ~HardwareCalibration() {}
 
    void initialise() {
-      vccValue          = 3.30;
-      lowGainNoBoost    = LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF;
-      lowGainWithBoost  = LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF;
-      highGainNoBoost   = 1.05*HIGH_GAIN_MEASUREMENT_RATIO_BOOST_OFF;
-      highGainWithBoost = 1.05*HIGH_GAIN_MEASUREMENT_RATIO_BOOST_ON;
+      vccValue               = 3.30;
+      preAmplifierNoBoost    = LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF;
+      preAmplifierWithBoost  = LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF;
    }
 };
 

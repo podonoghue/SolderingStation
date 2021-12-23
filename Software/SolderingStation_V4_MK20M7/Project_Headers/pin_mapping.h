@@ -636,8 +636,8 @@ public:
    static constexpr PinInfo  info[] = {
 
          //      Signal                 Pin                                  portInfo    gpioBit                 PCR value
-         /*   0: GPIOE_0              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*   1: GPIOE_1              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
+         /*   0: GPIOE_0              = PTE0(p1)                       */  { PortEInfo,  0,            (PcrValue)0x00100UL  },
+         /*   1: GPIOE_1              = PTE1(p2)                       */  { PortEInfo,  1,            (PcrValue)0x00100UL  },
    };
 
    /**
@@ -646,6 +646,14 @@ public:
     * @note Only the lower 16-bits of the PCR registers are affected
     */
    static void initPCRs() {
+
+#if defined(PCC_PCCn_CGC_MASK)
+PCC->PCC_PORTE = PCC_PCCn_CGC_MASK;
+#else
+enablePortClocks(PORTE_CLOCK_MASK);
+#endif
+
+PORTE->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0003UL);
    }
 
    /**
@@ -654,6 +662,14 @@ public:
     * @note Only the lower 16-bits of the PCR registers are affected
     */
    static void clearPCRs() {
+
+#if defined(PCC_PCCn_CGC_MASK)
+PCC->PCC_PORTE = PCC_PCCn_CGC_MASK;
+#else
+enablePortClocks(PORTE_CLOCK_MASK);
+#endif
+
+PORTE->GPCLR = PinMux_Disabled|PORT_GPCLR_GPWE(0x0U);
    }
 
 };
@@ -1004,6 +1020,11 @@ public:
       ClockMode_PEE,
    };
 
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+   //! Frequency of Internal 48MHz Clock
+   static constexpr uint32_t irc48m_clock = 0UL;
+   #endif
+
    //! Frequency of Slow Internal Reference Clock [~32kHz]
    static constexpr uint32_t system_slow_irc_clock = 32768UL;
 
@@ -1048,6 +1069,14 @@ public:
       const uint8_t c7;
       //! Control Register 8 - LOCRE1, LOLRE, CME1
       const uint8_t c8;
+   #ifdef MCG_C9_PLL_CME
+      //! Control Register 9
+      const uint8_t c9;
+   #endif
+   #ifdef MCG_C11_PLLCS
+      //! Control Register 11
+      const uint8_t c11;
+   #endif
    };
 
    /**
@@ -1060,7 +1089,12 @@ public:
       switch((mcg->C7&MCG_C7_OSCSEL_MASK)) {
          default               : return 0;
          case MCG_C7_OSCSEL(0) : return Osc0Info::getOscClock();
+   #if defined(SIM_SOPT1_OSC32KSEL)
          case MCG_C7_OSCSEL(1) : return RtcInfo::getInternalClock();
+   #endif
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+         case MCG_C7_OSCSEL(2) : return McgInfo::irc48m_clock;
+   #endif
       }
    }
 
@@ -1153,6 +1187,8 @@ public:
    enum SimUsbFullSpeedClockSource {
       SimUsbFullSpeedClockSource_External   = SIM_SOPT2_USBSRC(0), //!< External bypass clock (USB_CLKIN)
       SimUsbFullSpeedClockSource_Peripheral = SIM_SOPT2_USBSRC(1), //!< Peripheral clock selected by SIM.SOPT2[PLLFLLSEL] divided by SIM.CLKDIV2
+   //   SimUsbFullSpeedClockSource_McgFll = SIM_SOPT2_USBSRC(0), //!< External bypass clock (USB_CLKIN)
+   //   SimUsbFullSpeedClockSource_McgPll = SIM_SOPT2_USBSRC(1), //!< Peripheral clock selected by SIM.SOPT2[PLLFLLSEL] divided by SIM.CLKDIV2
    };
    #endif
 
@@ -1234,6 +1270,18 @@ public:
       SimTpmClockSource_Peripheral = SIM_SOPT2_TPMSRC(1), //!< Peripheral clock selected by SIM.SOPT2[PLLFLLSEL] divided by SIM.CLKDIV3
       SimTpmClockSource_OscerClk   = SIM_SOPT2_TPMSRC(2), //!< OSCERCLK clock
       SimTpmClockSource_McgIrClk   = SIM_SOPT2_TPMSRC(3), //!< MCG Internal Reference clock
+   };
+   #endif
+
+   #if defined(SIM_SOPT2_EMVSIMSRC)
+   /**
+    * EMVSIMSRC Clock sources
+    */
+   enum SimEmvsimClockSource {
+      SimEmvsimClockSource_Disabled   = SIM_SOPT2_EMVSIMSRC(0), //!< Disabled
+      SimEmvsimClockSource_Peripheral = SIM_SOPT2_EMVSIMSRC(1), //!< Peripheral clock selected by SIM.SOPT2[PLLFLLSEL] divided by SIM.CLKDIV3
+      SimEmvsimClockSource_OscerClk   = SIM_SOPT2_EMVSIMSRC(2), //!< OSCERCLK clock
+      SimEmvsimClockSource_McgIrClk   = SIM_SOPT2_EMVSIMSRC(3), //!< MCG Internal Reference clock
    };
    #endif
 
@@ -1706,7 +1754,7 @@ public:
    #ifdef SIM_SOPT1_OSC32KOUT
       SIM_SOPT1_OSC32KOUT(0) |    // 32K oscillator clock out pin select
    #endif
-      SIM_SOPT1_OSC32KSEL(2);     // 32K oscillator clock select
+      SIM_SOPT1_OSC32KSEL(3);     // 32K oscillator clock select
 
    /**
     * Selects the clock to output on the CLKOUT pin.
@@ -1788,7 +1836,7 @@ public:
     * @return Clock frequency in Hz
     */
    static inline uint32_t getUart3Clock() {
-      return SystemBusClock;
+      return 0;
    }
    #endif
 
@@ -1799,7 +1847,7 @@ public:
     * @return Clock frequency in Hz
     */
    static inline uint32_t getUart4Clock() {
-      return SystemBusClock;
+      return 0;
    }
    #endif
 
@@ -1810,7 +1858,7 @@ public:
     * @return Clock frequency in Hz
     */
    static inline uint32_t getUart5Clock() {
-      return SystemBusClock;
+      return 0;
    }
    #endif
 
@@ -2012,11 +2060,14 @@ public:
    #ifdef SIM_SOPT2_TPMSRC
          SIM_SOPT2_TPMSRC(-1) |        // TPM clock source select
    #endif
+   #ifdef SIM_SOPT2_EMVSIMSRC
+         SIM_SOPT2_EMVSIMSRC(-1) | // EMVSIMSRC clock source select
+   #endif
    #ifdef SIM_SOPT2_USBSRC
          SIM_SOPT2_USBSRC(1) |        // USB clock source select
    #endif
    #ifdef SIM_SOPT2_FBSL
-         SIM_SOPT2_FBSL(0) |          // FlexBus security level
+         SIM_SOPT2_FBSL(-1) |          // FlexBus security level
    #endif
    #ifdef SIM_SOPT2_PLLFLLSEL
          SIM_SOPT2_PLLFLLSEL(1)|      // PLL/FLL clock select
@@ -2075,6 +2126,33 @@ public:
       case SIM_SOPT2_TPMSRC(1): return getDividedPeripheralClock();
       case SIM_SOPT2_TPMSRC(2): return Osc0Info::getOscerClock();
       case SIM_SOPT2_TPMSRC(3): return McgInfo::getMcgIrClock();
+      }
+   }
+   #endif
+
+   #if defined(SIM_SOPT2_EMVSIMSRC)
+   /**
+    * Set EMVSIMSRC input clock source
+    *
+    * @param simEmvsimClockSource Clock source for EMVSIMSRC
+    */
+   static void setEmvsimClock(SimEmvsimClockSource simEmvsimClockSource) {
+      sim->SOPT2 = (sim->SOPT2&~SIM_SOPT2_EMVSIMSRC_MASK) | simEmvsimClockSource;
+   }
+
+   /**
+    * Get EMVSIMSRC input clock frequency
+    *
+    * @return EMVSIMSRC input clock frequency as a uint32_t in Hz
+    */
+   static uint32_t getEmvsimClock() {
+      
+      switch(sim->SOPT2&SIM_SOPT2_EMVSIMSRC_MASK) {
+      default:
+      case SIM_SOPT2_EMVSIMSRC(0): return 0;
+      case SIM_SOPT2_EMVSIMSRC(1): return getDividedPeripheralClock();
+      case SIM_SOPT2_EMVSIMSRC(2): return Osc0Info::getOscerClock();
+      case SIM_SOPT2_EMVSIMSRC(3): return McgInfo::getMcgIrClock();
       }
    }
    #endif
@@ -2594,7 +2672,11 @@ public:
     */
    enum AdcClockSource {
       AdcClockSource_Bus      = ADC_CFG1_ADICLK(0), //!< Bus Clock
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+      AdcClockSource_Irc48m   = ADC_CFG1_ADICLK(1), //!< IRC 48MHz clock
+   #else
       AdcClockSource_Busdiv2  = ADC_CFG1_ADICLK(1), //!< Bus Clock / 2
+   #endif
       AdcClockSource_Alt      = ADC_CFG1_ADICLK(2), //!< Alternate clock (ALTCLK)
       AdcClockSource_Asynch   = ADC_CFG1_ADICLK(3), //!< Asynchronous clock (ADACK Internal ADC clock source)
       AdcClockSource_Default  = AdcClockSource_Asynch
@@ -2626,7 +2708,7 @@ public:
    static constexpr bool irqHandlerInstalled = 1;
 
    //! Default IRQ level
-   static constexpr NvicPriority irqLevel =  NvicPriority_Normal;
+   static constexpr NvicPriority irqLevel =  NvicPriority_High;
 
    /**
     *  Get input clock frequency for ADC
@@ -2639,8 +2721,13 @@ public:
       switch (adcClockSource) {
          case AdcClockSource_Bus:
             return SystemBusClock;
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+         case AdcClockSource_Irc48m:
+            return McgInfo::irc48m_clock;
+   #else
          case AdcClockSource_Busdiv2:
             return SystemBusClock/2;
+   #endif
          case AdcClockSource_Alt:
             return  Osc0Info::getOscerClock();;
          case AdcClockSource_Asynch:
@@ -2664,10 +2751,10 @@ public:
 
    //! Default value for ADCx_CFG1 register
    static constexpr uint32_t cfg1  = 
-       ADC_CFG1_ADICLK(0)|
+       ADC_CFG1_ADICLK(2)|
        ADC_CFG1_MODE(3)|
-       ADC_CFG1_ADLSMP(0)|
-       ADC_CFG1_ADIV(3)|
+       ADC_CFG1_ADLSMP(1)|
+       ADC_CFG1_ADIV(1)|
        ADC_CFG1_ADLPC(0);
 
    //! Default value for ADCx_CFG2 register
@@ -2851,7 +2938,11 @@ public:
     */
    enum AdcClockSource {
       AdcClockSource_Bus      = ADC_CFG1_ADICLK(0), //!< Bus Clock
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+      AdcClockSource_Irc48m   = ADC_CFG1_ADICLK(1), //!< IRC 48MHz clock
+   #else
       AdcClockSource_Busdiv2  = ADC_CFG1_ADICLK(1), //!< Bus Clock / 2
+   #endif
       AdcClockSource_Alt      = ADC_CFG1_ADICLK(2), //!< Alternate clock (ALTCLK)
       AdcClockSource_Asynch   = ADC_CFG1_ADICLK(3), //!< Asynchronous clock (ADACK Internal ADC clock source)
       AdcClockSource_Default  = AdcClockSource_Asynch
@@ -2883,7 +2974,7 @@ public:
    static constexpr bool irqHandlerInstalled = 1;
 
    //! Default IRQ level
-   static constexpr NvicPriority irqLevel =  NvicPriority_Normal;
+   static constexpr NvicPriority irqLevel =  NvicPriority_High;
 
    /**
     *  Get input clock frequency for ADC
@@ -2896,8 +2987,13 @@ public:
       switch (adcClockSource) {
          case AdcClockSource_Bus:
             return SystemBusClock;
+   #if defined(USB_CLK_RECOVER_IRC_EN_REG_EN_MASK)
+         case AdcClockSource_Irc48m:
+            return McgInfo::irc48m_clock;
+   #else
          case AdcClockSource_Busdiv2:
             return SystemBusClock/2;
+   #endif
          case AdcClockSource_Alt:
             return  Osc0Info::getOscerClock();;
          case AdcClockSource_Asynch:
@@ -2917,14 +3013,14 @@ public:
    }
 
    //! Default resolution
-   static constexpr uint32_t defaultAdcResolution = ADC_CFG1_MODE(2);
+   static constexpr uint32_t defaultAdcResolution = ADC_CFG1_MODE(3);
 
    //! Default value for ADCx_CFG1 register
    static constexpr uint32_t cfg1  = 
-       ADC_CFG1_ADICLK(3)|
-       ADC_CFG1_MODE(2)|
-       ADC_CFG1_ADLSMP(0)|
-       ADC_CFG1_ADIV(0)|
+       ADC_CFG1_ADICLK(2)|
+       ADC_CFG1_MODE(3)|
+       ADC_CFG1_ADLSMP(1)|
+       ADC_CFG1_ADIV(1)|
        ADC_CFG1_ADLPC(0);
 
    //! Default value for ADCx_CFG2 register
@@ -2939,7 +3035,7 @@ public:
        ADC_SC2_ACFE(0)|
        ADC_SC2_ACFGT(0)|
        ADC_SC2_ACREN(0)|
-       ADC_SC2_REFSEL(0)|
+       ADC_SC2_REFSEL(1)|
        ADC_SC2_DMAEN(0)|
        ADC_SC2_ADTRG(0);
 
@@ -3371,7 +3467,7 @@ public:
    static constexpr bool irqHandlerInstalled = 1;
 
    //! Default IRQ level
-   static constexpr NvicPriority irqLevel =  NvicPriority_Normal;
+   static constexpr NvicPriority irqLevel =  NvicPriority_High;
 
    //! Number of signals available in info table
    static constexpr int numSignals  = 9;
@@ -3657,7 +3753,7 @@ public:
    static constexpr bool irqHandlerInstalled = 1;
 
    //! Default IRQ level
-   static constexpr NvicPriority irqLevel =  NvicPriority_Normal;
+   static constexpr NvicPriority irqLevel =  NvicPriority_VeryHigh;
 
    //! Number of signals available in info table
    static constexpr int numSignals  = 9;
@@ -3974,7 +4070,7 @@ public:
    //! DAC Control Register 0
    static constexpr uint32_t c0 =
       DAC_C0_DACRFS(1)        | // Reference Select
-      DAC_C0_DACTRGSEL(1)     | // Trigger Select
+      DAC_C0_DACTRGSEL(0)     | // Trigger Select
       DAC_C0_LPEN(0)          | // Low Power Control
    #if defined(DAC_C0_DACBWIEN)
       DAC_C0_DACBWIEN(0)      | // Buffer Watermark Interrupt Enable
@@ -4298,229 +4394,6 @@ public:
 
 /** 
  * End group EWM_Group
- * @}
- */
-/**
- * @addtogroup FLEXBUS_Group FLEXBUS, Flexbus - External Bus Interface
- * @brief Abstraction for Flexbus - External Bus Interface
- * @{
- */
-#define USBDM_FLEXBUS_IS_DEFINED
-/**
- * Peripheral information for FLEXBUS, Flexbus - External Bus Interface.
- * 
- * This may include pin information, constants, register addresses, and default register values,
- * along with simple accessor functions.
- */
-   /**
-    * FlexBus Signal Group 1 Multiplex control.
-    * Controls the multiplexing of the FB_ALE, FB_CS1 , and FB_TS signals.
-    */
-   enum FlexbusGroup1 {
-      FlexbusGroup1_FB_ALE       = FLEXBUS_CSPMCR_GROUP1(0b0000), /**< FB_ALE */
-      FlexbusGroup1_FB_CS1       = FLEXBUS_CSPMCR_GROUP1(0b0001), /**< FB_CS1 */
-      FlexbusGroup1_FB_TS        = FLEXBUS_CSPMCR_GROUP1(0b0010), /**< FB_TS */
-   };
-   /**
-    * FlexBus Signal Group 2 Multiplex control.
-    * Controls the multiplexing of the FB_CS4 , FB_TSIZ0, and FB_BE_31_24 signals.
-    */
-   enum FlexbusGroup2 {
-      FlexbusGroup2_FB_CS4       = FLEXBUS_CSPMCR_GROUP2(0b0000), /**< FB_CS4 */
-      FlexbusGroup2_FB_TSIZ0     = FLEXBUS_CSPMCR_GROUP2(0b0001), /**< FB_TSIZ0 */
-      FlexbusGroup2_FB_BE_31_24  = FLEXBUS_CSPMCR_GROUP2(0b0010), /**< FB_BE_31_24 */
-   };
-   /**
-    * FlexBus Signal Group 3 Multiplex control.
-    * Controls the multiplexing of the FB_CS5 , FB_TSIZ1, and FB_BE_23_16 signals.
-    */
-   enum FlexbusGroup3 {
-      FlexbusGroup3_FB_CS5       = FLEXBUS_CSPMCR_GROUP3(0b0000), /**< FB_CS5 */
-      FlexbusGroup3_FB_TSIZ1     = FLEXBUS_CSPMCR_GROUP3(0b0001), /**< FB_TSIZ1 */
-      FlexbusGroup3_FB_BE_23_16  = FLEXBUS_CSPMCR_GROUP3(0b0010), /**< FB_BE_23_16 */
-   };
-   /**
-    * FlexBus Signal Group 4 Multiplex control.
-    * Controls the multiplexing of the FB_TBST , FB_CS2 , and FB_BE_15_8 signals.
-    */
-   enum FlexbusGroup4 {
-      FlexbusGroup4_FB_TBST      = FLEXBUS_CSPMCR_GROUP4(0b0000), /**< FB_TBST */
-      FlexbusGroup4_FB_CS2       = FLEXBUS_CSPMCR_GROUP4(0b0001), /**< FB_CS2 */
-      FlexbusGroup4_FB_BE_15_8   = FLEXBUS_CSPMCR_GROUP4(0b0010), /**< FB_BE_15_8 */
-   };
-   /**
-    * FlexBus Signal Group 5 Multiplex control.
-    * Controls the multiplexing of the FB_TA , FB_CS3 , and FB_BE_7_0 signals.
-    */
-   enum FlexbusGroup5 {
-      FlexbusGroup5_FB_TA        = FLEXBUS_CSPMCR_GROUP5(0b0000), /**< FB_TA */
-      FlexbusGroup5_FB_CS3       = FLEXBUS_CSPMCR_GROUP5(0b0001), /**< FB_CS3 - You must also write 1b to CSCR[AA].*/
-      FlexbusGroup5_FB_BE_7_0    = FLEXBUS_CSPMCR_GROUP5(0b0010), /**< FB_BE_7_0 - You must also write 1b to CSCR[AA].*/
-   };
-
-class FlexbusInfo {
-public:
-   // Template:flexbus
-
-   //! Map all allocated pins on a peripheral when enabled
-   static constexpr bool mapPinsOnEnable = true;
-
-   //! Hardware base address as uint32_t 
-   static constexpr uint32_t baseAddress = FLEXBUS_BasePtr;
-
-   //! Hardware base pointer
-   static constexpr HardwarePtr<FLEXBUS_Type> flexbus = baseAddress;
-
-   /** 
-    *  Enable clock to Flexbus
-    */
-   static void enableClock() {
-#ifdef PCC
-      PccInfo::enableFlexbusClock();
-#else
-      SIM->SCGC7 |= SIM_SCGC7_FLEXBUS_MASK;
-#endif
-   }
-
-   /** 
-    *  Disable clock to Flexbus
-    */
-   static void disableClock() {
-#ifdef PCC
-      PccInfo::disableFlexbusClock();
-#else
-      SIM->SCGC7 &= ~SIM_SCGC7_FLEXBUS_MASK;
-#endif
-   }
-
-   /**
-    * Configure the multiplexing of <b>shared</b> FlexBus/Sdramc signals.
-    *
-    * Shared pins are configures as follows:
-    * - Group2 = FB_BE_31_24 signals.
-    * - Group3 = FB_BE_23_16 signals.
-    * - Group4 = FB_BE_15_8 signals.
-    * - Group5 = FB_BE_7_0 signals.
-    *
-    * @note Group1 settings are unchanged as they are not shared.
-    * @note The clock to the Flexbus controller will be enabled.
-    */
-   static void configureSharedMultiplexing() {
-      enableClock();
-      CriticalSection cs;
-      flexbus->CSPMCR =
-         (flexbus->CSPMCR&~(FLEXBUS_CSPMCR_GROUP2_MASK|FLEXBUS_CSPMCR_GROUP3_MASK|FLEXBUS_CSPMCR_GROUP4_MASK|FLEXBUS_CSPMCR_GROUP5_MASK))|
-         (FlexbusGroup2_FB_BE_31_24|FlexbusGroup3_FB_BE_23_16|FlexbusGroup4_FB_BE_15_8|FlexbusGroup5_FB_BE_7_0);
-   }
-
-   //! Number of signals available in info table
-   static constexpr int numSignals  = 79;
-
-   //! Information for each signal of peripheral
-   static constexpr PinInfo  info[] = {
-
-         //      Signal                 Pin                                  portInfo    gpioBit                 PCR value
-         /*   0: FB_CS0_b             = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*   1: FB_CS1_b             = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*   2: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*   3: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*   4: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*   5: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*   6: FB_AD0               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*   7: FB_AD1               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*   8: FB_AD2               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*   9: FB_AD3               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  10: FB_AD4               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  11: FB_AD5               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  12: FB_AD6               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  13: FB_AD7               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  14: FB_AD8               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  15: FB_AD9               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  16: FB_AD10              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  17: FB_AD11              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  18: FB_AD12              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  19: FB_AD13              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  20: FB_AD14              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  21: FB_AD15              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  22: FB_AD16              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  23: FB_AD17              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  24: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  25: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  26: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  27: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  28: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  29: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  30: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  31: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  32: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  33: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  34: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  35: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  36: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  37: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  38: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  39: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  40: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  41: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  42: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  43: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  44: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  45: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  46: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  47: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  48: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  49: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  50: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  51: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  52: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  53: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  54: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  55: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  56: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  57: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  58: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  59: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  60: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  61: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  62: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  63: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  64: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  65: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  66: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  67: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  68: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  69: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  70: CLKOUT               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  71: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  72: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  73: FB_ALE               = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  74: FB_OE_b              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  75: FB_RW_b              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-         /*  76: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  77: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
-         /*  78: FB_TS_b              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
-   };
-
-   /**
-    * Initialise pins used by peripheral
-
-    * @note Only the lower 16-bits of the PCR registers are affected
-    */
-   static void initPCRs() {
-   }
-
-   /**
-    * Resets pins used by peripheral
-
-    * @note Only the lower 16-bits of the PCR registers are affected
-    */
-   static void clearPCRs() {
-   }
-
-};
-
-/** 
- * End group FLEXBUS_Group
  * @}
  */
 /**
@@ -5710,7 +5583,7 @@ public:
    static constexpr PinInfo  info[] = {
 
          //      Signal                 Pin                                  portInfo    gpioBit                 PCR value
-         /*   0: LLWU_P0              = --                             */  { NoPortInfo, UNMAPPED_PCR, (PcrValue)0          },
+         /*   0: LLWU_P0              = PTE1(p2)                       */  { PortEInfo,  1,            (PcrValue)0x00100UL  },
          /*   1: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
          /*   2: --                   = --                             */  { NoPortInfo, INVALID_PCR,  (PcrValue)0          },
          /*   3: LLWU_P3              = PTA4(p26)                      */  { PortAInfo,  4,            (PcrValue)0x00100UL  },
@@ -5740,14 +5613,16 @@ PCC->PCC_PORTA = PCC_PCCn_CGC_MASK;
 PCC->PCC_PORTB = PCC_PCCn_CGC_MASK;
 PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
 PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
+PCC->PCC_PORTE = PCC_PCCn_CGC_MASK;
 #else
-enablePortClocks(PORTA_CLOCK_MASK|PORTB_CLOCK_MASK|PORTC_CLOCK_MASK|PORTD_CLOCK_MASK);
+enablePortClocks(PORTA_CLOCK_MASK|PORTB_CLOCK_MASK|PORTC_CLOCK_MASK|PORTD_CLOCK_MASK|PORTE_CLOCK_MASK);
 #endif
 
 PORTA->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0010UL);
 PORTB->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0001UL);
 PORTC->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x087AUL);
 PORTD->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0055UL);
+PORTE->GPCLR = 0x0100UL|PORT_GPCLR_GPWE(0x0002UL);
    }
 
    /**
@@ -5762,14 +5637,16 @@ PCC->PCC_PORTA = PCC_PCCn_CGC_MASK;
 PCC->PCC_PORTB = PCC_PCCn_CGC_MASK;
 PCC->PCC_PORTC = PCC_PCCn_CGC_MASK;
 PCC->PCC_PORTD = PCC_PCCn_CGC_MASK;
+PCC->PCC_PORTE = PCC_PCCn_CGC_MASK;
 #else
-enablePortClocks(PORTA_CLOCK_MASK|PORTB_CLOCK_MASK|PORTC_CLOCK_MASK|PORTD_CLOCK_MASK);
+enablePortClocks(PORTA_CLOCK_MASK|PORTB_CLOCK_MASK|PORTC_CLOCK_MASK|PORTD_CLOCK_MASK|PORTE_CLOCK_MASK);
 #endif
 
 PORTA->GPCLR = PinMux_Disabled|PORT_GPCLR_GPWE(0x0U);
 PORTB->GPCLR = PinMux_Disabled|PORT_GPCLR_GPWE(0x0U);
 PORTC->GPCLR = PinMux_Disabled|PORT_GPCLR_GPWE(0x0U);
 PORTD->GPCLR = PinMux_Disabled|PORT_GPCLR_GPWE(0x0U);
+PORTE->GPCLR = PinMux_Disabled|PORT_GPCLR_GPWE(0x0U);
    }
 
 };
@@ -7404,10 +7281,10 @@ public:
    static constexpr uint32_t irqCount  = sizeofArray(irqNums);
 
    //! Class based callback handler has been installed in vector table
-   static constexpr bool irqHandlerInstalled = 0;
+   static constexpr bool irqHandlerInstalled = 1;
 
    //! Default IRQ level
-   static constexpr NvicPriority irqLevel =  NvicPriority_NotInstalled;
+   static constexpr NvicPriority irqLevel =  NvicPriority_Normal;
 
    /**
     * Get input clock frequency
@@ -7450,8 +7327,8 @@ public:
 ///  PGA0_DM        | LowGainDirectAdcChannel       | ADC0_SE19                                          | p10                       | ADC channel direct to sample point
 ///  PGA0_DP        | Ch1Identify                   | ADC0_SE0                                           | p9                        | ADC channel for channel 1 ID pin
 ///  PGA1_DM        | Ch2Identify                   | ADC0_SE21                                          | p12                       | ADC channel for channel 2 ID pin
-///  PGA1_DP        | HighGainAmpAdcChannel         | PGA1                                               | p11                       | ADC channel with external amplifier
-///  PGA1_DP        | LowGainAmpAdcChannel          | ADC0_SE3                                           | p11                       | ADC channel with external amplifier
+///  PGA1_DP        | ProgrammableGainAdcChannel    | PGA1                                               | p11                       | ADC channel with external amplifier
+///  PGA1_DP        | FixedGainAdcChannel           | ADC0_SE3                                           | p11                       | ADC channel with external amplifier
 ///  PIT_CH0        | PollingTimerChannel           | PIT_CH0                                            | Internal                  | PIT channel to use for switch polling
 ///  PIT_CH1        | ControlTimerChannel           | PIT_CH1                                            | Internal                  | PIT channel to use for sample and control timing
 ///  PTA0           |                               | SWD_CLK                                            | p22                       | SWD Clock
@@ -7464,8 +7341,8 @@ public:
 ///  PTA19          | -                             | XTAL0                                              | p33                       | 16MHz Crystal
 ///  PTB0           | QuadPhases                    | GPIOB_0                                            | p35                       | Quadrature encoder B
 ///  PTB1           | QuadPhases                    | GPIOB_1                                            | p36                       | Quadrature encoder A
-///  PTB2           | -                             | I2C0_SCL                                           | p37                       | I2C Clock
-///  PTB3           | -                             | I2C0_SDA                                           | p38                       | I2C Data
+///  PTB2           | -                             | I2C0_SCL                                           | p37                       | I2C Clock (OLED)
+///  PTB3           | -                             | I2C0_SDA                                           | p38                       | I2C Data (OLED)
 ///  PTB16          | ToolStands                    | GPIOB_16                                           | p39                       | Tool stand detectors
 ///  PTB17          | ToolStands                    | GPIOB_17                                           | p40                       | Tool stand detectors
 ///  PTB18          | Spare2                        | GPIOB_18                                           | p41                       | Spare #2
@@ -7490,6 +7367,8 @@ public:
 ///  PTD5           | Ch2VoltageSelect              | GPIOD_5                                            | p62                       | Channel 2 voltage select (24V)
 ///  PTD6           | Ch1VoltageSelect              | GPIOD_6                                            | p63                       | Channel 1 voltage select/Channel 1 voltage select (12V)
 ///  PTD7           | Ch1VoltageSelect              | GPIOD_7                                            | p64                       | Channel 1 voltage select (24V)
+///  PTE0           | Spare4                        | GPIOE_0                                            | p1                        | Spare 4
+///  PTE1           | Spare5                        | GPIOE_1                                            | p2                        | Spare 5
 ///  RESET_b        |                               | RESET_b                                            | p34                       | Reset_b
 ///  TEMP_SENSOR    | ChipTemperatureAdcChannel     | ADC0_SE26                                          | Internal                  | Internal temperature sensor
 ///  USB0_DM        | -                             | USB0_DM                                            | p6                        | USB DM
@@ -7517,6 +7396,8 @@ public:
 ///  PIT_CH0        | PollingTimerChannel           | PIT_CH0                                            | Internal                  | PIT channel to use for switch polling
 ///  PIT_CH1        | ControlTimerChannel           | PIT_CH1                                            | Internal                  | PIT channel to use for sample and control timing
 ///  TEMP_SENSOR    | ChipTemperatureAdcChannel     | ADC0_SE26                                          | Internal                  | Internal temperature sensor
+///  PTE0           | Spare4                        | GPIOE_0                                            | p1                        | Spare 4
+///  PTE1           | Spare5                        | GPIOE_1                                            | p2                        | Spare 5
 ///  VDD1           | -                             | VDD                                                | p3                        | +3V3
 ///  VSS1           | -                             | VSS                                                | p4                        | Gnd
 ///  USB0_DP        | -                             | USB0_DP                                            | p5                        | USB DP
@@ -7525,8 +7406,8 @@ public:
 ///  VREGIN         | -                             | VREGIN                                             | p8                        | +3V3
 ///  PGA0_DP        | Ch1Identify                   | ADC0_SE0                                           | p9                        | ADC channel for channel 1 ID pin
 ///  PGA0_DM        | LowGainDirectAdcChannel       | ADC0_SE19                                          | p10                       | ADC channel direct to sample point
-///  PGA1_DP        | HighGainAmpAdcChannel         | PGA1                                               | p11                       | ADC channel with external amplifier
-///  PGA1_DP        | LowGainAmpAdcChannel          | ADC0_SE3                                           | p11                       | ADC channel with external amplifier
+///  PGA1_DP        | ProgrammableGainAdcChannel    | PGA1                                               | p11                       | ADC channel with external amplifier
+///  PGA1_DP        | FixedGainAdcChannel           | ADC0_SE3                                           | p11                       | ADC channel with external amplifier
 ///  PGA1_DM        | Ch2Identify                   | ADC0_SE21                                          | p12                       | ADC channel for channel 2 ID pin
 ///  VDDA           | -                             | VDDA                                               | p13                       | +3V3
 ///  VREFH          | -                             | VREFH                                              | p14                       | 3.00 V Reference
@@ -7547,8 +7428,8 @@ public:
 ///  RESET_b        |                               | RESET_b                                            | p34                       | Reset_b
 ///  PTB0           | QuadPhases                    | GPIOB_0                                            | p35                       | Quadrature encoder B
 ///  PTB1           | QuadPhases                    | GPIOB_1                                            | p36                       | Quadrature encoder A
-///  PTB2           | -                             | I2C0_SCL                                           | p37                       | I2C Clock
-///  PTB3           | -                             | I2C0_SDA                                           | p38                       | I2C Data
+///  PTB2           | -                             | I2C0_SCL                                           | p37                       | I2C Clock (OLED)
+///  PTB3           | -                             | I2C0_SDA                                           | p38                       | I2C Data (OLED)
 ///  PTB16          | ToolStands                    | GPIOB_16                                           | p39                       | Tool stand detectors
 ///  PTB17          | ToolStands                    | GPIOB_17                                           | p40                       | Tool stand detectors
 ///  PTB18          | Spare2                        | GPIOB_18                                           | p41                       | Spare #2
@@ -7585,7 +7466,7 @@ public:
 ///  PGA0_DM        | LowGainDirectAdcChannel       | ADC0_SE19                                          | p10                       | ADC channel direct to sample point
 ///  PGA1_DM        | Ch2Identify                   | ADC0_SE21                                          | p12                       | ADC channel for channel 2 ID pin
 ///  TEMP_SENSOR    | ChipTemperatureAdcChannel     | ADC0_SE26                                          | Internal                  | Internal temperature sensor
-///  PGA1_DP        | LowGainAmpAdcChannel          | ADC0_SE3                                           | p11                       | ADC channel with external amplifier
+///  PGA1_DP        | FixedGainAdcChannel           | ADC0_SE3                                           | p11                       | ADC channel with external amplifier
 ///  PTC7           | ZeroCrossingInput             | CMP0_IN1                                           | p52                       | Mains zero crossing detector
 ///  PTA13          | Overcurrent                   | CMP2_IN1                                           | p29                       | Overcurrent comparator
 ///  PTA18          | -                             | EXTAL0                                             | p32                       | 16MHz Crystal
@@ -7615,9 +7496,11 @@ public:
 ///  PTD5           | Ch2VoltageSelect              | GPIOD_5                                            | p62                       | Channel 2 voltage select (24V)
 ///  PTD6           | Ch1VoltageSelect              | GPIOD_6                                            | p63                       | Channel 1 voltage select/Channel 1 voltage select (12V)
 ///  PTD7           | Ch1VoltageSelect              | GPIOD_7                                            | p64                       | Channel 1 voltage select (24V)
-///  PTB2           | -                             | I2C0_SCL                                           | p37                       | I2C Clock
-///  PTB3           | -                             | I2C0_SDA                                           | p38                       | I2C Data
-///  PGA1_DP        | HighGainAmpAdcChannel         | PGA1                                               | p11                       | ADC channel with external amplifier
+///  PTE0           | Spare4                        | GPIOE_0                                            | p1                        | Spare 4
+///  PTE1           | Spare5                        | GPIOE_1                                            | p2                        | Spare 5
+///  PTB2           | -                             | I2C0_SCL                                           | p37                       | I2C Clock (OLED)
+///  PTB3           | -                             | I2C0_SDA                                           | p38                       | I2C Data (OLED)
+///  PGA1_DP        | ProgrammableGainAdcChannel    | PGA1                                               | p11                       | ADC channel with external amplifier
 ///  PIT_CH0        | PollingTimerChannel           | PIT_CH0                                            | Internal                  | PIT channel to use for switch polling
 ///  PIT_CH1        | ControlTimerChannel           | PIT_CH1                                            | Internal                  | PIT channel to use for sample and control timing
 ///  RESET_b        |                               | RESET_b                                            | p34                       | Reset_b

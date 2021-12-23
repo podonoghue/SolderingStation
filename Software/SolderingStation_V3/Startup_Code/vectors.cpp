@@ -20,6 +20,7 @@
 /*********** $start(VectorsIncludeFiles) *** Do not edit after this comment ****************/
 #include "cmp.h"
 #include "gpio.h"
+#include "wdog.h"
 #include "pit.h"
 #include "adc.h"
 /*********** $end(VectorsIncludeFiles)   *** Do not edit above this comment ***************/
@@ -183,7 +184,6 @@ void FTF_Command_IRQHandler(void)             WEAK_DEFAULT_HANDLER;
 void FTF_ReadCollision_IRQHandler(void)       WEAK_DEFAULT_HANDLER;
 void PMC_IRQHandler(void)                     WEAK_DEFAULT_HANDLER;
 void LLWU_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
-void WDOG_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void I2C0_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void SPI0_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void I2S0_Tx_IRQHandler(void)                 WEAK_DEFAULT_HANDLER;
@@ -251,7 +251,7 @@ VectorTable const __vector_table = {
       FTF_ReadCollision_IRQHandler,            /*   23,    7  Flash Memory Interface                                                           */
       PMC_IRQHandler,                          /*   24,    8  Power Management Controller                                                      */
       LLWU_IRQHandler,                         /*   25,    9  Low Leakage Wakeup                                                               */
-      WDOG_IRQHandler,                         /*   26,   10  External Watchdog Monitor                                                        */
+      USBDM::Wdog::irqHandler,                 /*   26,   10  External Watchdog Monitor                                                        */
       I2C0_IRQHandler,                         /*   27,   11  Inter-Integrated Circuit                                                         */
       SPI0_IRQHandler,                         /*   28,   12  Serial Peripheral Interface                                                      */
       I2S0_Tx_IRQHandler,                      /*   29,   13  Synchronous Serial Interface                                                     */

@@ -18,6 +18,7 @@
 /*********** $start(VectorsIncludeFiles) *** Do not edit after this comment ****************/
 #include "cmp.h"
 #include "gpio.h"
+#include "wdog.h"
 #include "pit.h"
 #include "adc.h"
 /*********** $end(VectorsIncludeFiles)   *** Do not edit above this comment ***************/
@@ -191,7 +192,6 @@ void FTF_Command_IRQHandler(void)             WEAK_DEFAULT_HANDLER;
 void FTF_ReadCollision_IRQHandler(void)       WEAK_DEFAULT_HANDLER;
 void PMC_IRQHandler(void)                     WEAK_DEFAULT_HANDLER;
 void LLWU_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
-void WDOG_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void I2C0_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void I2C1_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void SPI0_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
@@ -211,10 +211,6 @@ void UART1_RxTx_IRQHandler(void)              WEAK_DEFAULT_HANDLER;
 void UART1_Error_IRQHandler(void)             WEAK_DEFAULT_HANDLER;
 void UART2_RxTx_IRQHandler(void)              WEAK_DEFAULT_HANDLER;
 void UART2_Error_IRQHandler(void)             WEAK_DEFAULT_HANDLER;
-void UART3_RxTx_IRQHandler(void)              WEAK_DEFAULT_HANDLER;
-void UART3_Error_IRQHandler(void)             WEAK_DEFAULT_HANDLER;
-void UART4_RxTx_IRQHandler(void)              WEAK_DEFAULT_HANDLER;
-void UART4_Error_IRQHandler(void)             WEAK_DEFAULT_HANDLER;
 void CMP1_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void FTM0_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
 void FTM1_IRQHandler(void)                    WEAK_DEFAULT_HANDLER;
@@ -285,7 +281,7 @@ VectorTable const __vector_table = {
       FTF_ReadCollision_IRQHandler,            /*   35,   19  Flash Memory Interface                                                           */
       PMC_IRQHandler,                          /*   36,   20  Power Management Controller                                                      */
       LLWU_IRQHandler,                         /*   37,   21  Low Leakage Wakeup                                                               */
-      WDOG_IRQHandler,                         /*   38,   22  External Watchdog Monitor                                                        */
+      USBDM::Wdog::irqHandler,                 /*   38,   22  External Watchdog Monitor                                                        */
       Default_Handler,                         /*   39,   23                                                                                   */
       I2C0_IRQHandler,                         /*   40,   24  Inter-Integrated Circuit                                                         */
       I2C1_IRQHandler,                         /*   41,   25  Inter-Integrated Circuit                                                         */
@@ -314,10 +310,10 @@ VectorTable const __vector_table = {
       UART1_Error_IRQHandler,                  /*   64,   48  Serial Communication Interface                                                   */
       UART2_RxTx_IRQHandler,                   /*   65,   49  Serial Communication Interface                                                   */
       UART2_Error_IRQHandler,                  /*   66,   50  Serial Communication Interface                                                   */
-      UART3_RxTx_IRQHandler,                   /*   67,   51  Serial Communication Interface                                                   */
-      UART3_Error_IRQHandler,                  /*   68,   52  Serial Communication Interface                                                   */
-      UART4_RxTx_IRQHandler,                   /*   69,   53  Serial Communication Interface                                                   */
-      UART4_Error_IRQHandler,                  /*   70,   54  Serial Communication Interface                                                   */
+      Default_Handler,                         /*   67,   51                                                                                   */
+      Default_Handler,                         /*   68,   52                                                                                   */
+      Default_Handler,                         /*   69,   53                                                                                   */
+      Default_Handler,                         /*   70,   54                                                                                   */
       Default_Handler,                         /*   71,   55                                                                                   */
       Default_Handler,                         /*   72,   56                                                                                   */
       USBDM::Adc0::irqHandler,                 /*   73,   57  Analogue to Digital Converter                                                    */

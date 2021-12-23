@@ -101,24 +101,6 @@ public:
    virtual MuxSelect const *getMeasurementSequence() const = 0;
 
    /**
-    * Get the sequence of ADC measurements to do
-    *
-    * @param[out] seq         Array of measurements to do
-    * @param[in]  channelMask Mask indicating which channel
-    *
-    * @return Number of measurements added to seq[]
-    */
-   unsigned getMeasurementSequence(MuxSelect seq[], uint8_t channelMask) const {
-      MuxSelect const *newSequence = getMeasurementSequence();
-      unsigned sequenceLength;
-      for(sequenceLength=0; newSequence[sequenceLength] != MuxSelect_Complete; sequenceLength++) {
-         // Add channel information
-         seq[sequenceLength] = (MuxSelect)(newSequence[sequenceLength]|channelMask);
-      }
-      return sequenceLength;
-   }
-
-   /**
     * Process ADC measurement value
     *
     * @param[in] muxSelect  Indicates which measurement made.\n

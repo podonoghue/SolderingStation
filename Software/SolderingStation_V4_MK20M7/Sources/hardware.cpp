@@ -78,6 +78,7 @@ void mapAllPins() {
    PORTC->GPCLR = ForceLockedPins|0x0000UL|PORT_GPCLR_GPWE(0x0080UL);
    PORTC->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0F7FUL);
    PORTD->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x00FFUL);
+   PORTE->GPCLR = ForceLockedPins|0x0100UL|PORT_GPCLR_GPWE(0x0003UL);
 
    if constexpr (ForceLockoutUnbondedPins) {
       PORTA->GPCLR = PinLock_Locked |0x0000UL|PORT_GPCLR_GPWE(0xCFC0UL); // Lockout unavailable pins

@@ -8,7 +8,7 @@
    <item key="$$DeviceInfo_Device_Variant"                 value="MK20DX128VLF5" />
    <item key="$$DeviceInfo_SubFamily"                      value="MK20D5" />
    <item key="$$Hardware_Source_Filename"                  value="MK20D5.usbdmHardware" />
-   <item key="$peripheral$ADC0_codeIdentifier"             value="MeasurementADC" />
+   <item key="$peripheral$ADC0_codeIdentifier"             value="FixedGainAdc" />
    <item key="$peripheral$ADC0_userDescription"            value="Measurement ADC" />
    <item key="$peripheral$CMP0_codeIdentifier"             value="ZeroCrossingComparator" />
    <item key="$peripheral$CMP0_userDescription"            value="Mains zero-crossing comparator" />
@@ -26,28 +26,26 @@
    <item key="$pin$PTA2_pcrSetting_2"                      value="200" />
    <item key="$pin$PTA3_pcrSetting_7"                      value="700" />
    <item key="$pin$PTA4_pcrSetting_1"                      value="100" />
-   <item key="$pin$PTB0_pcrSetting_1"                      value="100" />
-   <item key="$pin$PTB16_pcrSetting_1"                     value="100" />
-   <item key="$pin$PTB17_pcrSetting_1"                     value="100" />
-   <item key="$pin$PTB1_pcrSetting_1"                      value="100" />
+   <item key="$pin$PTB0_pcrSetting_1"                      value="113" />
+   <item key="$pin$PTB16_pcrSetting_1"                     value="113" />
+   <item key="$pin$PTB17_pcrSetting_1"                     value="113" />
+   <item key="$pin$PTB1_pcrSetting_1"                      value="113" />
    <item key="$pin$PTB2_pcrSetting_2"                      value="220" />
    <item key="$pin$PTB3_pcrSetting_2"                      value="220" />
-   <item key="$pin$PTC0_pcrSetting_1"                      value="100" />
+   <item key="$pin$PTC0_pcrSetting_1"                      value="140" />
    <item key="$pin$PTC1_pcrSetting_1"                      value="103" />
    <item key="$pin$PTC2_pcrSetting_1"                      value="103" />
    <item key="$pin$PTC3_pcrSetting_1"                      value="103" />
    <item key="$pin$PTC4_pcrSetting_1"                      value="103" />
    <item key="$pin$PTC5_pcrSetting_1"                      value="100" />
-   <item key="$pin$PTC6_pcrSetting_1"                      value="100" />
+   <item key="$pin$PTC6_pcrSetting_1"                      value="140" />
    <item key="$pin$PTC7_pcrSetting_0"                      value="0" />
-   <item key="$pin$PTD0_pcrSetting_1"                      value="100" />
-   <item key="$pin$PTD1_pcrSetting_1"                      value="100" />
-   <item key="$pin$PTD2_pcrSetting_1"                      value="100" />
-   <item key="$pin$PTD3_pcrSetting_1"                      value="100" />
+   <item key="$pin$PTD0_pcrSetting_1"                      value="113" />
+   <item key="$pin$PTD1_pcrSetting_1"                      value="113" />
+   <item key="$pin$PTD2_pcrSetting_1"                      value="113" />
+   <item key="$pin$PTD3_pcrSetting_1"                      value="113" />
    <item key="$pin$PTD4_pcrSetting_1"                      value="100" />
-   <item key="$pin$PTD5_pcrSetting_0"                      value="0" />
    <item key="$pin$PTD5_pcrSetting_1"                      value="100" />
-   <item key="$pin$PTD6_pcrSetting_0"                      value="0" />
    <item key="$pin$PTD6_pcrSetting_1"                      value="100" />
    <item key="$pin$PTD7_pcrSetting_1"                      value="100" />
    <item key="$signal$ADC0_SE0_codeIdentifier"             value="highGainAdcChannel" />
@@ -56,7 +54,6 @@
    <item key="$signal$ADC0_SE19_descriptionSetting"        value="ADC channel connected to low gain  amplifier" />
    <item key="$signal$ADC0_SE26_codeIdentifier"            value="chipTemperatureAdcChannel" />
    <item key="$signal$ADC0_SE26_descriptionSetting"        value="Internal temperature sensor T = (25 - (Tvolts-0.719)/.001715)" />
-   <item key="$signal$ADC0_SE4b_codeIdentifier"            value="adc0_se4" />
    <item key="$signal$ADC0_SE6b_codeIdentifier"            value="Ch1Identify" />
    <item key="$signal$ADC0_SE7b_codeIdentifier"            value="Ch2Identify" />
    <item key="$signal$CMP0_IN1_codeIdentifier"             value="ZeroCrossingInput" />
@@ -111,14 +108,14 @@
    <item key="$signal$GPIOD_2_descriptionSetting"          value="Channel 1 Button" />
    <item key="$signal$GPIOD_3_codeIdentifier"              value="MenuButton/Buttons" />
    <item key="$signal$GPIOD_3_descriptionSetting"          value="MenuButton" />
-   <item key="$signal$GPIOD_4_codeIdentifier"              value="amplifierControl/highGainEnable" />
+   <item key="$signal$GPIOD_4_codeIdentifier"              value="amplifierControl" />
    <item key="$signal$GPIOD_4_descriptionSetting"          value="Mux&amp;amplifier control/Gain boost enable on amplifier" />
    <item key="$signal$GPIOD_5_codeIdentifier"              value="amplifierControl" />
-   <item key="$signal$GPIOD_5_descriptionSetting"          value="MUX_SEL0/ID1" />
+   <item key="$signal$GPIOD_5_descriptionSetting"          value="Mux select 0" />
    <item key="$signal$GPIOD_6_codeIdentifier"              value="amplifierControl" />
-   <item key="$signal$GPIOD_6_descriptionSetting"          value="MUX_SEL1/ID2" />
-   <item key="$signal$GPIOD_7_codeIdentifier"              value="amplifierControl/biasEnable" />
-   <item key="$signal$GPIOD_7_descriptionSetting"          value="/Bias enable on amplifier input" />
+   <item key="$signal$GPIOD_6_descriptionSetting"          value="Mux select 1" />
+   <item key="$signal$GPIOD_7_codeIdentifier"              value="amplifierControl" />
+   <item key="$signal$GPIOD_7_descriptionSetting"          value="Bias enable on amplifier input" />
    <item key="$signal$I2C0_SCL_descriptionSetting"         value="I2C SCL (oled)" />
    <item key="$signal$I2C0_SDA_descriptionSetting"         value="I2C SDA (oled)" />
    <item key="$signal$PIT_CH0_codeIdentifier"              value="PollingTimerChannel" />
@@ -154,11 +151,13 @@
    <item key="/FTFL/peripheral_file"                       value="ftfl_32k_flexrom" />
    <item key="/GPIOB/irqHandlingMethod"                    value="$ClassMethod" />
    <item key="/HARDWARE/mapAllPins"                        value="true" />
-   <item key="/HARDWARE/warnMultipleSignalsOnPin"          value="false" />
    <item key="/LLWU/device_list"                           value="LPTMR0;CMP0;CMP1;;TSI;RTC_Alarm;;RTC_Seconds" />
    <item key="/MCG/ClockConfig[0]"                         value="ClockConfig_PEE_48MHz" />
    <item key="/MCG/ClockConfig[1]"                         value="ClockConfig_BLPE_4MHz" />
    <item key="/MCG/ClockConfig[2]"                         value="ClockConfig_FEE_40MHz" />
+   <item key="/MCG/DummyClockConfig[0]"                    value="ClockConfig_0" />
+   <item key="/MCG/DummyClockConfig[1]"                    value="ClockConfig_1" />
+   <item key="/MCG/DummyClockConfig[2]"                    value="ClockConfig_2" />
    <item key="/MCG/clock_mode[0]"                          value="ClockMode_PEE" />
    <item key="/MCG/clock_mode[1]"                          value="ClockMode_BLPE" />
    <item key="/MCG/clock_mode[2]"                          value="ClockMode_FEE" />
@@ -180,4 +179,5 @@
    <item key="/SIM/system_core_clock[2]"                   value="40000000" />
    <item key="/SIM/system_flash_clock[1]"                  value="1000000" />
    <item key="/SIM/system_flash_clock[2]"                  value="20000000" />
+   <item key="/WDOG/irqHandlingMethod"                     value="$ClassMethod" />
 </section>

@@ -101,6 +101,11 @@ static void resetToBootloader() {
 }
 
 int main() {
+   console.write("LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF = ").writeln(LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF);
+   console.write("LOW_GAIN_MEASUREMENT_RATIO_BOOST_ON  = ").writeln(LOW_GAIN_MEASUREMENT_RATIO_BOOST_ON);
+   console.write("BIAS_RESISTOR_VALUE                  = ").writeln(BIAS_RESISTOR_VALUE);
+   console.write("BIAS_VOLTAGE                         = ").writeln(BIAS_VOLTAGE);
+
    // Power-on message
 //   StringFormatter_T<40> sf;
 //   sf.write("SW:V").writeln(bootInformation.softwareVersion)

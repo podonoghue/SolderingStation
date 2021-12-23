@@ -10,19 +10,23 @@
 #include "Display.h"
 #include "Channel.h"
 
+// Tip settings used for "NO_TIP"
+const TipSettings Tips::NoTipSettings(TipSettings::NO_TIP);
+
 Tips::Tips() : tipSettings(nvinit.tipSettings) {
 }
 
 /**
  * Fill menu array with tips currently selected.
- * The array is sorted.
- * The array contains pointers to non-volatile data so unnecessary modification should be avoided to reduce EEPROM wear
+ *
+ * The array is sorted.\n
+ * The array contains pointers to non-volatile data so unnecessary modification should be avoided to reduce EEPROM wear.\n
  * Menu items are marked with a star if checkModifier() evaluates true
  *
  * @param[inout]  menuItems      Array to populate with data
  * @param[in]     checkModifier  Class function to check for set attributes
  */
-unsigned Tips::populateSelectedTips(
+int Tips::populateSelectedTips(
       MenuItem menuItems[TipSettings::NUM_TIP_SETTINGS],
       bool (TipSettings::*checkModifier)() const) {
 
@@ -33,8 +37,8 @@ unsigned Tips::populateSelectedTips(
       TipSettings       *ts = getTip(index);
       if (!ts->isFree()) {
          MenuItem &mi = menuItems[tipsAllocated++];
-         mi.name   = ts->getTipName();
-         mi.tipSettings = ts;
+         mi.name          = ts->getTipName();
+         mi.nvTipSettings = ts;
          if ((checkModifier != nullptr) && (ts->*checkModifier)()) {
             // Mark calibrated tips with star
             mi.modifiers |= MenuItem::Starred;
@@ -59,7 +63,7 @@ unsigned Tips::populateSelectedTips(
 int Tips::findTipInMenu(const TipSettings *tip, MenuItem menuItems[], int tipsAllocated) {
 
    for (int tipIndex=0; tipIndex<tipsAllocated; tipIndex++) {
-      if (menuItems[tipIndex].tipSettings == tip) {
+      if (menuItems[tipIndex].nvTipSettings == tip) {
          return tipIndex;
       }
    }
@@ -68,25 +72,29 @@ int Tips::findTipInMenu(const TipSettings *tip, MenuItem menuItems[], int tipsAl
 
 /**
  * Fill menu array with all tips available.
+ *
  * The array is sorted.
+ * "NO_TIP" is excluded.
  *
  * @param [inout] tipMenuItems      Array to populate with data
  */
-void Tips::populateTips(MenuItem tipMenuItems[TipSettings::NUMBER_OF_TIPS]) {
+void Tips::populateTips(MenuItem (&tipMenuItems)[TipSettings::NUMBER_OF_VALID_TIPS]) {
+
    // Copy tip information to menu settings
-   for(TipSettings::TipNameIndex index=0; index<TipSettings::NUMBER_OF_TIPS; index++) {
-      tipMenuItems[index].name      = TipSettings::initialTipInfo[index].name;
-      tipMenuItems[index].modifiers = 0;
-      tipMenuItems[index].object    = nullptr;
+   unsigned foundTips = 0;
+   for(TipSettings::TipNameIndex index=TipSettings::FIRST_VALID_TIP; index<=TipSettings::LAST_VALID_TIP; TipSettings::inc(index), foundTips++) {
+      tipMenuItems[foundTips].name          = TipSettings::initialTipInfo[index].name;
+      tipMenuItems[foundTips].modifiers     = 0;
+      tipMenuItems[foundTips].nvTipSettings = nullptr;
 
       TipSettings *tip = tips.findTipSettings(index);
       if (tip != nullptr) {
          // Non-volatile tip settings have already been allocated
-         tipMenuItems[index].modifiers |= MenuItem::CheckBoxSelected;
-         tipMenuItems[index].object    = tip;
+         tipMenuItems[foundTips].modifiers      |= MenuItem::CheckBoxSelected;
+         tipMenuItems[foundTips].nvTipSettings   = tip;
       }
    }
 
    // Sort the menu
-   MenuItem::sort(tipMenuItems, TipSettings::NUMBER_OF_TIPS);
+   MenuItem::sort(tipMenuItems, TipSettings::NUMBER_OF_VALID_TIPS);
 }

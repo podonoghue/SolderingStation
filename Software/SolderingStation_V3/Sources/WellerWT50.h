@@ -24,9 +24,9 @@ private:
    /// Thermistor in heater
    WellerThermistorAverage thermistor;
 
-   /// Measurement to use for thermistor on sub-channel A
-   static constexpr MuxSelect Measurement1_ChaThermistor =
-         muxSelectAddSubChannel(WellerThermistorAverage::getMeasurement(), SubChannelNum_A);
+   /// Measurement to use for thermistor on sub-channel B
+   static constexpr MuxSelect Measurement1_Thermistor =
+         muxSelectAddSubChannel(WellerThermistorAverage::getMeasurement(), SubChannelNum_B);
 
    /// Loop controller
    PidController controller{PID_INTERVAL, MIN_DUTY, MAX_DUTY};
@@ -178,7 +178,7 @@ public:
     */
    virtual MuxSelect const *getMeasurementSequence() const override {
       static const MuxSelect sequence[] = {
-            Measurement1_ChaThermistor,
+            Measurement1_Thermistor,
             MuxSelect_Complete,
       };
       return sequence;
@@ -193,7 +193,7 @@ public:
    virtual void processMeasurement(MuxSelect muxSelect, uint32_t adcValue) override {
       (void) adcValue;
       switch(muxSelect) {
-         case Measurement1_ChaThermistor:
+         case Measurement1_Thermistor:
             // Thermistor
             thermistor.accumulate(adcValue);
             tipPresent = adcValue<(ADC_MAXIMUM*0.9);

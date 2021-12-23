@@ -12,6 +12,8 @@
 #include "TipSettings.h"
 #include "Channel.h"
 
+class TipSettings;
+
 class Menus {
 
 private:

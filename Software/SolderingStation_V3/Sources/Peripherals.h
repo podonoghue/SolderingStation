@@ -15,7 +15,7 @@
 /// Resolution used for all ADC conversions.
 constexpr USBDM::AdcResolution ADC_RESOLUTION = USBDM::AdcResolution_16bit_se;
 
-constexpr unsigned ADC_MAXIMUM = USBDM::MeasurementADC::getSingleEndedMaximum(ADC_RESOLUTION);
+constexpr unsigned ADC_MAXIMUM = USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
 
 /// External voltage reference for ADC (Vrefh)
 constexpr float ADC_REF_VOLTAGE = 3.00;
@@ -63,11 +63,20 @@ constexpr float BIAS_RESISTOR_VALUE = 22000;
 /// Voltage used for bias resistor (Vdd ~ 3.3V)
 constexpr float BIAS_VOLTAGE = 3.30;
 
-/// Indicates which tool channel measurement is using
-static constexpr uint8_t CHANNEL_MASK = 0b00000100;
+/// Indicates gain boost (active low)
+constexpr uint8_t GAIN_BOOST_MASK = 0b00000001;
 
 /// Indicates which tool channel measurement is using
 static constexpr uint8_t AB_MASK = 0b00000010;
+
+/// Indicates sub-channel Xa measurement
+static constexpr uint8_t CHA_MASK = 0b00000000;
+
+/// Indicates sub-channel Xb measurement
+static constexpr uint8_t CHB_MASK = AB_MASK;
+
+/// Indicates which tool channel measurement is using
+static constexpr uint8_t CHANNEL_MASK = 0b00000100;
 
 /// Indicates channel 1 measurement
 static constexpr uint8_t CH1_MASK = CHANNEL_MASK;
@@ -77,15 +86,6 @@ static constexpr uint8_t CH2_MASK = 0b00000000;
 
 /// Enables bias for measurement
 static constexpr uint8_t BIAS_MASK = 0b00001000;
-
-/// Indicates sub-channel Xa measurement
-static constexpr uint8_t CHA_MASK = 0b00000000;
-
-/// Indicates sub-channel Xb measurement
-static constexpr uint8_t CHB_MASK = AB_MASK;
-
-/// Indicates gain boost (active low)
-constexpr uint8_t GAIN_BOOST_MASK = 0b00000001;
 
 /// Indicates use of High/Low gain Amplifier path (indicates to software which ADC channel to use)
 constexpr uint8_t AMPLIFIER_MASK = 0b00010000;
@@ -220,7 +220,11 @@ enum MuxSelect : uint8_t {
    MuxSelect_ChbHighGainBoostBiased  = MuxSelect_Ch1bHighGainBoostBiased&~CHANNEL_MASK,                               /**< Channel B + High gain amp + Boost + bias */
    MuxSelect_HighGainBoostBiased     = MuxSelect_Ch1bHighGainBoostBiased&~(CHANNEL_MASK|AB_MASK),                     /**< High gain amp + Boost + bias */
 
-   MuxSelect_Idle                    = MuxSelect_Ch1aHighGainBoost,//muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_HighGain,  false, true),  /**< Idle value - disable bias and gain boost */
+   // Identify tool by measuring ID resistor on A sub-channel
+   MuxSelect_Identify                = MuxSelect_ChaLowGainBiased,  /**< Channel Xa + Low gain amp + Bias */
+
+   MuxSelect_Idle                    = MuxSelect_Ch1aHighGainBoost,
+   //muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_HighGain,  false, true),  /**< Idle value - disable bias and gain boost */
 
    MuxSelect_Complete = (uint8_t)-1
 };
