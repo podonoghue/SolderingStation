@@ -88,10 +88,10 @@ public:
     */
    static void enableAlarmInterrupts(bool enable=true) {
       if (enable) {
-         rtc->IER   |= RTC_IER_TAIE_MASK;
+         rtc->IER = rtc->IER | RTC_IER_TAIE_MASK;
       }
       else {
-         rtc->IER   &= ~RTC_IER_TAIE_MASK;
+         rtc->IER = rtc->IER & ~RTC_IER_TAIE_MASK;
       }
    }
    /**
@@ -101,10 +101,10 @@ public:
     */
    static void enableSecondsInterrupts(bool enable=true) {
       if (enable) {
-         rtc->IER   |= RTC_IER_TSIE_MASK;
+         rtc->IER = rtc->IER | RTC_IER_TSIE_MASK;
       }
       else {
-         rtc->IER   &= ~RTC_IER_TSIE_MASK;
+         rtc->IER = rtc->IER & ~RTC_IER_TSIE_MASK;
       }
    }
 
@@ -225,6 +225,8 @@ public:
 
    /**
     * Configures all mapped pins associated with RTC
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -238,37 +240,33 @@ public:
     * Disabled all mapped pins associated with RTC
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
       // Disable pins if selected and not already locked
       if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
-      Info::clearPCRs();
+         Info::clearPCRs();
       }
    }
 
    /**
     * Basic enable of RTC
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
       Info::enableClock();
-   
       configureAllPins();
    }
 
    /**
-    * Disables the clock to RTC and all mappable pins
+    * Disables the clock to RTC and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
       
       disableAllPins();
-   
-      // Disable clock to peripheral
       Info::disableClock();
    }
 // End Template _mapPinsOption_on.xml

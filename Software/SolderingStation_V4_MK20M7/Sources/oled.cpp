@@ -6,9 +6,9 @@
  *
  *  Based loosely on Adafruit library (initialisation sequences and constants)
  */
-#include "malloc.h"
-#include "Oled.h"
-#include "memory.h"
+#include <malloc.h>
+#include <memory.h>
+#include "oled.h"
 
 using namespace USBDM;
 
@@ -153,7 +153,7 @@ void Oled::setContrast(uint8_t level) {
  */
 void Oled::refreshImage() {
    buffer.controlByte = MULTIPLE_GDRAM;
-   i2c.transmit(I2C_ADDRESS, sizeof(buffer), (uint8_t *)&buffer);
+   i2c.transmit(I2C_ADDRESS, buffer.rawData);
 }
 
 /**
@@ -254,37 +254,37 @@ Oled &Oled::putSpace(int width) {
  * @param [in] writeMode  Mode of modification
  */
 void Oled::putPixel(unsigned index, uint8_t mask, bool pixel, WriteMode writeMode) {
-   usbdm_assert(index < (sizeof(buffer.buffer)/sizeof(buffer.buffer[0])), "Illegal index");
+   usbdm_assert(index < IMAGE_DATA_SIZE, "Illegal index");
    switch(writeMode) {
       case WriteMode_Write:
          if (pixel) {
-            buffer.buffer[index] |= mask;
+            buffer.data[index] |= mask;
          }
          else {
-            buffer.buffer[index] &= ~mask;
+            buffer.data[index] &= ~mask;
          }
          break;
       case WriteMode_InverseWrite:
          if (pixel) {
-            buffer.buffer[index] &= ~mask;
+            buffer.data[index] &= ~mask;
          }
          else {
-            buffer.buffer[index] |= mask;
+            buffer.data[index] |= mask;
          }
          break;
       case WriteMode_Or:
          if (pixel) {
-            buffer.buffer[index] |= mask;
+            buffer.data[index] |= mask;
          }
          break;
       case WriteMode_InverseAnd:
          if (!pixel) {
-            buffer.buffer[index] &= ~mask;
+            buffer.data[index] &= ~mask;
          }
          break;
       case WriteMode_Xor:
          if (pixel) {
-            buffer.buffer[index] ^= mask;
+            buffer.data[index] ^= mask;
          }
          break;
       default:

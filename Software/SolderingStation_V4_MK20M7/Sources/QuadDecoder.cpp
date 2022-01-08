@@ -69,10 +69,10 @@ void QuadDecoder::pinIrqCallback(uint32_t eventMask) {
 
       // Do transition actions
       if (nextState&Inc) {
-         position++;
+         position = position + 1;
       }
       else if (nextState&Dec) {
-         position--;
+         position = position - 1;
       }
       // Strip actions from state
       currentState = (DecoderState)(nextState & DecoderState_Mask);

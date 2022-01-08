@@ -236,6 +236,8 @@ public:
 
    /**
     * Configures all mapped pins associated with DAC
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -249,6 +251,8 @@ public:
     * Disabled all mapped pins associated with DAC
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
@@ -260,26 +264,20 @@ public:
 
    /**
     * Basic enable of DAC
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
       Info::enableClock();
-   
       configureAllPins();
    }
 
    /**
-    * Disables the clock to DAC and all mappable pins
+    * Disables the clock to DAC and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
-      
+      dac->C0 = DAC_C0_DACEN(0);
       disableAllPins();
-   
-      // Disable clock to peripheral
       Info::disableClock();
    }
 // End Template _mapPinsOption.xml
@@ -375,19 +373,6 @@ public:
          callback = unhandledCallback;
       }
       sCallback = callback;
-   }
-
-   /**
-    * Basic enable DAC.
-    * Includes enabling clock and configuring all pins of mapPinsOnEnable is selected on configuration
-    */
-   static void enable() {
-      if (Info::mapPinsOnEnable) {
-         configureAllPins();
-      }
-
-      // Enable clock to DAC interface
-      Info::enableClock();
    }
 
    /**
@@ -511,14 +496,14 @@ public:
     * Enable DMA mode
     */
    static void enableDma() {
-      dac->C1 |= DAC_C1_DMAEN_MASK;
+      dac->C1 = dac->C1 | DAC_C1_DMAEN_MASK;
    }
 
    /**
     * Disable DMA mode
     */
    static void disableDma() {
-      dac->C1 &= ~DAC_C1_DMAEN_MASK;
+      dac->C1 = dac->C1 & ~DAC_C1_DMAEN_MASK;
    }
 
    /**
@@ -527,7 +512,7 @@ public:
     * the buffer read pointer will be advanced once.
     */
    static void softwareTrigger() {
-      dac->C0 |= DAC_C0_DACSWTRG_MASK;
+      dac->C0 = dac->C0 | DAC_C0_DACSWTRG_MASK;
    }
 
 #ifdef DAC_C0_DACBWIEN_MASK

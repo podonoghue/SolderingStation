@@ -335,6 +335,8 @@ public:
 
    /**
     * Configures all mapped pins associated with USB
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -348,37 +350,33 @@ public:
     * Disabled all mapped pins associated with USB
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
       // Disable pins if selected and not already locked
       if constexpr (Info::mapPinsOnEnable && !(MapAllPinsOnStartup && (ForceLockedPins == PinLock_Locked))) {
-      Info::clearPCRs();
+         Info::clearPCRs();
       }
    }
 
    /**
     * Basic enable of USB
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
       Info::enableClock();
-   
       configureAllPins();
    }
 
    /**
-    * Disables the clock to USB and all mappable pins
+    * Disables the clock to USB and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
       
       disableAllPins();
-   
-      // Disable clock to peripheral
       Info::disableClock();
    }
 // End Template _mapPinsOption_on.xml
@@ -1068,10 +1066,10 @@ void UsbBase_T<Info, EP0_SIZE>::handleUSBSuspend() {
 
    // Asynchronous Resume Interrupt Enable (USB->CPU)
    // Only enable if transceiver is disabled
-   //   fUsb->USBTRC0  |= USB_USBTRC0_USBRESMEN_MASK;
+   //   fUsb->USBTRC0 = fUsb->USBTRC0 | USB_USBTRC0_USBRESMEN_MASK;
 
    // Enable resume detection or reset interrupts from the USB
-   fUsb->INTEN   |= (USB_INTEN_RESUMEEN_MASK|USB_INTEN_USBRSTEN_MASK);
+   fUsb->INTEN = fUsb->INTEN | (USB_INTEN_RESUMEEN_MASK|USB_INTEN_USBRSTEN_MASK);
    fConnectionState = USBsuspended;
 
    // Notify user level (to enter Low power later!!!)
@@ -1090,7 +1088,7 @@ void UsbBase_T<Info, EP0_SIZE>::handleUSBResume() {
 
 
    // Mask further resume interrupts
-   fUsb->INTEN &= ~USB_INTEN_RESUMEEN_MASK;
+   fUsb->INTEN = fUsb->INTEN & ~USB_INTEN_RESUMEEN_MASK;
 
    if (fConnectionState != USBsuspended) {
       // Ignore if not suspended
@@ -1159,7 +1157,7 @@ void UsbBase_T<Info, EP0_SIZE>::initialise() {
 
    // Enable USB regulator
    SIM->SOPT1CFG  = SIM_SOPT1CFG_URWE_MASK;
-   SIM->SOPT1    |= SIM_SOPT1_USBREGEN_MASK;
+   SIM->SOPT1     = SIM->SOPT1 | SIM_SOPT1_USBREGEN_MASK;
 
 #ifdef USB_CLK_RECOVER_IRC_EN_IRC_EN
    // IRC clock enable
@@ -1172,13 +1170,13 @@ void UsbBase_T<Info, EP0_SIZE>::initialise() {
 #if 0
    // Enable in LP modes
    SIM->SOPT1CFG  = SIM_SOPT1CFG_URWE_MASK;
-   SIM->SOPT1    &= ~(SIM_SOPT1_USBSSTBY_MASK|SIM_SOPT1_USBVSTBY_MASK);
+   SIM->SOPT1     = SIM->SOPT1 & ~(SIM_SOPT1_USBSSTBY_MASK|SIM_SOPT1_USBVSTBY_MASK);
 #endif
 
 #if 0
    // Removed due to errata e5928: USBOTG: USBx_USBTRC0[USBRESET] bit does not operate as expected in all cases
    // Reset USB H/W
-   USB0_USBTRC0 |= USB_USBTRC0_USBRESET_MASK;
+   USB0_USBTRC0 = USB0_USBTRC0 | USB_USBTRC0_USBRESET_MASK;
    while ((USB0_USBTRC0&USB_USBTRC0_USBRESET_MASK) != 0) {
    }
 #endif

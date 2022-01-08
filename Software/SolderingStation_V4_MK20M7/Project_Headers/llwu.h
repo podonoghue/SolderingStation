@@ -366,6 +366,8 @@ public:
 
    /**
     * Configures all mapped pins associated with LLWU
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -379,6 +381,8 @@ public:
     * Disabled all mapped pins associated with LLWU
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
@@ -390,27 +394,21 @@ public:
 
    /**
     * Basic enable of LLWU
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
-      Info::enableClock();
-   
+      
       configureAllPins();
    }
 
    /**
-    * Disables the clock to LLWU and all mappable pins
+    * Disables the clock to LLWU and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
       
       disableAllPins();
-   
-      // Disable clock to peripheral
-      Info::disableClock();
+      
    }
 // End Template _mapPinsOption.xml
 
@@ -607,7 +605,7 @@ public:
     * @param[in] filterNum Pin Filter to clear flag
     */
    static void clearFilteredPinWakeupFlag(LlwuFilterNum filterNum) {
-      llwu->FILT[filterNum] |= LLWU_FILT_FILTF_MASK;
+      llwu->FILT[filterNum] = llwu->FILT[filterNum] | LLWU_FILT_FILTF_MASK;
    }
 
    /**
@@ -615,7 +613,7 @@ public:
     */
    static void clearFilteredPinWakeupFlags() {
       for (unsigned index=0; index<(sizeof(llwu->FILT)/sizeof(llwu->FILT[0])); index++) {
-         llwu->FILT[index] |= LLWU_FILT_FILTF_MASK;
+         llwu->FILT[index] = llwu->FILT[index] | LLWU_FILT_FILTF_MASK;
       }
    }
 
@@ -647,10 +645,10 @@ public:
          LlwuPeripheralMode   llwuPeripheralMode=LlwuPeripheralMode_Enabled) {
 
       if (llwuPeripheralMode) {
-         llwu->ME |= llwuPeripheral;
+         llwu->ME = llwu->ME | llwuPeripheral;
       }
       else {
-         llwu->ME &= (uint8_t)~llwuPeripheral;
+         llwu->ME = llwu->ME & (uint8_t)~llwuPeripheral;
       }
    }
 

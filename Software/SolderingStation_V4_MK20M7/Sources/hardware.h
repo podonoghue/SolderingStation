@@ -29,6 +29,7 @@
 #include "pit.h"
 #include "adc.h"
 #include "cmp.h"
+#include "vref.h"
 
 
 namespace USBDM {
@@ -46,7 +47,7 @@ extern void mapAllPins();
 typedef const Adc0                                           FixedGainAdc;                                 
 
 /// ADC channel for channel 1 ID pin
-typedef const Adc0::Channel<0>                               Ch1Identify;                                  // PGA0_DP(p9)
+typedef const Adc0::Channel<0>                               Ch1Identify_notUsed;                          // PGA0_DP(p9)
 
 /// ADC channel with external amplifier
 typedef const Adc0::Channel<3>                               FixedGainAdcChannel;                          // PGA1_DP(p11)
@@ -55,7 +56,7 @@ typedef const Adc0::Channel<3>                               FixedGainAdcChannel
 typedef const Adc0::Channel<19>                              LowGainDirectAdcChannel;                      // PGA0_DM(p10)
 
 /// ADC channel for channel 2 ID pin
-typedef const Adc0::Channel<21>                              Ch2Identify;                                  // PGA1_DM(p12)
+typedef const Adc0::Channel<21>                              Ch2Identify_notUsed;                          // PGA1_DM(p12)
 
 /// Internal temperature sensor
 typedef const Adc0::Channel<26>                              ChipTemperatureAdcChannel;                    // TEMP_SENSOR(Internal)
@@ -152,6 +153,9 @@ typedef const Pit::Channel<0>                                PollingTimerChannel
 
 /// PIT channel to use for sample and control timing
 typedef const Pit::Channel<1>                                ControlTimerChannel;                          // PIT_CH1(Internal)
+
+/// VREF, Voltage Reference
+typedef const Vref                                           V_ref;                                        
 
 } // End namespace USBDM
 

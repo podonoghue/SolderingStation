@@ -911,8 +911,6 @@ void Menus::settingsMenu() {
 
    // Top-level menu - must match table below
    static const MenuItem items[] = {
-         {"Ch1 Debug",         },
-         {"Ch2 Debug",         },
          {"Ch1 Setback temp.", },
          {"Ch2 Setback temp.", },
          {"Ch1 Idle time",     },
@@ -921,25 +919,31 @@ void Menus::settingsMenu() {
          {"Ch1 Safety time",   },
          {"Tip Selection",     },
          {"Temp Calibration",  },
-         {"Step Response",     },
          {"Pid Manual set",    },
+#if defined(DEBUG_BUILD)
+         {"Ch1 Debug",         },
+         {"Ch2 Debug",         },
+         {"Step Response",     },
+#endif
    };
 
    // Table of routines to execute and parameters for same
    static const SettingsData settingsData[] = {
          // Display Title             Routine               Parameters ...
-         {items[0].name,              runHeater,            1                                           },
-         {items[1].name,              runHeater,            2                                           },
          {"Channel 1\nSetback temp.", editTemperature,      nvinit.ch1Settings.setbackTemperature, 1    }, // C
          {"Channel 2\nSetback temp.", editTemperature,      nvinit.ch2Settings.setbackTemperature, 1    }, // C
          {"Channel 1\nIdle time",     editTime,             nvinit.ch1Settings.setbackTime,        10   }, // seconds
          {"Channel 2\nIdle time",     editTime,             nvinit.ch2Settings.setbackTime,        10   }, // seconds
          {"Channel 1\nSafety time",   editTime,             nvinit.ch1Settings.safetyOffTime,      60   }, // seconds
          {"Channel 2\nSafety time",   editTime,             nvinit.ch2Settings.safetyOffTime,      60   }, // seconds
-         {items[8].name,              selectAvailableTips                                               },
-         {items[9].name,              calibrateTipTemps                                                 },
-         {items[10].name,             stepResponse                                                      },
-         {items[11].name,             editPidSettings                                                   },
+         {"Tip Selection",            selectAvailableTips                                               },
+         {"Temp Calibration",         calibrateTipTemps                                                 },
+         {"Pid Manual set",           editPidSettings                                                   },
+#if defined(DEBUG_BUILD)
+         {"Ch1 Debug",                runHeater,            1                                           },
+         {"Ch2 Debug",                runHeater,            2                                           },
+         {"Step Response",            stepResponse                                                      },
+#endif
    };
 
    //   console.write("Size    = ").writeln(sizeof(settingsData));

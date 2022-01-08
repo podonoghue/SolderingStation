@@ -17,6 +17,7 @@
    <item key="$peripheral$GPIOB_polarity"                  value="196611" />
    <item key="$peripheral$GPIOC_polarity"                  value="286" />
    <item key="$peripheral$GPIOD_polarity"                  value="255" />
+   <item key="$peripheral$VREF_codeIdentifier"             value="V_ref" />
    <item key="$pin$PTA0_pcrSetting_7"                      value="700" />
    <item key="$pin$PTA13_pcrSetting_0"                     value="0" />
    <item key="$pin$PTA18_pcrSetting_0"                     value="0" />
@@ -55,11 +56,11 @@
    <item key="$pin$PTD7_pcrSetting_1"                      value="100" />
    <item key="$pin$PTE0_pcrSetting_1"                      value="100" />
    <item key="$pin$PTE1_pcrSetting_1"                      value="100" />
-   <item key="$signal$ADC0_SE0_codeIdentifier"             value="Ch1Identify" />
+   <item key="$signal$ADC0_SE0_codeIdentifier"             value="Ch1Identify_notUsed" />
    <item key="$signal$ADC0_SE0_descriptionSetting"         value="ADC channel for channel 1 ID pin" />
    <item key="$signal$ADC0_SE19_codeIdentifier"            value="LowGainDirectAdcChannel" />
    <item key="$signal$ADC0_SE19_descriptionSetting"        value="ADC channel direct to sample point" />
-   <item key="$signal$ADC0_SE21_codeIdentifier"            value="Ch2Identify" />
+   <item key="$signal$ADC0_SE21_codeIdentifier"            value="Ch2Identify_notUsed" />
    <item key="$signal$ADC0_SE21_descriptionSetting"        value="ADC channel for channel 2 ID pin" />
    <item key="$signal$ADC0_SE26_codeIdentifier"            value="ChipTemperatureAdcChannel" />
    <item key="$signal$ADC0_SE26_descriptionSetting"        value="Internal temperature sensor" />

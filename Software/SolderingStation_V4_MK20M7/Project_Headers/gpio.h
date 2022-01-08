@@ -87,7 +87,7 @@ public:
     */
    void setIn() const {
       // Make pin an input
-      gpio->PDDR &= ~bitMask;
+      gpio->PDDR = gpio->PDDR & ~bitMask;
    }
    /**
     * Set pin as digital output
@@ -96,7 +96,7 @@ public:
     */
    void setOut() const {
       // Make pin an output
-      gpio->PDDR |= bitMask;
+      gpio->PDDR = gpio->PDDR | bitMask;
    }
    /**
     * Set pin. Pin will be high if configured as an output.
@@ -139,6 +139,34 @@ public:
     */
    void toggle() const {
       gpio->PTOR = bitMask;
+   }
+   /**
+    * Read pin value
+    *
+    * @return true/false reflecting pin value.
+    *
+    * @note This reads the PDIR
+    * @note Polarity _is_ _not_ significant
+    * @note Don't use this method unless dealing with very low-level I/O
+    */
+   bool readBit() const {
+      return isHigh();
+   }
+   /**
+    * Write boolean value to pin (if configured as output)
+    *
+    * @param[in] value true/false value
+    *
+    * @note Polarity _is_ _not_ significant
+    * @note Don't use this method unless dealing with very low-level I/O
+    */
+   void  __attribute__((always_inline)) writeBit(bool value) const {
+      if (value) {
+         set();
+      }
+      else {
+         clear();
+      }
    }
    /**
     * Set pin to active level (if configured as output)
@@ -366,9 +394,40 @@ public:
    /** Get base address of GPIO hardware as pointer to struct */
    static constexpr HardwarePtr<GPIO_Type> gpio = gpioAddress;
 
+   /// Base address of GPIO hardware
+   static constexpr uint32_t gpioBase = gpioAddress;
+   /// Address of PDOR register in GPIO
+   static constexpr uint32_t gpioPDOR = gpioAddress+offsetof(GPIO_Type, PDOR);
+   /// Address of PSOR register in GPIO
+   static constexpr uint32_t gpioPSOR = gpioAddress+offsetof(GPIO_Type, PSOR);
+   /// Address of PCOR register in GPIO
+   static constexpr uint32_t gpioPCOR = gpioAddress+offsetof(GPIO_Type, PCOR);
+   /// Address of PTOR register in GPIO
+   static constexpr uint32_t gpioPTOR = gpioAddress+offsetof(GPIO_Type, PTOR);
+   /// Address of PDDR register in GPIO
+   static constexpr uint32_t gpioPDDR = gpioAddress+offsetof(GPIO_Type, PDDR);
+   /// Address of PDIR register in GPIO
+   static constexpr uint32_t gpioPDIR = gpioAddress+offsetof(GPIO_Type, PDIR);
+
    /** Polarity of pin */
    static constexpr Polarity POLARITY = polarity;
 
+   /**
+    * Set pin as digital I/O.
+    * Pin is initially set as an input.
+    * Use SetIn() and SetOut() to change direction.
+    *
+    * @note Resets the pin output value to the inactive state
+    *
+    * @param[in] pcrValue PCR value to use in configuring pin (excluding MUX value). See pcrValue()
+    */
+   static void setInOut() {
+      // Make input initially
+      setIn();
+      // Set inactive pin state (if later made output)
+      setInactive();
+      Pcr::setPCR(defaultPcrValue);
+   }
    /**
     * Set pin as digital I/O.
     * Pin is initially set as an input.
@@ -379,12 +438,29 @@ public:
     *
     * @param[in] pcrValue PCR value to use in configuring pin (excluding MUX value). See pcrValue()
     */
-   static void setInOut(PcrValue pcrValue = defaultPcrValue) {
+   static void setInOut(PcrValue pcrValue) {
       // Make input initially
       setIn();
       // Set inactive pin state (if later made output)
       setInactive();
       Pcr::setPCR(pcrValue);
+   }
+   /**
+    * Set pin as digital I/O.
+    * Pin is initially set as an input.
+    * Use SetIn() and SetOut() to change direction.
+    *
+    * @note Resets the Pin Control Register value (PCR value).
+    * @note Resets the pin output value to the inactive state
+    *
+    * @param[in] pcrValue PCR value to use in configuring pin (excluding MUX value). See pcrValue()
+    */
+   static void setInOut(PcrValueClass pcrValue) {
+      // Make input initially
+      setIn();
+      // Set inactive pin state (if later made output)
+      setInactive();
+      Pcr::setPCR(pcrValue.pcrValue());
    }
    /**
     * Set pin as digital I/O.
@@ -427,7 +503,7 @@ public:
 #ifdef RELEASE_BUILD
       bitbandSet(gpio->PDDR, bitNum);
 #else
-      gpio->PDDR |= Pcr::BITMASK;
+      gpio->PDDR = gpio->PDDR | Pcr::BITMASK;
 #endif
    }
    /**
@@ -466,6 +542,24 @@ public:
       Pcr::setPCR(pcrValue);
    }
    /**
+    * Enable pin as digital output with initial inactive level.\n
+    * Configures all Pin Control Register (PCR) values
+    *
+    * @note Resets the Pin Control Register value (PCR value).
+    * @note Resets the pin value to the inactive state
+    * @note Use setOut() for a lightweight change of direction without affecting other pin settings.
+    *
+    * @param[in] pcrValue PCR value to use in configuring port (excluding MUX value). See pcrValue()
+    */
+   static void setOutput(PcrValueClass pcrValue) {
+      // Set initial level before enabling pin drive
+      setInactive();
+      // Make pin an output
+      setOut();
+      // Configure pin
+      Pcr::setPCR(pcrValue.pcrValue());
+   }
+   /**
     * @brief
     * Enable pin as digital output with initial inactive level.\n
     * Configures <b>all</b> Pin Control Register (PCR) values\n
@@ -501,7 +595,7 @@ public:
 #ifdef RELEASE_BUILD
       bitbandClear(gpio->PDDR, bitNum);
 #else
-      gpio->PDDR &= ~Pcr::BITMASK;
+      gpio->PDDR = gpio->PDDR & ~Pcr::BITMASK;
 #endif
    }
    /**
@@ -532,6 +626,21 @@ public:
       // Make pin an input
       setIn();
       Pcr::setPCR(pcrValue);
+   }
+   /**
+    * @brief
+    * Enable pin as digital input.\n
+    * Configures all Pin Control Register (PCR) values
+    *
+    * @note Resets the Pin Control Register value (PCR value).
+    * @note Use setIn() for a lightweight change of direction without affecting other pin settings.
+    *
+    * @param[in] pcrValue PCR value to use in configuring port (excluding MUX value)
+    */
+   static void setInput(PcrValueClass pcrValue) {
+      // Make pin an input
+      setIn();
+      Pcr::setPCR(pcrValue.pcrValue());
    }
    /**
     * @brief
@@ -596,6 +705,34 @@ public:
     */
    static void toggle() {
       gpio->PTOR = Pcr::BITMASK;
+   }
+   /**
+    * Write boolean value to pin (if configured as output)
+    *
+    * @param[in] value true/false value
+    *
+    * @note Polarity _is_ _not_ significant
+    * @note Don't use this method unless dealing with very low-level I/O
+    */
+   static void  __attribute__((always_inline)) writeBit(bool value) {
+      if (value) {
+         set();
+      }
+      else {
+         clear();
+      }
+   }
+   /**
+    * Read pin value
+    *
+    * @return true/false reflecting pin value.
+    *
+    * @note This reads the PDIR
+    * @note Polarity _is_ _not_ significant
+    * @note Don't use this method unless dealing with very low-level I/O
+    */
+   static bool readBit() {
+      return isHigh();
    }
    /**
     * Set pin to active level (if configured as output)
@@ -808,7 +945,7 @@ public:
     * @note Does not affect other pin settings.
     */
    void setIn() const {
-      gpio->PDDR &= ~bitMask;
+      gpio->PDDR = gpio->PDDR & ~bitMask;
    }
    /**
     * Set all pins in field as outputs.
@@ -816,7 +953,7 @@ public:
     * @note Does not affect other pin settings.
     */
    void setOut() const {
-      gpio->PDDR |= bitMask;
+      gpio->PDDR = gpio->PDDR | bitMask;
    }
    /**
     * Set individual pin directions
@@ -985,6 +1122,21 @@ public:
    /** Get base address of GPIO hardware as pointer to struct */
    static constexpr HardwarePtr<GPIO_Type> gpio = gpioAddress;
 
+   /// Base address of GPIO hardware
+   static constexpr uint32_t gpioBase = gpioAddress;
+   /// Address of PDOR register in GPIO
+   static constexpr uint32_t gpioPDOR = gpioAddress+offsetof(GPIO_Type, PDOR);
+   /// Address of PSOR register in GPIO
+   static constexpr uint32_t gpioPSOR = gpioAddress+offsetof(GPIO_Type, PSOR);
+   /// Address of PCOR register in GPIO
+   static constexpr uint32_t gpioPCOR = gpioAddress+offsetof(GPIO_Type, PCOR);
+   /// Address of PTOR register in GPIO
+   static constexpr uint32_t gpioPTOR = gpioAddress+offsetof(GPIO_Type, PTOR);
+   /// Address of PDDR register in GPIO
+   static constexpr uint32_t gpioPDDR = gpioAddress+offsetof(GPIO_Type, PDDR);
+   /// Address of PDIR register in GPIO
+   static constexpr uint32_t gpioPDIR = gpioAddress+offsetof(GPIO_Type, PDIR);
+
 public:
    /** Port associated with this GPIO Field */
    using Port = PcrBase_T<portAddress, irqNum, irqLevel>;
@@ -1054,12 +1206,12 @@ public:
       enablePortClocks(clockInfo);
 
       // Default to input
-      gpio->PDDR &= ~BITMASK;
+      gpio->PDDR = gpio->PDDR & ~BITMASK;
 
       // Default to output inactive
       write(0);
 
-      uint32_t pcr  = pcrValue;
+      uint32_t pcr  = static_cast<uint32_t>(pcrValue);
 
 #ifdef PORT_DFCR_CS_MASK
       if (pcr&PinFilter_Digital) {
@@ -1114,7 +1266,7 @@ public:
     * @note Does not affect other pin settings
     */
    static void setOut() {
-      gpio->PDDR |= BITMASK;
+      gpio->PDDR = gpio->PDDR | BITMASK;
    }
    /**
     * Sets all pin as digital outputs.
@@ -1126,7 +1278,7 @@ public:
     */
    static void setOutput() {
       setInOut(defaultPcrValue.pcrValue());
-      gpio->PDDR |= BITMASK;
+      gpio->PDDR = gpio->PDDR | BITMASK;
    }
    /**
     * Sets all pin as digital outputs.
@@ -1139,7 +1291,7 @@ public:
     */
    static void setOutput(PcrValue pcrValue) {
       setInOut(pcrValue);
-      gpio->PDDR |= BITMASK;
+      gpio->PDDR = gpio->PDDR | BITMASK;
    }
    /**
     * Sets all pin as digital outputs.
@@ -1165,7 +1317,7 @@ public:
     * @note Does not affect other pin settings
     */
    static void setIn() {
-      gpio->PDDR &= ~BITMASK;
+      gpio->PDDR = gpio->PDDR & ~BITMASK;
    }
    /**
     * Set all pins as digital inputs.

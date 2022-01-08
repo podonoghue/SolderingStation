@@ -15,13 +15,17 @@
 /// Resolution used for all ADC conversions.
 constexpr USBDM::AdcResolution ADC_RESOLUTION = USBDM::AdcResolution_16bit_se;
 
-constexpr unsigned ADC_MAXIMUM = USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
+/// Vcc used as reference in some places (volts)
+constexpr float VCC_REF_VOLTAGE = 3.30;
 
-/// External voltage reference for ADC (Vrefh)
-constexpr float ADC_REF_VOLTAGE = 3.00;
+/// External voltage reference for low-gain ADC - VrefH (volts)
+constexpr float ADC_LOW_GAIN_REF_VOLTAGE = 3.00;
 
-/// External voltage reference for CMP (Vdda or VrefOut)
-constexpr float CMP_REF_VOLTAGE = 3.30;
+/// External voltage reference for programmable-gain ADC - VrefOut (volts)
+constexpr float ADC_PROGRAMMABLE_GAIN_REF_VOLTAGE = 1.195;
+
+/// External voltage reference for CMP (Vdda)
+constexpr float CMP_REF_VOLTAGE = VCC_REF_VOLTAGE;
 
 /// Low gain op-amp feedback resistor
 constexpr float LOW_GAIN_RF = 10000;
@@ -242,22 +246,44 @@ enum MuxSelect : uint8_t {
    MuxSelect_ChbProgGainBoostBiased  = MuxSelect_Ch1bProgGainBoostBiased&~CHANNEL_MASK,                               /**< Channel B + High gain amp + Boost + bias */
    MuxSelect_ProgGainBoostBiased     = MuxSelect_Ch1bProgGainBoostBiased&~(CHANNEL_MASK|AB_MASK),                     /**< High gain amp + Boost + bias */
 
-   // Identify tool by measuring ID resistor on A sub-channel
-   MuxSelect_Identify                = MuxSelect_ChaLowGainBiased,  /**< Channel Xa + Low gain amp + Bias */
-
    MuxSelect_Idle                    = MuxSelect_Ch1aProgGainBoost,
    //muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_ProgGain,  false, true),  /**< Idle value - disable bias and gain boost */
 
    MuxSelect_Complete = (uint8_t)-1,
 
    // Various PGA settings with Boost
-   MuxSelect_ProgGainBoostx1  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_1),
+   MuxSelect_ProgGainBoostx1  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_1), // =  MuxSelect_ChaProgGainBoostx1
    MuxSelect_ProgGainBoostx2  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_2),
    MuxSelect_ProgGainBoostx4  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_4),
    MuxSelect_ProgGainBoostx8  = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_8),
    MuxSelect_ProgGainBoostx16 = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_16),
    MuxSelect_ProgGainBoostx32 = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_32),
    MuxSelect_ProgGainBoostx64 = muxSelectAddPgaGain(MuxSelect_ProgGainBoost, PgaGain_64),
+
+   MuxSelect_ChbProgGainBoostx1  = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoost, PgaGain_1),
+   MuxSelect_ChbProgGainBoostx2  = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoost, PgaGain_2),
+   MuxSelect_ChbProgGainBoostx4  = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoost, PgaGain_4),
+   MuxSelect_ChbProgGainBoostx8  = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoost, PgaGain_8),
+   MuxSelect_ChbProgGainBoostx16 = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoost, PgaGain_16),
+   MuxSelect_ChbProgGainBoostx32 = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoost, PgaGain_32),
+   MuxSelect_ChbProgGainBoostx64 = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoost, PgaGain_64),
+
+   // Various PGA settings with Boost+Bias
+   MuxSelect_ProgGainBoostBiasedx1  = muxSelectAddPgaGain(MuxSelect_ProgGainBoostBiased, PgaGain_1), // =  MuxSelect_ChaProgGainBoostBiasedx1
+   MuxSelect_ProgGainBoostBiasedx2  = muxSelectAddPgaGain(MuxSelect_ProgGainBoostBiased, PgaGain_2),
+   MuxSelect_ProgGainBoostBiasedx4  = muxSelectAddPgaGain(MuxSelect_ProgGainBoostBiased, PgaGain_4),
+   MuxSelect_ProgGainBoostBiasedx8  = muxSelectAddPgaGain(MuxSelect_ProgGainBoostBiased, PgaGain_8),
+   MuxSelect_ProgGainBoostBiasedx16 = muxSelectAddPgaGain(MuxSelect_ProgGainBoostBiased, PgaGain_16),
+   MuxSelect_ProgGainBoostBiasedx32 = muxSelectAddPgaGain(MuxSelect_ProgGainBoostBiased, PgaGain_32),
+   MuxSelect_ProgGainBoostBiasedx64 = muxSelectAddPgaGain(MuxSelect_ProgGainBoostBiased, PgaGain_64),
+
+   MuxSelect_ChbProgGainBoostBiasedx1  = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoostBiased, PgaGain_1),
+   MuxSelect_ChbProgGainBoostBiasedx2  = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoostBiased, PgaGain_2),
+   MuxSelect_ChbProgGainBoostBiasedx4  = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoostBiased, PgaGain_4),
+   MuxSelect_ChbProgGainBoostBiasedx8  = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoostBiased, PgaGain_8),
+   MuxSelect_ChbProgGainBoostBiasedx16 = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoostBiased, PgaGain_16),
+   MuxSelect_ChbProgGainBoostBiasedx32 = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoostBiased, PgaGain_32),
+   MuxSelect_ChbProgGainBoostBiasedx64 = muxSelectAddPgaGain(MuxSelect_ChbProgGainBoostBiased, PgaGain_64),
 };
 
 /**
@@ -310,7 +336,7 @@ static constexpr int      MAX_DUTY     = 100;
 /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohm element
 static constexpr int      MIN_DUTY     = 0;
 
-/// PID interval (1 rectified mains cycle)
-static constexpr float    PID_INTERVAL = 10*USBDM::ms;
+/// PID interval (1 cycle of the rectified mains)
+static constexpr float    PID_INTERVAL = 10_ms;
 
 #endif /* SOURCES_PERIPHERALS_H_ */

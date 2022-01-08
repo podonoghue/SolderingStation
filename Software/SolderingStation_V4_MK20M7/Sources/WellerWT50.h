@@ -26,7 +26,7 @@ private:
 
    /// Measurement to use for thermistor on sub-channel B
    static constexpr MuxSelect Measurement1_Thermistor =
-         muxSelectAddSubChannel(WellerThermistorAverage::getMeasurement(), SubChannelNum_B);
+         muxSelectAddSubChannel(WellerThermistorAverage::MEASUREMENT, SubChannelNum_B);
 
    /// Loop controller
    PidController controller{PID_INTERVAL, MIN_DUTY, MAX_DUTY};
@@ -195,8 +195,7 @@ public:
       switch(muxSelect) {
          case Measurement1_Thermistor:
             // Thermistor
-            thermistor.accumulate(adcValue);
-            tipPresent = adcValue<(ADC_MAXIMUM*0.9);
+            tipPresent = thermistor.accumulate(adcValue);
             break;
 
          default:
