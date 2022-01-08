@@ -32,8 +32,7 @@
 
 #include "libusb.h"
 #include "Bootloader.h"
-
-#include "BootloaderInfo.h"
+#include "UsbCommandMessage.h"
 
 static constexpr uint8_t   EP_OUT      = LIBUSB_ENDPOINT_OUT|1;  // EP #1 OUT
 static constexpr uint8_t   EP_IN       = LIBUSB_ENDPOINT_IN |2;  // EP #2 IN
@@ -251,45 +250,24 @@ const char *Bootloader::queryDeviceInformation(ResponseIdentify &identity) {
       return "Operation failed on device";
    }
 
-   flashStart           = identity.flashStart;
-   flashSize            = identity.flashSize;
    hardwareVersion      = identity.bootHardwareVersion;
    bootloaderVersion    = identity.bootSoftwareVersion;
-   existingImageVersion = identity.imageSoftwareVersion;
+   imageVersion = identity.imageSoftwareVersion;
+   flash1Start          = identity.flash1_start;
+   flash1Size           = identity.flash1_size;
+   flash2Start          = identity.flash2_start;
+   flash2Size           = identity.flash2_size;
 
    return nullptr;
 }
 
-/**
- * Program image to device
- *
- * @param flashImage    Flash image being programmed to device
- *
- * @return nullptr   => success
- * @return !=nullptr => failed, error message
- */
-const char *Bootloader::programFlash(FlashImagePtr flashImage) {
+const char *Bootloader::programFlashRange(FlashImagePtr flashImage, uint32_t flashAddress, uint32_t bytesToProgram) {
 
-   Crc32 crc32;
-
-   // OK for empty image
-   if (flashSize==0) {
-      return nullptr;
-   }
+   fprintf(stderr, "Processing [0x%08X..0x%08X]\n", flashAddress, (flashAddress)+bytesToProgram-1);
    const char *errrorMessage = nullptr;
-
-   fprintf(stderr, "Processing [0x%06X..0x%06X]\n", flashStart, (flashStart)+flashSize-1);
 
    // Maximum size of data to write
    unsigned int maxSplitBlockSize = sizeof(UsbCommandMessage::data);
-
-   uint32_t flashAddress   = flashStart;
-   uint32_t bytesToProgram = flashSize;
-
-   bool     report    = false;
-   bool     lastEmpty = true;
-   uint32_t lastStart = flashStart;
-   uint32_t lastEnd   = 0x0;
 
    while (bytesToProgram>0) {
       uint32_t splitBlockSize = bytesToProgram;
@@ -305,11 +283,12 @@ const char *Bootloader::programFlash(FlashImagePtr flashImage) {
       bool empty = true;
       for (unsigned index=0; index<maxSplitBlockSize; index++) {
          uint8_t byte;
-         if ((flashAddress+index) == (flashStart+flashSize-4)) {
+         if ((flashAddress+index) == (flash1Start+flash1Size-4)) {
             empty = false;
 
             // Replace last 4 bytes with CRC
             uint32_t crc = crc32.getCrc();
+            fprintf(stderr, "crc = 0x%08X\n", crc);
             command.data[index++] = (uint8_t)crc;
             command.data[index++] = (uint8_t)(crc>>8);
             command.data[index++] = (uint8_t)(crc>>16);
@@ -321,18 +300,16 @@ const char *Bootloader::programFlash(FlashImagePtr flashImage) {
          empty = empty && (byte == 0xFF);
          command.data[index] = byte;
       }
-      if (lastEmpty != empty) {
-         if (report) {
-            fprintf(stderr, "[0x%06X..0x%06X] - %s\n",
-                  lastStart, lastEnd, lastEmpty?"Skipping":"Programming");
-            fflush(stderr);
-         }
-         lastEmpty = empty;
-         lastStart = command.startAddress;
+      if (empty) {
+         fprintf(stderr, "Skipping splitBlock [0x%06X..0x%06X]\n",
+               command.startAddress, command.startAddress+command.byteLength-1);
+         fflush(stderr);
       }
-      report = true;
-      lastEnd   = command.startAddress+command.byteLength-1;
-      if (!empty) {
+      else {
+         fprintf(stderr, "Programming splitBlock [0x%06X..0x%06X]\n",
+               command.startAddress, command.startAddress+command.byteLength-1);
+         fflush(stderr);
+
          errrorMessage = programBlock(command);
          if (errrorMessage != nullptr) {
             break;
@@ -341,11 +318,36 @@ const char *Bootloader::programFlash(FlashImagePtr flashImage) {
       flashAddress    += splitBlockSize;
       bytesToProgram  -= splitBlockSize;
    }
-   fprintf(stderr, "[0x%06X..0x%06X] - %s\n",
-         lastStart, lastEnd, lastEmpty?"Skipping":"Programming");
-   fflush(stderr);
-   uint32_t crc = crc32.getCrc();
-   fprintf(stderr, "crc = 0x%08X\n", crc);
+   return errrorMessage;
+}
+
+/**
+ * Program image to device
+ *
+ * @param flashImage    Flash image being programmed to device
+ *
+ * @return nullptr   => success
+ * @return !=nullptr => failed, error message
+ */
+const char *Bootloader::programFlash(FlashImagePtr flashImage) {
+
+   // OK for empty image
+   if ((flash1Size==0) && (flash2Size==0)) {
+      return nullptr;
+   }
+   const char *errrorMessage = nullptr;
+
+   do {
+      programFlashRange(flashImage, flash2Start, flash2Size);
+      if (errrorMessage != nullptr) {
+         continue;
+      }
+      errrorMessage = programFlashRange(flashImage, flash1Start, flash1Size);
+      if (errrorMessage != nullptr) {
+         continue;
+      }
+   } while (false);
+
    return errrorMessage;
 }
 
@@ -375,11 +377,11 @@ const char *Bootloader::download(FlashImagePtr flashImage) {
       if (errorMessage != nullptr) {
          break;
       }
-      if ((flashImage->getFirstAllocatedAddress()<flashStart) ||
-            (flashImage->getLastAllocatedAddress()>(flashStart+flashSize-1))) {
-         errorMessage = "Flash image extends beyond target flash memory";
-         break;
-      }
+//      if ((flashImage->getFirstAllocatedAddress()<flashStart) ||
+//            (flashImage->getLastAllocatedAddress()>(flashStart+flashSize-1))) {
+//         errorMessage = "Flash image extends beyond target flash memory";
+//         break;
+//      }
       errorMessage = eraseFlash();
       if (errorMessage != nullptr) {
          break;
@@ -435,8 +437,19 @@ const char *Bootloader::getDeviceInformation(ResponseIdentify &identity) {
       if (errorMessage) {
          continue;
       }
-      fprintf(stderr, "Hardware Version = %s, Bootloader Version = %d, Flash[0x%08X..0x%08X], Image Version = %d\n",
-            getHardwareType(hardwareVersion), bootloaderVersion, flashStart, flashStart+flashSize-1, existingImageVersion);
+      fprintf(stderr,
+            "Hardware Version   = %s\n"
+            "Bootloader Version = %d\n"
+            "Image Version      = %d\n"
+            "Flash1[0x%08X..0x%08X]\n"
+            "Flash2[0x%08X..0x%08X]\n",
+            getHardwareType(hardwareVersion),
+            bootloaderVersion,
+            imageVersion,
+            flash1Start,
+            flash1Start+flash1Size-1,
+            flash2Start,
+            flash2Start+flash2Size-1);
       fflush(stderr);
    } while (false);
 

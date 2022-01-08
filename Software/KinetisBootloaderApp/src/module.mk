@@ -5,7 +5,6 @@ SRC += BootloaderApp.cpp
 SRC += Bootloader.cpp
 SRC += BootloaderDialogue.cpp
 SRC += BootloaderDialogueSkeleton.cpp
-SRC += crc32b.cpp
 SRC += Version.rc
 SRC += ErrorMessages.cpp
 SRC += UsbdmSystem.cpp

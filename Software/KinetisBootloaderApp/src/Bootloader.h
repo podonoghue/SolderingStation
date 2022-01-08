@@ -32,10 +32,11 @@
 #ifndef BOOTLOADER_H_
 #define BOOTLOADER_H_
 
-#include "BootloaderInfo.h"
 #include "FlashImage.h"
 #include "libusb.h"
+#include "UsbCommandMessage.h"
 #include "crc32b.h"
+#include "BootInformation.h"
 
 class Bootloader {
 
@@ -69,13 +70,19 @@ private:
    Bootloader& operator=(const Bootloader &other) = delete;
    Bootloader& operator=(Bootloader &&other) = delete;
 
-   libusb_context *libusbContext = nullptr;
-   libusb_device_handle *deviceHandle = nullptr;
-   uint32_t flashStart           = 0;
-   uint32_t flashSize            = 0;
-   uint16_t hardwareVersion      = 0;
-   uint16_t bootloaderVersion    = 0;
-   uint32_t existingImageVersion = 0;
+   libusb_context       *libusbContext = nullptr;
+   libusb_device_handle *deviceHandle  = nullptr;
+
+   HardwareType      hardwareVersion      = HW_UNKNOWN;
+   BootloaderVersion bootloaderVersion    = BOOTLOADER_UNKNOWN;
+   uint32_t          imageVersion = 0;
+
+   uint32_t flash1Start = 0;
+   uint32_t flash1Size  = 0;
+   uint32_t flash2Start = 0;
+   uint32_t flash2Size  = 0;
+
+   Crc32 crc32;
 
    /**
     * Locate USB device to program
@@ -131,6 +138,9 @@ private:
     * @return !=nullptr => failed, error message
     */
    const char *programFlash(FlashImagePtr flashImage);
+
+   const char *programFlashRange(FlashImagePtr flashImage, uint32_t flashAddress, uint32_t bytesToProgram);
+
 };
 
 #endif /* BOOTLOADER_H_ */

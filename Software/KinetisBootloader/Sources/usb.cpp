@@ -283,7 +283,7 @@ void UsbBase::utf8ToStringDescriptor(volatile uint8_t *to, volatile const uint8_
       uint16_t utf16Char=0;
 
       // Update size
-      *size  += 2;
+      *size = *size + 2;
       if (*from < 0x80) {
          // 1-byte UTF-8
          utf16Char = *from++;

@@ -14,10 +14,7 @@
 #ifndef SOURCES_FLASH_H_
 #define SOURCES_FLASH_H_
 
-#include <string.h>
-#include "derivative.h"
-#include "hardware.h"
-#include "delay.h"
+#include "pin_mapping.h"
 #include "smc.h"
 
 extern uint8_t __FlexRamStart[];
@@ -116,7 +113,7 @@ protected:
    static FlashDriverError_t readFlashResource(uint8_t resourceSelectCode, uint32_t address, uint8_t *data);
 
    /**
-    * Program EEPROM Data Size Code and FlexNVM Partition Code.
+    * Program EEPROM Data Size Code and FlexNVM Partition Code
     *
     * See device reference manual for the meaning of the following parameters
     *
@@ -150,12 +147,12 @@ protected:
 //      write("residual flash=").write(partitionInformation[partition].eeepromSize>>10).writeln("K)");
 
       if (isFlexRamConfigured()) {
-//         console.write("flashController().FCNFG.FTFL_FCNFG_EEERDY = ").writeln((bool)(flashController().FCNFG&FTFL_FCNFG_EEERDY_MASK));
+//         console.write("flashController->FCNFG.FTFL_FCNFG_EEERDY = ").writeln((bool)(flashController->FCNFG&FTFL_FCNFG_EEERDY_MASK));
 //         console.writeln("Flex RAM is already configured");
          // Note: This means, even when using the debug build, if the FlexRAM has been previously configured then real FlexRAM will be used.
          return FLASH_ERR_OK;
       }
-//      console.write("flashController().FCNFG.FTFL_FCNFG_EEERDY = ").writeln((bool)(flashController().FCNFG&FTFL_FCNFG_EEERDY_MASK));
+//      console.write("flashController->FCNFG.FTFL_FCNFG_EEERDY = ").writeln((bool)(flashController->FCNFG&FTFL_FCNFG_EEERDY_MASK));
       if ((eepromSizes[eeprom].size*MINIMUM_BACKING_RATIO)>(partitionInformation[partition].eeepromSize)) {
 //         console.writeln("Backing ratio (Flash/EEPROM) is too small\n");
          USBDM::setErrorCode(E_FLASH_INIT_FAILED);
@@ -192,7 +189,7 @@ public:
     *
     * @return Reference to Flash hardware
     */
-   __attribute__((always_inline)) static volatile FTFL_Type &flashController() { return ftfl(); }
+   static constexpr HardwarePtr<FTFL_Type> flashController = baseAddress;
 
    /**
     * Checks if the flexRAM has been configured.
@@ -202,11 +199,11 @@ public:
     */
    static bool isFlexRamConfigured() {
 #if 1
-      return waitForFlashReady() && (flashController().FCNFG&FTFL_FCNFG_EEERDY_MASK);
+      return waitForFlashReady() && (flashController->FCNFG&FTFL_FCNFG_EEERDY_MASK);
 #else
-      console.write("flashController().FCNFG = ").writeln(flashController().FCNFG, Radix_16);
-      console.write("flashController().FCNFG.FTFL_FCNFG_RAMRDY = ").writeln((bool)(flashController().FCNFG&FTFL_FCNFG_RAMRDY_MASK));
-      console.write("flashController().FCNFG.FTFL_FCNFG_EEERDY = ").writeln((bool)(flashController().FCNFG&FTFL_FCNFG_EEERDY_MASK));
+      console.write("flashController->FCNFG = ").writeln(flashController->FCNFG, Radix_16);
+      console.write("flashController->FCNFG.FTFL_FCNFG_RAMRDY = ").writeln((bool)(flashController->FCNFG&FTFL_FCNFG_RAMRDY_MASK));
+      console.write("flashController->FCNFG.FTFL_FCNFG_EEERDY = ").writeln((bool)(flashController->FCNFG&FTFL_FCNFG_EEERDY_MASK));
 
       uint8_t result[4];
       FlashDriverError_t rc = readFlashResource(0, DATA_ADDRESS_FLAG|0xFC, result);
@@ -220,7 +217,7 @@ public:
       console.write("FlexNVM partition code = ").writeln(flexNvmPartitionSize, Radix_16);
       console.write("EEPROM data set size   = ").writeln(eepromDatSetSize, Radix_16);
 
-      return (flashController().FCNFG&FTFL_FCNFG_EEERDY_MASK);
+      return (flashController->FCNFG&FTFL_FCNFG_EEERDY_MASK);
 #endif
    }
 
@@ -232,7 +229,7 @@ public:
     */
    static bool waitForFlashReady() {
       for(int timeout=0; timeout<100000; timeout++) {
-         if ((flashController().FSTAT&FTFL_FSTAT_CCIF_MASK) != 0) {
+         if ((flashController->FSTAT&FTFL_FSTAT_CCIF_MASK) != 0) {
             return true;
          }
       }
@@ -255,7 +252,7 @@ public:
     * This is used to wait until a FlexRAM write has completed.
     *
     * @return true  => Operation complete and FlexRAM idle
-    * @return false => timeout or flash not available
+    * @return false => Timeout or flash not available
     */
    static bool waitUntilFlexIdle() {
       usbdm_assert(isFlashAvailable(), "Flash use in unsuitable run mode");
@@ -277,7 +274,7 @@ public:
     *
     * @param[in]  nvicPriority  Interrupt priority
     */
-   static void enableNvicInterrupts(uint32_t nvicPriority) {
+   static void enableNvicInterrupts(NvicPriority nvicPriority) {
       enableNvicInterrupt(irqNums[0], nvicPriority);
    }
 
@@ -315,7 +312,7 @@ public:
 
 private:
    /**
-    * Program a phrase to Flash memory.
+    * Program phrase to Flash memory
     *
     * @param[in]  data       Location of data to program
     * @param[out] address    Memory address to program - must be phrase boundary
@@ -335,7 +332,7 @@ private:
 
 public:
    /**
-    * Program a range of bytes to Flash memory.
+    * Program a range of bytes to Flash memory
     *
     * @param[in]  data       Location of data to program
     * @param[out] address    Memory address to program - must be phrase boundary
@@ -391,6 +388,9 @@ private:
    T data;
 
 public:
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wuninitialized"
    /**
     * Assignment
     * This adds a wait for the Flash to be updated.
@@ -421,6 +421,7 @@ public:
       }
       return *this;
    }
+#pragma GCC diagnostic pop
    /**
     * Increment underlying type.
     * This adds a wait for the Flash to be updated
@@ -537,7 +538,7 @@ public:
    /**
     * Assign from NonvolatileArray array.
     *
-    * @param[in]other NonvolatileArray to assign from
+    * @param[in] other NonvolatileArray to assign from
     *
     * This adds a wait for the Flash to be updated after each element is assigned
     *

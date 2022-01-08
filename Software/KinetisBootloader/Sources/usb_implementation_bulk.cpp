@@ -18,6 +18,7 @@
 
 #include "usb.h"
 #include "usb_implementation_bulk.h"
+#include "delay.h"
 
 namespace USBDM {
 

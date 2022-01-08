@@ -1,4 +1,3 @@
 /KinetisBootloaderApp.x86_64-win-gnu/
 /KinetisBootloaderApp.x86_64-linux-gnu/
-/Debug/
-/.cproject
+/KinetisBootloaderApp-debug.x86_64-linux-gnu/

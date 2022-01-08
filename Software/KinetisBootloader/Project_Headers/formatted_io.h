@@ -19,9 +19,8 @@
  */
 #include <stdint.h>
 #include <math.h>
-//#include <cstdio>       // snprintf()
 #include <ctype.h>      // isspace() etc
-#include "hardware.h"
+#include "pin_mapping.h"
 
 #if defined(__FREE_RTOS)
 #include "FreeRTOS.h"
@@ -41,13 +40,25 @@ namespace USBDM {
 /**
  * Enumeration selecting radix for integer types with << or >> operators
  */
-enum Radix : uint8_t {
+enum class Radix : uint8_t {
    Radix_2       = 2,         //!< Convert as binary number
    Radix_8       = 8,         //!< Convert as octal number
    Radix_10      = 10,        //!< Convert as decimal number
    Radix_16      = 16,        //!< Convert as hexadecimal number
    Radix_Default = Radix_10,  //!< Default radix (10)
 };
+
+// Radix 2 format
+constexpr Radix Radix_2  = Radix::Radix_2;
+
+// Radix 8 format
+constexpr Radix Radix_8  = Radix::Radix_8;
+
+// Radix 10 format
+constexpr Radix Radix_10 = Radix::Radix_10;
+
+// Radix 16 format
+constexpr Radix Radix_16 = Radix::Radix_16;
 
 enum WhiteSpaceType {
    /**
@@ -81,7 +92,7 @@ enum Width : uint8_t {
    Width_auto = 0,//!< Width_auto
 };
 
-enum EchoMode : uint8_t {
+enum EchoMode : bool {
    /*
     * For use with operator<< and operator>>
     */
@@ -97,50 +108,98 @@ enum FlushType {
    Flush
 };
 
-struct FormattingSettings {
+struct IoFormat {
    /**
     * Precision multiplier used for floating point numbers (10^fFloatPrecision)
     */
    unsigned fFloatPrecisionMultiplier;
 
-   /**
-    * Current radix for << and >> operators
-    */
+   /** Current radix */
    Radix fRadix;
 
-   /**
-    * Control echo of input characters
-    */
+   /** Control echo of input characters */
    EchoMode fEcho;
 
-   /**
-    * Padding for integers
-    */
+   /** Padding for integers  */
    Padding fPadding;
 
-   /**
-    * Width used for integers numbers
-    */
+   /** Width used for integers numbers  */
    uint8_t fWidth;
 
-   /**
-    * How to pad the digits on left of floating point number
-    */
+   /** How to pad the digits on left of floating point number */
    Padding fFloatPadding;
 
-   /**
-    * Precision used for floating point numbers
-    */
+   /** Precision used for floating point numbers */
    uint8_t fFloatWidth;
 
-   /**
-    * Precision used for floating point numbers
-    */
+   /** Precision used for floating point numbers */
    uint8_t fFloatPrecision;
 
-   constexpr FormattingSettings() :
-      fFloatPrecisionMultiplier(1000), fRadix(Radix_10), fEcho(EchoMode_On), fPadding(Padding_None),
-      fWidth(0), fFloatPadding(Padding_None), fFloatWidth(0), fFloatPrecision(3) {
+   /**
+    * Constructor.
+    *
+    * This also determines the default settings
+    */
+   constexpr IoFormat() :
+      fFloatPrecisionMultiplier(1000),    // 3 decimal places
+      fRadix(Radix_10),                   // Base 10
+      fEcho(EchoMode_On),                 // Echo on
+      fPadding(Padding_None),             // No padding in integers
+      fWidth(0),                          // Minimum width on integers
+      fFloatPadding(Padding_None),        // No padding on floats
+      fFloatWidth(0),                     // Minimum width on floats
+      fFloatPrecision(3) {                // 3 decimal places on floats
+   }
+
+   /**
+    * Set format for floating point numbers
+    *
+    * @param precision Number of digits to the right of decimal point
+    * @param padding   How to pad on the left of the number (Padding_LeadingSpaces, Padding_None, Padding_LeadingZeroes)
+    * @param width     Number of characters to the left of decimal point (ignored for padding_None)
+    *
+    * @return Reference to self
+    */
+   IoFormat &setFloatFormat(
+         unsigned  precision,
+         Padding   padding  = Padding_None,
+         unsigned  width    = 0) {
+
+      usbdm_assert(padding != Padding_TrailingSpaces, "Not supported format");
+
+      fFloatPrecision           = precision;
+      fFloatPrecisionMultiplier = 1;
+      while (precision-->0) {
+         fFloatPrecisionMultiplier *= 10;
+      }
+      fFloatPadding = padding;
+      fFloatWidth   = width;
+      return *this;
+   }
+
+   /**
+    * Set format for integers
+    *
+    * @param width      Width of number
+    * @param padding    How to pad on the left of the number (Padding_LeadingSpaces, Padding_None, Padding_LeadingZeroes)
+    * @param radix      Radix for number
+    *
+    * @return Reference to self
+    */
+   IoFormat &setIntegerFormat(
+         unsigned width,
+         Padding padding   = Padding_LeadingSpaces,
+         Radix radix       = Radix_10) {
+
+      fWidth   = width;
+      fPadding = padding;
+      fRadix   = radix;
+      return *this;
+   }
+
+   IoFormat &setEcho(EchoMode echo) {
+      fEcho = echo;
+      return *this;
    }
 };
 
@@ -150,21 +209,20 @@ struct FormattingSettings {
 class FormattedIO {
 
 protected:
-
    /**
     * Current settings
     */
-   FormattingSettings fFormat;
-
-   /**
-    * Indicate in error state
-    */
-   bool inErrorState = false;
+   IoFormat fFormat;
 
    /**
     * One character look-ahead
     */
    int16_t lookAhead = -1;
+
+   /**
+    * Indicate in error state
+    */
+   bool inErrorState = false;
 
 #if defined (__FREE_RTOS) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_RECURSIVE_MUTEXES == 1 )
    SemaphoreHandle_t mutex;
@@ -206,14 +264,14 @@ protected:
    static int convertDigit(int ch, Radix radix) {
       unsigned digit = ch - '0';
       if (digit<10) {
-         return (digit<radix)?digit:-1;
+         return (digit<static_cast<unsigned>(radix))?digit:-1;
       }
       digit = ch-'a'+10;
-      if (digit<radix) {
+      if (digit<static_cast<unsigned>(radix)) {
          return digit;
       }
       digit = ch-'A'+10;
-      if (digit<radix) {
+      if (digit<static_cast<unsigned>(radix)) {
          return digit;
       }
       return -1;
@@ -226,21 +284,27 @@ protected:
     * @return true  Character available i.e. _readChar() will not block
     * @return false No character available
     */
-   virtual bool _isCharAvailable() = 0;
+   virtual bool _isCharAvailable() {
+      return false;
+   }
 
    /**
     * Receives a character (blocking)
     *
     * @return Character received
     */
-   virtual int _readChar() = 0;
+   virtual int _readChar() {
+      return -1;
+   }
 
    /**
     * Writes a character (blocking)
     *
     * @param[in]  ch - character to send
     */
-   virtual void _writeChar(char ch) = 0;
+   virtual void _writeChar(char ch) {
+      (void)ch;
+   }
 
 public:
    /**
@@ -248,7 +312,7 @@ public:
     *
     * @param[out] settings Setting object
     */
-   FormattedIO &getFormat(FormattingSettings &settings) {
+   FormattedIO &getFormat(IoFormat &settings) {
       settings = fFormat;
       return *this;
    }
@@ -258,7 +322,7 @@ public:
     *
     * @param[in] settings Setting object
     */
-   FormattedIO &setFormat(FormattingSettings &settings) {
+   FormattedIO &setFormat(IoFormat &settings) {
       fFormat = settings;
       return *this;
    }
@@ -271,7 +335,7 @@ public:
     */
    FormattedIO &resetFormat() {
       // Default settings
-      static const FormattingSettings defaultSettings;
+      static const IoFormat defaultSettings;
 
       fFormat = defaultSettings;
       return *this;
@@ -280,12 +344,17 @@ public:
    /**
     *  Flush output data
     */
-   virtual void flushOutput() = 0;
+   virtual FormattedIO &flushOutput() {
+      return *this;
+   }
 
    /**
     *  Flush input data
     */
-   virtual void flushInput() = 0;
+   virtual FormattedIO &flushInput() {
+      lookAhead = -1;
+      return *this;
+   }
 
    /**
     * Lock the object
@@ -318,7 +387,7 @@ public:
     * Peek at lookahead (non-blocking).
     *
     * @return <0   No character available
-    * @return >=0  Character available
+    * @return >=0  The available character
     */
    int __attribute__((noinline)) peek() {
       if (lookAhead>0) {
@@ -397,16 +466,11 @@ public:
    /**
     * Set precision for floating point numbers
     *
-    * @param precision Precision to use
-    *
-    * @return Reference to self
-    */
-   /**
-    *
     * @param precision Number of digits to the right of decimal point
     * @param padding   How to pad on the left of the number (Padding_LeadingSpaces, Padding_None, Padding_LeadingZeroes)
     * @param width     Number of characters to the left of decimal point (ignored for padding_None)
-    * @return
+    *
+    * @return Reference to self
     */
    FormattedIO &setFloatFormat( unsigned  precision,
                                 Padding   padding  = Padding_None,
@@ -450,7 +514,7 @@ public:
       if (ptr == nullptr) {
          __BKPT();
       }
-      if ((radix<2)||(radix>16)) {
+      if ((static_cast<unsigned>(radix)<2)||(static_cast<unsigned>(radix)>16)) {
          __BKPT();
       }
 #endif
@@ -458,8 +522,8 @@ public:
       char *beginPtr = ptr;
       // Convert backwards
       do {
-         *ptr++ = "0123456789ABCDEF"[value % radix];
-         value /= radix;
+         *ptr++ = "0123456789ABCDEF"[value % static_cast<unsigned>(radix)];
+         value /= static_cast<unsigned>(radix);
       } while (value != 0);
 
       // Add leading padding
@@ -636,6 +700,27 @@ public:
    }
 
    /**
+    * Receive string until terminator character or buffer full.\n
+    * The terminating character is discarded and the string always '\0' terminated
+    *
+    * @param[out] data       Data buffer for reception (size is inferred from this parameter)
+    * @param[in]  terminator Terminating character
+    *
+    * @return number of characters read (excluding terminator)
+    *
+    * @note Excess characters are discarded once the buffer is full.
+    *
+    * Usage
+    * @code
+    *    char buff[100];
+    *    int numChars = gets(buff);
+    * @endcode
+    */
+   template<size_t N>
+   int __attribute__((noinline)) gets(char (&data)[N], char terminator='\n') {
+      return gets(data, N, terminator);
+   }
+    /**
     * Write a character
     *
     * @param[in]  ch - character to send
@@ -822,8 +907,9 @@ public:
     *
     * @return Reference to self
     */
-   FormattedIO NOINLINE_DEBUG &writeln(const void *value, Radix radix=Radix_16) {
-      return writeln(reinterpret_cast<unsigned long>(value), radix);
+   FormattedIO __attribute__((noinline)) &writeln(const void *value, Radix radix=Radix_16) {
+      write(reinterpret_cast<unsigned long>(value), radix);
+      return writeln();
    }
 
    /**
@@ -914,20 +1000,48 @@ public:
     */
    FormattedIO __attribute__((noinline)) &write(double value) {
       char buff[20];
+      if (isnan(value)) {
+         return write("Nan");
+      }
       bool isNegative = value<0;
       if (isNegative) {
          value = -value;
       }
-      long scaledValue = static_cast<long>(round(value*fFormat.fFloatPrecisionMultiplier));
+      int exponent=0;
+      auto x = value*fFormat.fFloatPrecisionMultiplier;
+      if (x>4294967295) {
+         while (x>=fFormat.fFloatPrecisionMultiplier*10) {
+            exponent++;
+            x /= 10;
+         }
+      }
+      if ((x!=0) && (x<1)) {
+         while (x<=(fFormat.fFloatPrecisionMultiplier/10.0)) {
+            exponent--;
+            x *= 10;
+         }
+      }
+      auto y = round(x);
+      unsigned long scaledValue = static_cast<unsigned long>(y);
+      if (exponent != 0) {
+
+      }
+
       ultoa(buff, scaledValue/fFormat.fFloatPrecisionMultiplier, Radix_10, fFormat.fFloatPadding, fFormat.fFloatWidth, isNegative);
-      write(buff).write('.');
-      ultoa(buff, 
-           (scaledValue)%fFormat.fFloatPrecisionMultiplier,
-           Radix_10, Padding_LeadingZeroes, fFormat.fFloatPrecision);
+      if (fFormat.fFloatPrecision>0) {
+         write(buff).write('.');
+         ultoa(buff,
+               (scaledValue)%fFormat.fFloatPrecisionMultiplier,
+               Radix_10, Padding_LeadingZeroes, fFormat.fFloatPrecision);
+      }
       write(buff);
+      if (exponent != 0) {
+         write("E").write(exponent);
+      }
       return *this;
    }
 #endif
+
    /**
     * Write a double with newline
     *
@@ -962,6 +1076,166 @@ public:
       return writeln(static_cast<double>(value));
    }
 
+   /**
+    * Write an integral array
+    *
+    * @param[in]  array Pointer to array to print
+    * @param[in]  size  Number of elements in array
+    * @param[in]  radix Radix for conversion
+    *
+    * @return Reference to self
+    */
+   template <typename T>
+   FormattedIO NOINLINE_DEBUG &write(const T array[], size_t size, Radix radix) {
+      unsigned itemCount = 0;
+      const char *prefix="";
+      switch(radix) {
+         case Radix_2:  prefix = "0b"; break;
+         case Radix_8:  prefix = "0";  break;
+         case Radix_16: prefix = "0x"; break;
+         case Radix_10:                break;
+         default:                      break; // ToDo add other prefixes?
+      }
+      write("{ ");
+      for(unsigned index=0; index<size; index++) {
+         if (itemCount>=10) {
+            itemCount = 0;
+            write("\n  ");
+         }
+         itemCount++;
+         write(prefix);
+         write(array[index], radix);
+         write(", ");
+      }
+      write('}');
+      return *this;
+   }
+
+   /**
+    * Write an integral array with newline
+    *
+    * @param[in]  array Pointer to array to print
+    * @param[in]  size  Number of elements in array
+    * @param[in]  radix Radix for conversion
+    *
+    * @return Reference to self
+    */
+   template <typename T>
+   FormattedIO NOINLINE_DEBUG &writeln(const T array[], size_t size, Radix radix) {
+      write(array, size, radix);
+      return writeln();
+   }
+
+   /**
+    * Write an integral array
+    *
+    * @param[in]  array Reference to array to print
+    * @param[in]  radix Radix for conversion
+    *
+    * @return Reference to self
+    */
+   template <typename T, size_t N>
+   FormattedIO NOINLINE_DEBUG &write(const T (&array)[N], Radix radix) {
+      return write(array, N, radix);
+   }
+
+   /**
+    * Write an integral array with newline
+    *
+    * @param[in]  array Reference to array to print
+    * @param[in]  radix Radix for conversion
+    *
+    * @return Reference to self
+    */
+   template <typename T, size_t N>
+   FormattedIO NOINLINE_DEBUG &writeln(const T (&array)[N], Radix radix) {
+      return writeln(array, N, radix);
+   }
+
+   /**
+    * Write an array
+    *
+    * @param[in]  array Pointer to array to print
+    * @param[in]  size  Number of elements in array
+    *
+    * @return Reference to self
+    */
+   template <typename T>
+   FormattedIO NOINLINE_DEBUG &write(const T array[], size_t size) {
+      unsigned itemCount = 0;
+      write("{ ");
+      for(unsigned index=0; index<size; index++) {
+         if (itemCount>=10) {
+            itemCount = 0;
+            write("\n  ");
+         }
+         itemCount++;
+         write(array[index]);
+         write(", ");
+      }
+      write('}');
+      return *this;
+   }
+
+   /**
+    * Write an array with newline
+    *
+    * @param[in]  array Pointer to array to print
+    * @param[in]  size  Number of elements in array
+    *
+    * @return Reference to self
+    */
+   template <typename T>
+   FormattedIO NOINLINE_DEBUG &writeln(const T array[], size_t size) {
+      write(array, size);
+      return writeln();
+   }
+
+   /**
+    * Write an array
+    *
+    * @param[in]  array Reference to array to print
+    *
+    * @return Reference to self
+    */
+   template <typename T, size_t N>
+   FormattedIO NOINLINE_DEBUG &write(const T (&array)[N]) {
+      return write(array, N);
+   }
+
+   /**
+    * Write an array with newline
+    *
+    * @param[in]  array Reference to array to print
+    *
+    * @return Reference to self
+    */
+   template <typename T, size_t N>
+   FormattedIO NOINLINE_DEBUG &writeln(const T (&array)[N]) {
+      return writeln(array, N);
+   }
+
+   /**
+    * Write a C string
+    *
+    * @param array
+    * @return
+    */
+   template <size_t N>
+   FormattedIO NOINLINE_DEBUG &write(const char (&array)[N]) {
+      return write((const char*)array);
+   }
+
+   /**
+    * Write a C string with newline
+    *
+    * @param array
+    * @return
+    */
+   template <size_t N>
+   FormattedIO NOINLINE_DEBUG &writeln(const char (&array)[N]) {
+      return writeln((const char*)array);
+   }
    /**
     * Write a character
     *
@@ -1071,6 +1345,131 @@ public:
    FormattedIO NOINLINE_DEBUG &operator <<(double value) {
       return write(value);
    }
+
+#if (USE_DIMENSION_CHECK)
+   /**
+    * Write a Seconds variable
+    *
+    * @param[in]  value Seconds to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &write(const Seconds value) {
+      float num = value.getValue();
+      const char *units = " s";
+      if (value<0.000'001) {
+         num *= 1'000'000'000.0;
+         units =  " ns";
+      }
+      else if (value<0.001) {
+         num *= 1'000'000.0;
+         units =  " us";
+      }
+      else if (value<1.0) {
+         num *= 1000.0;
+         units =  " ms";
+      }
+      return write(num).write(units);
+   }
+
+   /**
+    * Write a Seconds variable
+    *
+    * @param[in]  value Seconds to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &operator <<(const Seconds value) {
+      return write(value);
+   }
+
+   /**
+    * Write a Seconds variable with newline
+    *
+    * @param[in]  value Seconds to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &writeln(const Seconds value) {
+      return write(value).writeln();
+   }
+
+   /**
+    * Write a Ticks variable
+    *
+    * @param[in]  value Ticks to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &write(const Ticks value) {
+      return write(value.getValue()).write(" ticks");
+   }
+
+   /**
+    * Write a Ticks variable
+    *
+    * @param[in]  value Ticks to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &operator <<(const Ticks value) {
+      return write(value);
+   }
+
+   /**
+    * Write a Ticks variable with newline
+    *
+    * @param[in]  value Ticks to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &writeln(const Ticks value) {
+      return write(value).writeln();
+   }
+
+   /**
+    * Write a Hertz variable
+    *
+    * @param[in]  value Hertz to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &write(const Hertz value) {
+      float num = value.getValue();
+      const char *units = " Hz";
+      if (num>=1'000'000.0) {
+         num /= 1'000'000.0;
+         units =  " MHz";
+      }
+      else if (num>=1'000.0) {
+         num /= 1'000.0;
+         units =  " kHz";
+      }
+      return write(num).write(units);
+   }
+
+   /**
+    * Write a Hertz variable with newline
+    *
+    * @param[in]  value Hertz to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &writeln(const Hertz value) {
+      return write(value).writeln();
+   }
+
+   /**
+    * Write a Hertz variable
+    *
+    * @param[in]  value Hertz to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &operator <<(const Hertz value) {
+      return write(value);
+   }
+#endif
 
    /**
     * Sets the conversion radix for integer types
@@ -1206,7 +1605,7 @@ public:
             break;
          }
          digitCount++;
-         value *= radix;
+         value *= static_cast<unsigned>(radix);
          value += digit;
          ch = readChar();
       } while (true);
@@ -1465,7 +1864,12 @@ public:
    }
 
    /**
-    * Get field width
+    * Create field width object
+    *
+    * @code
+    * Uart0 myUart;
+    * myUart<<Uart0::width(10)<<123;
+    * @endcode
     *
     * @param[in]  width Integer to convert to width
     *
@@ -1476,10 +1880,23 @@ public:
    }
 
    /**
+    * Set printing format
+    *
+    * @param ioSettings    Setting to apply
+    *
+    * @return Reference to self
+    */
+   FormattedIO &operator<<(const IoFormat &ioSettings) {
+      fFormat = ioSettings;
+      return *this;
+   }
+
+   /**
+    * Set width for integers
     *
     * @param[in] width
     *
-    * @return
+    * @return Reference to self
     */
    FormattedIO &operator<<(Width width) {
       setWidth(width);
@@ -1487,10 +1904,11 @@ public:
    }
 
    /**
+    * Set padding for integers
     *
     * @param[in] padding
     *
-    * @return
+    * @return Reference to self
     */
    FormattedIO &operator<<(Padding padding) {
       setPadding(padding);

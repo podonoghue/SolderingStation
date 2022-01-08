@@ -22,6 +22,11 @@ uint32_t SystemCoreClock = 20000000;
 __attribute__((__weak__))
 uint32_t SystemBusClock  = 20000000;
 
+#ifdef SIM_CLKDIV1_OUTDIV3_MASK
+__attribute__((__weak__))
+uint32_t SystemFlexbusClock = 20000000;
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,10 +63,12 @@ void software_init_hook () {
 void* __dso_handle;
 #endif
 
+#if defined(KINETIS_BOOTLOADER_CHECK)
 void checkICP();
+#endif
 
 /**
- *  @brief Low-level initialize the system
+ *  @brief Low-level initialise the system
  *
  *  Low level setup of the microcontroller system. \n
  *  Called very early in the initialisation. \n
@@ -80,7 +87,7 @@ void SystemInitLowLevel(void) {
 
 #ifdef SCB_CCR_DIV_0_TRP_Msk
    /* Enable trapping of divide by zero */
-   SCB->CCR |= SCB_CCR_DIV_0_TRP_Msk;
+   SCB->CCR = SCB->CCR | SCB_CCR_DIV_0_TRP_Msk;
 #endif
 
 #ifdef RCM_MR_BOOTROM
@@ -137,11 +144,13 @@ void SystemInitLowLevel(void) {
          WDOG_STCTRLH_CLKSRC(0);          // WDOG clk=LPO
 #endif
 
+#if defined(KINETIS_BOOTLOADER_CHECK)
    /**
     * Hook for ICP code
     * Needed to be done before too much uC configuration
     */
    checkICP();
+#endif
 }
 
 /**
@@ -155,7 +164,7 @@ void SystemInit(void) {
     * This is generic initialization code
     * It may not be correct for a specific target
     */
-	
+
 #ifdef PMC_REGSC_ACKISO
    USBDM::Pmc::releasePins();
 #endif

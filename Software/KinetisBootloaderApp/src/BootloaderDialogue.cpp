@@ -75,16 +75,19 @@ void BootloaderDialogue::onCheckDevice(wxCommandEvent &event) {
             "==== Bootloader ====\r\n"
             "Hardware Version = %s\r\n"
             "Software Version = %d\r\n"
+            "Flash Range1[0x%08X..0x%08X]\r\n"
+            "Flash Range2[0x%08X..0x%08X]\r\n"
             "=== Loaded Image ===\r\n"
             "Hardware Version = %s\r\n"
-            "Software Version = %d\r\n"
-            "Flash Image[0x%08X..0x%08X]",
+            "Software Version = %d",
             getHardwareType(identity.bootHardwareVersion),
             identity.bootSoftwareVersion,
+            identity.flash1_start,
+            identity.flash1_start+identity.flash1_size-1,
+            identity.flash2_start,
+            identity.flash2_start+identity.flash2_size-1,
             getHardwareType(identity.imageHardwareVersion),
-            identity.imageSoftwareVersion,
-            identity.flashStart,
-            identity.flashStart+identity.flashSize-1
+            identity.imageSoftwareVersion
             );
       checkDevice_textCtrl->ChangeValue(status);
    }
@@ -102,15 +105,6 @@ void BootloaderDialogue::onProgramDevice(wxCommandEvent &event) {
       const char *errorMessage = bl.getDeviceInformation(identity);
       if (errorMessage != nullptr) {
          programAction_static->SetLabel(errorMessage);
-         return;
-      }
-      if ((flashImage->getFirstAllocatedAddress() < identity.flashStart) ||
-          ((flashImage->getLastAllocatedAddress() - flashImage->getFirstAllocatedAddress() + 1)) > identity.flashSize) {
-
-      }
-      if ((identity.flashStart  > flashImage->getFirstAllocatedAddress()) ||
-            (identity.flashSize < flashImage->getLastAllocatedAddress() - flashImage->getFirstAllocatedAddress())) {
-         programAction_static->SetLabel("Flash image lies outside target range");
          return;
       }
       errorMessage = bl.download(flashImage);
