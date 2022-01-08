@@ -35,6 +35,9 @@ void Control::initialise() {
 
    Debug::setOutput();
 
+   // Vref_out is needed for PGA/ADC reference
+//   Vref::configure(VrefBuffer_HighPower, VrefReg_Enable, VrefIcomp_Enable, VrefChop_Enable);
+
    // Static function to use as ADC call-back
    static AdcCallbackFunction adc_cb = [](uint32_t result, int channel){
       control.adcHandler(result, channel);
@@ -117,15 +120,26 @@ void Control::initialise() {
    // Enable amplifier input clamp
    Clamp::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
 
+   /**
+    * Watchdog handler
+    * Will execute on power-off
+    */
    static auto wdogCallback = []() {
       ch1Drive.write(0b00);
       ch2Drive.write(0b00);
       ch1Drive.setInput();
       ch2Drive.setInput();
+
+      // Wait here for reset
+      __asm__("bkpt");
    };
 
-   Wdog::setCallback(wdogCallback);
-   Wdog::setTimeout(20*ms);
+   // Set up watchdog to monitor tool switching
+   // This ensures the iron isn't stuck on
+   Wdog::writeRefresh(0xA602, 0xB480);
+
+   // Timeout = twice the expected refresh period
+   Wdog::setTimeout(20_ms);
    Wdog::configure(
          WdogEnable_Enabled,
          WdogClock_Lpo,
@@ -134,7 +148,9 @@ void Control::initialise() {
          WdogEnableInDebug_Disabled,
          WdogEnableInStop_Enabled,
          WdogEnableInWait_Enabled);
-   Wdog::writeRefresh(0xA602, 0xB480);
+   Wdog::lockRegisters();
+   Wdog::setCallback(wdogCallback);
+   Wdog::enableNvicInterrupts(NvicPriority_VeryHigh);
 }
 
 /**
@@ -486,6 +502,9 @@ void Control::eventLoop()  {
          Smc::enterWaitMode();
          continue;
       }
+
+      // Restart idle timers on any event
+      channels.restartIdleTimers();
 
       if (!isDisplayInUse()) {
          // Fix display

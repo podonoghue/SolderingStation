@@ -29,7 +29,7 @@ StepResponseDriver::StepResponseDriver(Channel &channel) : channel(channel) {
  */
 bool StepResponseDriver::run(unsigned maxDrive) {
 
-   static constexpr float TICK_INTERVAL    = 100*ms;
+   static constexpr float TICK_INTERVAL    = 100_ms;
 
    static constexpr unsigned INITIAL_TIME  = round( 50.0/TICK_INTERVAL);
    static constexpr unsigned DRIVING_TIME  = round(600.0/TICK_INTERVAL);

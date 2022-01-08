@@ -223,6 +223,8 @@ public:
 
    /**
     * Configures all mapped pins associated with EWM
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -236,6 +238,8 @@ public:
     * Disabled all mapped pins associated with EWM
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
@@ -247,26 +251,20 @@ public:
 
    /**
     * Basic enable of EWM
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
       Info::enableClock();
-   
       configureAllPins();
    }
 
    /**
-    * Disables the clock to EWM and all mappable pins
+    * Disables the clock to EWM and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
-      
+      ewm->CTRL = EWM_CTRL_EWMEN(0);
       disableAllPins();
-   
-      // Disable clock to peripheral
       Info::disableClock();
    }
 // End Template _mapPinsOption.xml
@@ -394,10 +392,10 @@ public:
     */
    static void enableInterrupt(bool enable=true) {
       if (enable) {
-         ewm->CTRL |= EWM_CTRL_INTEN_MASK;
+         ewm->CTRL = ewm->CTRL | EWM_CTRL_INTEN_MASK;
       }
       else {
-         ewm->CTRL &= ~EWM_CTRL_INTEN_MASK;
+         ewm->CTRL = ewm->CTRL & ~EWM_CTRL_INTEN_MASK;
       }
    }
 };

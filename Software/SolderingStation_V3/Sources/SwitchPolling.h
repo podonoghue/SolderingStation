@@ -31,7 +31,7 @@ enum EventType : uint8_t {
    ev_Ch1Ch2Hold      = ev_Ch1Ch2Release + 1,
 
    ev_QuadRotate,
-   ev_QuadRotatePressed = ev_QuadRotate+1,
+   ev_QuadRotatePressed = ev_QuadRotate + 1,
 };
 
 /**
@@ -69,7 +69,14 @@ public:
    }
 };
 
-const char *getEventName(const EventType b);
+/**
+ * Get name of event from event type
+ *
+ * @param eventType_ Event to describe
+ *
+ * @return Pointer to static string
+ */
+const char *getEventName(const EventType eventType);
 
 /**
  * Get name of event from Event
@@ -83,7 +90,7 @@ inline const char *getEventName(const Event event) {
 }
 
 /**
- * Timer driven class to represent the front panel.
+ * Timer driven class to represent the front panel switches.
  */
 class SwitchPolling {
 
@@ -121,7 +128,6 @@ public:
     * Initialise the switch polling
     */
    void initialise();
-
 };
 
 extern SwitchPolling switchPolling;

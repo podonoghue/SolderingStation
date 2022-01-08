@@ -42,7 +42,7 @@ public:
       setbackTemperature   = 200;
       setbackTime          = DEFAULT_IDLE_TIME;
       safetyOffTime        = DEFAULT_LONGIDLE_TIME;
-      selectedTip          = tips.getTip(0);
+      selectedTip          = Tips::getDefaultTip();
    }
 };
 

@@ -13,17 +13,18 @@
 using namespace USBDM;
 
 /// How often the switches are polled
-constexpr unsigned POLL_INTERVAL_IN_MS = 10;                               // Polled every 10 ms
+constexpr float POLL_INTERVAL          = 10_ms;                 // Polled every 10 ms
 
 /// Number of consistent samples to confirm debouncing
-constexpr unsigned DEBOUNCE_COUNT      = 40/POLL_INTERVAL_IN_MS;           // 40 ms
+constexpr unsigned DEBOUNCE_COUNT      = 40_ms/POLL_INTERVAL;   // 40 ms
+
 /// How long to hold a button for long press in samples
-constexpr unsigned HOLD_COUNT          = 1*1000/POLL_INTERVAL_IN_MS;       // 1 s
+constexpr unsigned HOLD_COUNT          = 1_s/POLL_INTERVAL;     // 1 s
 
 /**
- * Get name of event from EventTYpe
+ * Get name of event from event type
  *
- * @param eventType Event type to describe
+ * @param eventType_ Event to describe
  *
  * @return Pointer to static string
  */
@@ -185,10 +186,10 @@ void SwitchPolling::pollSetbacks() {
       else if (!toolBusy[tool]) {
 
          // Tool in holder - increment idle time
-         channel.incrementIdleTime(POLL_INTERVAL_IN_MS);
+         channel.incrementIdleTime(POLL_INTERVAL/1_ms);
       }
    }
-   control.updateDisplayInUse(POLL_INTERVAL_IN_MS);
+   control.updateDisplayInUse(POLL_INTERVAL/1_ms);
 }
 
 /**
@@ -208,9 +209,9 @@ Event SwitchPolling::getEvent() {
       t.change = currentQuadPosition - lastQuadPosition;
       if (t.change != 0) {
 
-         // Restart timers on use of rotary encoder
-         channels.restartIdleTimers();
-
+//         // Restart timers on use of rotary encoder
+//         channels.restartIdleTimers();
+//
          if (quadState == QuadState_Normal) {
             t.type   = ev_QuadRotate;
          }
@@ -246,7 +247,7 @@ void SwitchPolling::initialise() {
    };
 
    PollingTimerChannel::configureIfNeeded(PitDebugMode_Stop);
-   PollingTimerChannel::configure(POLL_INTERVAL_IN_MS*ms, PitChannelIrq_Enabled);
+   PollingTimerChannel::configure(POLL_INTERVAL, PitChannelIrq_Enabled);
    PollingTimerChannel::setCallback(callBack);
    PollingTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
 }

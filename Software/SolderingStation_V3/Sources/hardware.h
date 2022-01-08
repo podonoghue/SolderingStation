@@ -29,6 +29,7 @@
 #include "pit.h"
 #include "adc.h"
 #include "cmp.h"
+#include "vref.h"
 #include "ftm.h"
 
 
@@ -117,6 +118,9 @@ typedef const Pit::Channel<0>                                PollingTimerChannel
 
 /// PIT channel to use for sample and control timing
 typedef const Pit::Channel<1>                                ControlTimerChannel;                          // PIT_CH1(Internal)
+
+/// VREF, Voltage Reference
+typedef const Vref                                           V_ref;                                        
 
 } // End namespace USBDM
 

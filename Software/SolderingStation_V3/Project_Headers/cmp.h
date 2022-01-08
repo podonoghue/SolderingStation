@@ -277,7 +277,7 @@ public:
       unsigned status = cmp->SCR&(CMP_SCR_CFR_MASK|CMP_SCR_CFF_MASK|CMP_SCR_COUT_MASK);
 
       // Clear interrupt flags
-      cmp->SCR |= status;
+      cmp->SCR = cmp->SCR | status;
 
       // Create status from snapshot
       CmpStatus cmpStatus{(CmpEvent)(status&(CMP_SCR_CFR_MASK|CMP_SCR_CFF_MASK)),(bool)(status&CMP_SCR_COUT_MASK)};
@@ -384,6 +384,8 @@ public:
 
    /**
     * Configures all mapped pins associated with CMP
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -397,6 +399,8 @@ public:
     * Disabled all mapped pins associated with CMP
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
@@ -408,26 +412,20 @@ public:
 
    /**
     * Basic enable of CMP
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
       Info::enableClock();
-   
       configureAllPins();
    }
 
    /**
-    * Disables the clock to CMP and all mappable pins
+    * Disables the clock to CMP and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
-      
+      cmp->CR1 = CMP_CR1_EN(0);
       disableAllPins();
-   
-      // Disable clock to peripheral
       Info::disableClock();
    }
 // End Template _mapPinsOption.xml
@@ -477,7 +475,7 @@ public:
       CheckOutputIsMapped<Info::outputPin>::check();
 
       // Enable CMP_OUT
-      cmp->CR1 |= CMP_CR1_OPE_MASK;
+      cmp->CR1 = cmp->CR1 | CMP_CR1_OPE_MASK;
 
       // Map CMP_OUT to pin
       OutputPin::setPCR(pinDriveStrength|pinDriveMode|pinSlewRate);
@@ -650,14 +648,14 @@ public:
     * @note Window mode may not be selected with external filter.
     */
    static void enableWindowMode() {
-      cmp->CR1 |= CMP_CR1_WE_MASK;
+      cmp->CR1 = cmp->CR1 | CMP_CR1_WE_MASK;
    }
 
    /**
     * Disables Window mode
     */
    static void disableWindowMode() {
-      cmp->CR1 &= ~CMP_CR1_WE_MASK;
+      cmp->CR1 = cmp->CR1 & ~CMP_CR1_WE_MASK;
    }
 
    /**
@@ -666,14 +664,14 @@ public:
     * @note Window mode may not be selected with external filter.
     */
    static void enableFilterMode() {
-      cmp->CR1 |= CMP_CR1_WE_MASK;
+      cmp->CR1 = cmp->CR1 | CMP_CR1_WE_MASK;
    }
 
    /**
     * Disables Filter mode
     */
    static void disableFilterMode() {
-      cmp->CR1 &= ~CMP_CR1_WE_MASK;
+      cmp->CR1 = cmp->CR1 & ~CMP_CR1_WE_MASK;
    }
 
    /**
@@ -735,28 +733,28 @@ public:
     * Enable rising edge interrupts
     */
    static void enableRisingEdgeInterrupts() {
-      cmp->SCR |= CMP_SCR_IER_MASK;
+      cmp->SCR = cmp->SCR | CMP_SCR_IER_MASK;
    }
 
    /**
     * Disable rising edge interrupts
     */
    static void disableRisingEdgeInterrupts() {
-      cmp->SCR &= ~CMP_SCR_IER_MASK;
+      cmp->SCR = cmp->SCR & ~CMP_SCR_IER_MASK;
    }
 
    /**
     * Enable falling edge interrupts
     */
    static void enableFallingEdgeInterrupts() {
-      cmp->SCR |= CMP_SCR_IEF_MASK;
+      cmp->SCR = cmp->SCR | CMP_SCR_IEF_MASK;
    }
 
    /**
     * Disable falling edge interrupts
     */
    static void disableFallingEdgeInterrupts() {
-      cmp->SCR &= ~CMP_SCR_IEF_MASK;
+      cmp->SCR = cmp->SCR & ~CMP_SCR_IEF_MASK;
    }
 
 #ifdef CMP_SCR_DMAEN_MASK
@@ -764,14 +762,14 @@ public:
     * Enable DMA requests
     */
    static void enableDmaRequests() {
-      cmp->SCR |= CMP_SCR_DMAEN_MASK;
+      cmp->SCR = cmp->SCR | CMP_SCR_DMAEN_MASK;
    }
 
    /**
     * Disable DMA requests
     */
    static void disableDmaRequests() {
-      cmp->SCR &= ~CMP_SCR_DMAEN_MASK;
+      cmp->SCR = cmp->SCR & ~CMP_SCR_DMAEN_MASK;
    }
 #endif
 
@@ -779,7 +777,7 @@ public:
     * Clear edge interrupt flags
     */
    static void clearInterruptFlags() {
-   cmp->SCR |= CMP_SCR_CFR_MASK|CMP_SCR_CFF_MASK;
+   cmp->SCR = cmp->SCR | CMP_SCR_CFR_MASK|CMP_SCR_CFF_MASK;
    }
 
    /**
@@ -798,14 +796,14 @@ public:
     * Enable DAC
     */
    static void enableDAC() {
-         cmp->DACCR |= CMP_DACCR_DACEN_MASK;
+      cmp->DACCR = cmp->DACCR | CMP_DACCR_DACEN_MASK;
    }
 
    /**
     * Disable DAC
     */
    static void disableDAC() {
-         cmp->DACCR &= ~CMP_DACCR_DACEN_MASK;
+      cmp->DACCR = cmp->DACCR & ~CMP_DACCR_DACEN_MASK;
    }
 
    /** Maximum DAC value corresponding to Vref) */

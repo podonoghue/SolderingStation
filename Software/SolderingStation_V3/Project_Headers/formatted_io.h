@@ -40,13 +40,25 @@ namespace USBDM {
 /**
  * Enumeration selecting radix for integer types with << or >> operators
  */
-enum Radix : uint8_t {
+enum class Radix : uint8_t {
    Radix_2       = 2,         //!< Convert as binary number
    Radix_8       = 8,         //!< Convert as octal number
    Radix_10      = 10,        //!< Convert as decimal number
    Radix_16      = 16,        //!< Convert as hexadecimal number
    Radix_Default = Radix_10,  //!< Default radix (10)
 };
+
+// Radix 2 format
+constexpr Radix Radix_2  = Radix::Radix_2;
+
+// Radix 8 format
+constexpr Radix Radix_8  = Radix::Radix_8;
+
+// Radix 10 format
+constexpr Radix Radix_10 = Radix::Radix_10;
+
+// Radix 16 format
+constexpr Radix Radix_16 = Radix::Radix_16;
 
 enum WhiteSpaceType {
    /**
@@ -252,14 +264,14 @@ protected:
    static int convertDigit(int ch, Radix radix) {
       unsigned digit = ch - '0';
       if (digit<10) {
-         return (digit<radix)?digit:-1;
+         return (digit<static_cast<unsigned>(radix))?digit:-1;
       }
       digit = ch-'a'+10;
-      if (digit<radix) {
+      if (digit<static_cast<unsigned>(radix)) {
          return digit;
       }
       digit = ch-'A'+10;
-      if (digit<radix) {
+      if (digit<static_cast<unsigned>(radix)) {
          return digit;
       }
       return -1;
@@ -502,7 +514,7 @@ public:
       if (ptr == nullptr) {
          __BKPT();
       }
-      if ((radix<2)||(radix>16)) {
+      if ((static_cast<unsigned>(radix)<2)||(static_cast<unsigned>(radix)>16)) {
          __BKPT();
       }
 #endif
@@ -510,8 +522,8 @@ public:
       char *beginPtr = ptr;
       // Convert backwards
       do {
-         *ptr++ = "0123456789ABCDEF"[value % radix];
-         value /= radix;
+         *ptr++ = "0123456789ABCDEF"[value % static_cast<unsigned>(radix)];
+         value /= static_cast<unsigned>(radix);
       } while (value != 0);
 
       // Add leading padding
@@ -895,8 +907,9 @@ public:
     *
     * @return Reference to self
     */
-   FormattedIO NOINLINE_DEBUG &writeln(const void *value, Radix radix=Radix_16) {
-      return writeln(reinterpret_cast<unsigned long>(value), radix);
+   FormattedIO __attribute__((noinline)) &writeln(const void *value, Radix radix=Radix_16) {
+      write(reinterpret_cast<unsigned long>(value), radix);
+      return writeln();
    }
 
    /**
@@ -994,7 +1007,26 @@ public:
       if (isNegative) {
          value = -value;
       }
-      long scaledValue = static_cast<long>(round(value*fFormat.fFloatPrecisionMultiplier));
+      int exponent=0;
+      auto x = value*fFormat.fFloatPrecisionMultiplier;
+      if (x>4294967295) {
+         while (x>=fFormat.fFloatPrecisionMultiplier*10) {
+            exponent++;
+            x /= 10;
+         }
+      }
+      if ((x!=0) && (x<1)) {
+         while (x<=(fFormat.fFloatPrecisionMultiplier/10.0)) {
+            exponent--;
+            x *= 10;
+         }
+      }
+      auto y = round(x);
+      unsigned long scaledValue = static_cast<unsigned long>(y);
+      if (exponent != 0) {
+
+      }
+
       ultoa(buff, scaledValue/fFormat.fFloatPrecisionMultiplier, Radix_10, fFormat.fFloatPadding, fFormat.fFloatWidth, isNegative);
       if (fFormat.fFloatPrecision>0) {
          write(buff).write('.');
@@ -1003,9 +1035,13 @@ public:
                Radix_10, Padding_LeadingZeroes, fFormat.fFloatPrecision);
       }
       write(buff);
+      if (exponent != 0) {
+         write("E").write(exponent);
+      }
       return *this;
    }
 #endif
+
    /**
     * Write a double with newline
     *
@@ -1040,6 +1076,166 @@ public:
       return writeln(static_cast<double>(value));
    }
 
+   /**
+    * Write an integral array
+    *
+    * @param[in]  array Pointer to array to print
+    * @param[in]  size  Number of elements in array
+    * @param[in]  radix Radix for conversion
+    *
+    * @return Reference to self
+    */
+   template <typename T>
+   FormattedIO NOINLINE_DEBUG &write(const T array[], size_t size, Radix radix) {
+      unsigned itemCount = 0;
+      const char *prefix="";
+      switch(radix) {
+         case Radix_2:  prefix = "0b"; break;
+         case Radix_8:  prefix = "0";  break;
+         case Radix_16: prefix = "0x"; break;
+         case Radix_10:                break;
+         default:                      break; // ToDo add other prefixes?
+      }
+      write("{ ");
+      for(unsigned index=0; index<size; index++) {
+         if (itemCount>=10) {
+            itemCount = 0;
+            write("\n  ");
+         }
+         itemCount++;
+         write(prefix);
+         write(array[index], radix);
+         write(", ");
+      }
+      write('}');
+      return *this;
+   }
+
+   /**
+    * Write an integral array with newline
+    *
+    * @param[in]  array Pointer to array to print
+    * @param[in]  size  Number of elements in array
+    * @param[in]  radix Radix for conversion
+    *
+    * @return Reference to self
+    */
+   template <typename T>
+   FormattedIO NOINLINE_DEBUG &writeln(const T array[], size_t size, Radix radix) {
+      write(array, size, radix);
+      return writeln();
+   }
+
+   /**
+    * Write an integral array
+    *
+    * @param[in]  array Reference to array to print
+    * @param[in]  radix Radix for conversion
+    *
+    * @return Reference to self
+    */
+   template <typename T, size_t N>
+   FormattedIO NOINLINE_DEBUG &write(const T (&array)[N], Radix radix) {
+      return write(array, N, radix);
+   }
+
+   /**
+    * Write an integral array with newline
+    *
+    * @param[in]  array Reference to array to print
+    * @param[in]  radix Radix for conversion
+    *
+    * @return Reference to self
+    */
+   template <typename T, size_t N>
+   FormattedIO NOINLINE_DEBUG &writeln(const T (&array)[N], Radix radix) {
+      return writeln(array, N, radix);
+   }
+
+   /**
+    * Write an array
+    *
+    * @param[in]  array Pointer to array to print
+    * @param[in]  size  Number of elements in array
+    *
+    * @return Reference to self
+    */
+   template <typename T>
+   FormattedIO NOINLINE_DEBUG &write(const T array[], size_t size) {
+      unsigned itemCount = 0;
+      write("{ ");
+      for(unsigned index=0; index<size; index++) {
+         if (itemCount>=10) {
+            itemCount = 0;
+            write("\n  ");
+         }
+         itemCount++;
+         write(array[index]);
+         write(", ");
+      }
+      write('}');
+      return *this;
+   }
+
+   /**
+    * Write an array with newline
+    *
+    * @param[in]  array Pointer to array to print
+    * @param[in]  size  Number of elements in array
+    *
+    * @return Reference to self
+    */
+   template <typename T>
+   FormattedIO NOINLINE_DEBUG &writeln(const T array[], size_t size) {
+      write(array, size);
+      return writeln();
+   }
+
+   /**
+    * Write an array
+    *
+    * @param[in]  array Reference to array to print
+    *
+    * @return Reference to self
+    */
+   template <typename T, size_t N>
+   FormattedIO NOINLINE_DEBUG &write(const T (&array)[N]) {
+      return write(array, N);
+   }
+
+   /**
+    * Write an array with newline
+    *
+    * @param[in]  array Reference to array to print
+    *
+    * @return Reference to self
+    */
+   template <typename T, size_t N>
+   FormattedIO NOINLINE_DEBUG &writeln(const T (&array)[N]) {
+      return writeln(array, N);
+   }
+
+   /**
+    * Write a C string
+    *
+    * @param array
+    * @return
+    */
+   template <size_t N>
+   FormattedIO NOINLINE_DEBUG &write(const char (&array)[N]) {
+      return write((const char*)array);
+   }
+
+   /**
+    * Write a C string with newline
+    *
+    * @param array
+    * @return
+    */
+   template <size_t N>
+   FormattedIO NOINLINE_DEBUG &writeln(const char (&array)[N]) {
+      return writeln((const char*)array);
+   }
    /**
     * Write a character
     *
@@ -1149,6 +1345,131 @@ public:
    FormattedIO NOINLINE_DEBUG &operator <<(double value) {
       return write(value);
    }
+
+#if (USE_DIMENSION_CHECK)
+   /**
+    * Write a Seconds variable
+    *
+    * @param[in]  value Seconds to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &write(const Seconds value) {
+      float num = value.getValue();
+      const char *units = " s";
+      if (value<0.000'001) {
+         num *= 1'000'000'000.0;
+         units =  " ns";
+      }
+      else if (value<0.001) {
+         num *= 1'000'000.0;
+         units =  " us";
+      }
+      else if (value<1.0) {
+         num *= 1000.0;
+         units =  " ms";
+      }
+      return write(num).write(units);
+   }
+
+   /**
+    * Write a Seconds variable
+    *
+    * @param[in]  value Seconds to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &operator <<(const Seconds value) {
+      return write(value);
+   }
+
+   /**
+    * Write a Seconds variable with newline
+    *
+    * @param[in]  value Seconds to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &writeln(const Seconds value) {
+      return write(value).writeln();
+   }
+
+   /**
+    * Write a Ticks variable
+    *
+    * @param[in]  value Ticks to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &write(const Ticks value) {
+      return write(value.getValue()).write(" ticks");
+   }
+
+   /**
+    * Write a Ticks variable
+    *
+    * @param[in]  value Ticks to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &operator <<(const Ticks value) {
+      return write(value);
+   }
+
+   /**
+    * Write a Ticks variable with newline
+    *
+    * @param[in]  value Ticks to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &writeln(const Ticks value) {
+      return write(value).writeln();
+   }
+
+   /**
+    * Write a Hertz variable
+    *
+    * @param[in]  value Hertz to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &write(const Hertz value) {
+      float num = value.getValue();
+      const char *units = " Hz";
+      if (num>=1'000'000.0) {
+         num /= 1'000'000.0;
+         units =  " MHz";
+      }
+      else if (num>=1'000.0) {
+         num /= 1'000.0;
+         units =  " kHz";
+      }
+      return write(num).write(units);
+   }
+
+   /**
+    * Write a Hertz variable with newline
+    *
+    * @param[in]  value Hertz to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &writeln(const Hertz value) {
+      return write(value).writeln();
+   }
+
+   /**
+    * Write a Hertz variable
+    *
+    * @param[in]  value Hertz to print
+    *
+    * @return Reference to self
+    */
+   FormattedIO NOINLINE_DEBUG &operator <<(const Hertz value) {
+      return write(value);
+   }
+#endif
 
    /**
     * Sets the conversion radix for integer types
@@ -1284,7 +1605,7 @@ public:
             break;
          }
          digitCount++;
-         value *= radix;
+         value *= static_cast<unsigned>(radix);
          value += digit;
          ch = readChar();
       } while (true);

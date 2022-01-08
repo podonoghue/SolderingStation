@@ -216,7 +216,7 @@ public:
          return;
       }
       // Clear flags
-      TsiBase_T<Info>::tsi->GENCS |= status; // w1c found flags
+      TsiBase_T<Info>::tsi->GENCS = TsiBase_T<Info>::tsi->GENCS | status; // w1c found flags
       if (status == (TSI_GENCS_SCNIP_MASK|TSI_GENCS_EOSF_MASK)) {
          // Ignore EOSF unless SCNIP is clear to avoid multiple events due to errata e3926
          // This assumes that there is at least some idle time between sequences - as there should be
@@ -255,6 +255,8 @@ public:
 
    /**
     * Configures all mapped pins associated with TSI
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -268,6 +270,8 @@ public:
     * Disabled all mapped pins associated with TSI
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
@@ -279,26 +283,20 @@ public:
 
    /**
     * Basic enable of TSI
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
       Info::enableClock();
-   
       configureAllPins();
    }
 
    /**
-    * Disables the clock to TSI and all mappable pins
+    * Disables the clock to TSI and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
       
       disableAllPins();
-   
-      // Disable clock to peripheral
       Info::disableClock();
    }
 // End Template _mapPinsOption.xml
@@ -479,16 +477,16 @@ public:
    static void startScan(TsiScanMode tsiScanMode) {
       // Disable module so changes have effect
       // This also helps with errata e4181
-      tsi->GENCS &= ~TSI_GENCS_TSIEN_MASK|TSI_GENCS_SWTS_MASK;
+      tsi->GENCS = tsi->GENCS & ~TSI_GENCS_TSIEN_MASK|TSI_GENCS_SWTS_MASK;
 
       // Select Hardware/Software mode
-      tsi->GENCS |= (tsiScanMode&TSI_GENCS_STM_MASK);
+      tsi->GENCS = tsi->GENCS | (tsiScanMode&TSI_GENCS_STM_MASK);
 
       // Enable
-      tsi->GENCS |= TSI_GENCS_TSIEN_MASK;
+      tsi->GENCS = tsi->GENCS | TSI_GENCS_TSIEN_MASK;
 
       // Clear flags and start scan
-      tsi->GENCS |=
+      tsi->GENCS = tsi->GENCS |
             tsiScanMode|            // Software/Hardware mode + optional software trigger
             TSI_GENCS_EOSF_MASK|    // Clear flags
             TSI_GENCS_OUTRGF_MASK|

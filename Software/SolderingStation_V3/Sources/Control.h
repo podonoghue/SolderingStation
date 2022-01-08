@@ -175,7 +175,7 @@ public:
    void reportPid(Channel &ch);
 
    /**
-    * Event loop for front panel events.
+    * Main event loop for front panel events
     */
    void eventLoop();
 

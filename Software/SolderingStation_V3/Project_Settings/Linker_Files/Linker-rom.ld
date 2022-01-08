@@ -1,4 +1,4 @@
-/* ARMLtd_GCC-rom-mk-sramu.ld (Packages\100.ARM_DeviceOptions\Project_Settings\Linker_Files)
+/* ARMLtd_GCC-rom-mk-sramu.ld (180.ARM_Peripherals/Project_Settings/Linker_Files/)
  *
  * Kinetis version with optional SRAM_U allocation and bitband
  *
@@ -59,16 +59,21 @@ SECTIONS
       ASSERT (. != __flash_start, "No reset vector found");
       __VECTOR_TABLE_END = .;
       
-      /* Emit a Freescale Bootloader configuration if present */
+      /* Emit a Freescale Bootloader configuration @0x3C0 if present */
       . = __flash_start + 0x3C0;
       KEEP(*(.bootloader_configuration))
       
+      /* Emit USBDM Bootloader information @0x3C0 if present */
+      __bootloaderInformation = .;
+      KEEP(*(.bootloaderInformation))
+      ASSERT ((BOOT_LOADER_SIZE == 0) || (. != __bootloaderInformation), "No bootloader information");
+
       /* Emit a Security field */
       . = __flash_start + 0x400;
       KEEP(*(.security_information))
       KEEP(*(.FlashConfig))    /* KDS Flash Configuration Field (FCF) */
       ASSERT (. == __flash_start + 0x410, "No Freescale security information");
-    } > flash
+   } > flash
 
 /* Size of RAM vector table (if needed) */
 M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECTOR_TABLE) : 0x0000;
@@ -77,8 +82,6 @@ M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECT
    {
       *(.text)                 /* .text sections (code) */
       *(.text*)                /* .text* sections (code) */
-      *(.rodata)               /* .rodata sections (constants, strings, etc.) */
-      *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
       KEEP(*(.init))
       KEEP(*(.fini))
 
@@ -121,21 +124,25 @@ M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECT
 
       KEEP(*(.jcr*))
 
-      *(.rodata*)
-
       KEEP(*(.eh_frame*))
-    } > flash
+   } > text_rom
 
+   .rodata :
+   {
+      *(.rodata)               /* .rodata sections (constants, strings, etc.) */
+      *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
+   } > rodata_rom
+   
    .ARM.extab : 
    {
       *(.ARM.extab* .gnu.linkonce.armextab.*)
-   } > flash
+   } > rodata_rom
 
    __exidx_start = .;
    .ARM.exidx :
    {
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-   } > flash
+   } > rodata_rom
    __exidx_end = .;
 
    /* Flash region for programming */
@@ -143,25 +150,17 @@ M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECT
    {
       . = ALIGN(4);
       KEEP(*(.flash))
-   } > flash
+   } > rodata_rom
 
-   __etext = .;    /* define a global symbol at end of code */
-   __DATA_ROM = .; /* Symbol is used by startup for data initialization */
+   __etext = .;     /* Symbol for .data image at end of .rodata */
+   __DATA_ROM = .;  /* Symbol is used by startup for data initialization */
 
-  /* USBDM Bootloader information */
-   .bootloader :
-   {
-     __bootloader = .;
-     KEEP(*(.bootloader))
-     ASSERT ((BOOT_INFO_SIZE == 0) || (. == __bootloader + BOOT_INFO_SIZE), "No bootloader information");
-    } > bootInfo
-    
   /* reserve MTB memory at the beginning of data */
   .mtb : /* MTB buffer no0load */
   {
     . = ALIGN(8);
     _mtb_start = .;
-    KEEP(*(.mtb_buf)) /* May not referenced by application */
+    KEEP(*(.mtb_buf)) /* May not be referenced by application */
     . = ALIGN(8);
     _mtb_end = .;
   } > mtb_ram
@@ -185,6 +184,7 @@ M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECT
       *(.bss*endPointBdts*) /* Load USB BDTs here as they are aligned */
    } > bdts_ram
   
+   /* Initialised data in RAM copied from flash */
    .data : AT (__etext)
    {
       __data_start__ = .;

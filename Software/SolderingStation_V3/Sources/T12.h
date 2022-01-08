@@ -28,10 +28,12 @@ private:
    ThermistorMF58Average coldJunctionThermistor;
 
    /// Measurement to use for thermocouple on sub-channel A
-   static constexpr MuxSelect Measurement1_ChaThermocouple = muxSelectAddSubChannel(ThermocoupleAverage::getMeasurement(), SubChannelNum_A);
+   static constexpr MuxSelect Measurement1_Thermocouple = 
+         muxSelectAddSubChannel(ThermocoupleAverage::MEASUREMENT, SubChannelNum_A);
 
    /// Measurement to use for thermistor on sub_channel B
-   static constexpr MuxSelect Measurement2_ChbColdRef      = muxSelectAddSubChannel(ThermistorMF58Average::getMeasurement(), SubChannelNum_B);
+   static constexpr MuxSelect Measurement2_ColdRef      = 
+         muxSelectAddSubChannel(ThermistorMF58Average::MEASUREMENT, SubChannelNum_B);
 
    /// Loop controller
    PidController controller{PID_INTERVAL, MIN_DUTY, MAX_DUTY};
@@ -199,11 +201,10 @@ public:
     */
    virtual MuxSelect const *getMeasurementSequence() const override {
       static const MuxSelect sequence[] = {
-            Measurement1_ChaThermocouple,
-            Measurement2_ChbColdRef,
+            Measurement1_Thermocouple,
+            Measurement2_ColdRef,
             MuxSelect_Complete,
       };
-//      return sequence;
       return tipPresent?sequence:sequence+1;
    };
 
@@ -217,15 +218,14 @@ public:
       (void) adcValue;
       switch(muxSelect) {
 
-         case Measurement1_ChaThermocouple:
+         case Measurement1_Thermocouple:
             // Thermocouple
             thermocouple.accumulate(adcValue);
             break;
 
-         case Measurement2_ChbColdRef:
+         case Measurement2_ColdRef:
             // NTC
-            coldJunctionThermistor.accumulate(adcValue);
-            tipPresent = adcValue<(ADC_MAXIMUM*0.9);
+            tipPresent = coldJunctionThermistor.accumulate(adcValue);
             break;
 
          default:
@@ -242,12 +242,13 @@ public:
    virtual void setDutyCycle(unsigned dutyCycle) {
       controller.setOutput(dutyCycle);
    }
+
    /**
     * Print single line report on control situation
     *
     * @param doHeading True to print a header first
     */
-   virtual void report(bool doHeading) const {
+   virtual void report(bool doHeading=false) const {
       using namespace USBDM;
 
       if (doHeading) {
@@ -264,6 +265,7 @@ public:
       console.writeln();
       console.resetFormat();
    }
+
 };
 
 #endif /* T12_H_ */

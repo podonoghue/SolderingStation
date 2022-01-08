@@ -217,6 +217,8 @@ public:
 
    /**
     * Configures all mapped pins associated with CMT
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -230,6 +232,8 @@ public:
     * Disabled all mapped pins associated with CMT
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
@@ -241,26 +245,20 @@ public:
 
    /**
     * Basic enable of CMT
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
       Info::enableClock();
-   
       configureAllPins();
    }
 
    /**
-    * Disables the clock to CMT and all mappable pins
+    * Disables the clock to CMT and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
       
       disableAllPins();
-   
-      // Disable clock to peripheral
       Info::disableClock();
    }
 // End Template _mapPinsOption.xml
@@ -500,16 +498,16 @@ public:
    static void enableInterruptDma(CmtInterruptDma cmtInterruptDma) {
       switch (cmtInterruptDma) {
          case CmtInterruptDma_None:
-            cmt->MSC &= ~CMT_MSC_EOCIE_MASK;
-            cmt->DMA &= ~CMT_DMA_DMA_MASK;
+            cmt->MSC = cmt->MSC & ~CMT_MSC_EOCIE_MASK;
+            cmt->DMA = cmt->DMA & ~CMT_DMA_DMA_MASK;
             break;
          case CmtInterruptDma_Irq:
-            cmt->DMA &= ~CMT_DMA_DMA_MASK;
-            cmt->MSC |= CMT_MSC_EOCIE_MASK;
+            cmt->DMA = cmt->DMA & ~CMT_DMA_DMA_MASK;
+            cmt->MSC = cmt->MSC | CMT_MSC_EOCIE_MASK;
             break;
          case CmtInterruptDma_Dma:
-            cmt->DMA |= CMT_DMA_DMA_MASK;
-            cmt->MSC |= CMT_MSC_EOCIE_MASK;
+            cmt->DMA = cmt->DMA | CMT_DMA_DMA_MASK;
+            cmt->MSC = cmt->MSC | CMT_MSC_EOCIE_MASK;
             break;
       }
    }

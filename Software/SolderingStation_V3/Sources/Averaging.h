@@ -33,7 +33,7 @@ public:
     */
    static constexpr float convertToAdcVoltage(float adcValue) {
       // Convert ADC value to voltage
-      return adcValue * (ADC_REF_VOLTAGE/USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION));
+      return adcValue * (ADC_LOW_GAIN_REF_VOLTAGE/USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION));
    }
 
    /**
@@ -343,10 +343,15 @@ public:
  */
 class ThermistorMF58Average : public TemperatureAverage {
 
-private:
+public:
 
    /// Measurement path being used
    static constexpr MuxSelect MEASUREMENT = MuxSelect_LowGainBiased;
+
+private:
+
+   /// Maximum ADC value possible for this measurement
+   static constexpr uint32_t ADC_MAXIMUM = USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
 
    /**
     * Converts ADC voltage to thermistor resistance
@@ -439,12 +444,21 @@ public:
    }
 
    /**
-    * Returns the measurement mux setting (excluding channel) to use
+    * Accumulate ADC thermistor measurement for average
     *
-    * @return
+    * @param value to add
+    *
+    * @return true if value indicates tip present, false otherwise
     */
-   static constexpr MuxSelect getMeasurement() {
-      return MEASUREMENT;
+   bool accumulate(uint32_t value) {
+
+      if (value>(ADC_MAXIMUM*0.9)) {
+         // Thermistor open
+         return false;
+      }
+
+      TemperatureAverage::accumulate(value);
+      return true;
    }
 };
 
@@ -452,6 +466,7 @@ public:
  * Class representing an average customised for a thermocouple
  */
 class ThermocoupleAverage : public TemperatureAverage {
+
 private:
    // Temperature calibration values
    float calibrationTemperatures[3];
@@ -459,10 +474,13 @@ private:
    // Thermocouple voltage calibration values
    float calibrationVoltages[3];
 
-   /// Measurement path being used
-   static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGainBoost;
+   /// Maximum ADC value possible for this measurement
+   static constexpr uint32_t ADC_MAXIMUM = USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
 
 public:
+
+   /// Measurement path being used
+   static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGainBoost;
 
    /**
     * Converts ADC voltage to thermocouple voltage
@@ -558,12 +576,20 @@ public:
    }
 
    /**
-    * Returns the measurement mux setting (excluding channel) to use
+    * Accumulate ADC thermocouple measurement for average
     *
-    * @return
+    * @param value to add
+    *
+    * @return true if value indicates tip present, false otherwise
     */
-   static constexpr MuxSelect getMeasurement() {
-      return MEASUREMENT;
+   bool accumulate(uint32_t value) {
+
+      if (value>(ADC_MAXIMUM*0.9)) {
+         // Thermocouple open
+         return false;
+      }
+      TemperatureAverage::accumulate(value);
+      return true;
    }
 };
 
@@ -624,10 +650,14 @@ public:
  */
 class WellerThermistorAverage : public TemperatureAverage {
 
-private:
-
+public:
    /// Measurement path being used
    static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGainBoostBiased;
+
+private:
+
+   /// Maximum ADC value possible for this measurement
+   static constexpr uint32_t ADC_MAXIMUM = USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
 
    // Temperature calibration values
    float calibrationTemperatures[3];
@@ -750,12 +780,20 @@ public:
    }
 
    /**
-    * Returns the measurement mux setting (excluding channel) to use
+    * Accumulate ADC thermistor measurement for average
     *
-    * @return
+    * @param value to add
+    *
+    * @return true if value indicates tip present, false otherwise
     */
-   static constexpr MuxSelect getMeasurement() {
-      return MEASUREMENT;
+   bool accumulate(uint32_t value) {
+
+      if (value>(ADC_MAXIMUM*0.9)) {
+         // Thermistor open
+         return false;
+      }
+      TemperatureAverage::accumulate(value);
+      return true;
    }
 };
 

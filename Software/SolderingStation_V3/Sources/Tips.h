@@ -25,9 +25,6 @@ public:
 
    static constexpr TipSettingsIndex INVALID_TIP_INDEX = (TipSettingsIndex)-1;
 
-   // Tip settings used for "NO_TIP"
-   static const TipSettings NoTipSettings;
-
 private:
    Tips(const Tips &other) = delete;
    Tips(Tips &&other) = delete;
@@ -37,9 +34,21 @@ private:
    /// Nonvolatile arrays of calibration data for available tips as selected by user
    TipSettingsArray  &tipSettings;
 
+   /// Tip settings used for "NO_TIP"
+   static const TipSettings NoTipSettings;
+
 public:
    Tips();
    ~Tips() {}
+
+   /**
+    * Get default tip (NO_TIP)
+    *
+    * @return Pointer to tip
+    */
+   static TipSettings *getDefaultTip() {
+      return const_cast<TipSettings *>(&NoTipSettings);
+   }
 
    /**
     * Initialise all Tip non-volatile settings.
@@ -70,7 +79,7 @@ public:
       if (ironType == IronType_Unknown) {
          return const_cast<TipSettings *>(&NoTipSettings);
       }
-      for (unsigned index=0; index<USBDM::sizeofArray(tipSettings); index++) {
+      for (unsigned index=0; index<TipSettings::NUM_TIP_SETTINGS; index++) {
          TipSettings *ts = &tipSettings[index];
          if (ts->isFree()) {
             continue;

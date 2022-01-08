@@ -19,6 +19,7 @@
    <item key="$peripheral$GPIOB_polarity"                  value="196611" />
    <item key="$peripheral$GPIOC_polarity"                  value="30" />
    <item key="$peripheral$GPIOD_polarity"                  value="31" />
+   <item key="$peripheral$VREF_codeIdentifier"             value="V_ref" />
    <item key="$pin$PTA0_pcrSetting_7"                      value="700" />
    <item key="$pin$PTA18_pcrSetting_0"                     value="0" />
    <item key="$pin$PTA19_pcrSetting_0"                     value="0" />

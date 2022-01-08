@@ -15,13 +15,14 @@
 /// Resolution used for all ADC conversions.
 constexpr USBDM::AdcResolution ADC_RESOLUTION = USBDM::AdcResolution_16bit_se;
 
-constexpr unsigned ADC_MAXIMUM = USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
+/// Vcc used as reference in some places (volts)
+constexpr float VCC_REF_VOLTAGE = 3.30;
 
-/// External voltage reference for ADC (Vrefh)
-constexpr float ADC_REF_VOLTAGE = 3.00;
+/// External voltage reference for low-gain ADC - VrefH (volts)
+constexpr float ADC_LOW_GAIN_REF_VOLTAGE = 3.00;
 
-/// External voltage reference for CMP (Vdda or VrefOut)
-constexpr float CMP_REF_VOLTAGE = 3.30;
+/// External voltage reference for CMP (Vdda)
+constexpr float CMP_REF_VOLTAGE = VCC_REF_VOLTAGE;
 
 /// Low gain op-amp feedback resistor
 constexpr float LOW_GAIN_RF = 10000;
@@ -32,14 +33,14 @@ constexpr float LOW_GAIN_R1 = 10000;
 /// Low Gain op-amp switchable input resistor 1
 constexpr float LOW_GAIN_R2 = 5100;
 
-/// Low Gain op-amp input resistor (R1//R2)
+/// Pre-amplifier op-amp input resistor (R1//R2)
 constexpr float LOW_GAIN_R1_R2 = (LOW_GAIN_R1*LOW_GAIN_R2)/(LOW_GAIN_R1+LOW_GAIN_R2);
 
-/// Low gain measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
+/// Pre-amplifier measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
 /// Amplifier gain is 1 + (LOW_GAIN_RF/LOW_GAIN_RI)
 constexpr float LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF   = LOW_GAIN_R1/(LOW_GAIN_R1+LOW_GAIN_RF);
 
-/// Low gain measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
+/// Pre-amplifier measurement ratio V/V i.e. converts ADC voltage to amplifier input voltage in V
 /// Amplifier gain is 1 + (LOW_GAIN_RF/LOW_GAIN_RI)
 constexpr float LOW_GAIN_MEASUREMENT_RATIO_BOOST_ON   = LOW_GAIN_R1_R2/(LOW_GAIN_R1_R2+LOW_GAIN_RF);
 
@@ -220,9 +221,6 @@ enum MuxSelect : uint8_t {
    MuxSelect_ChbHighGainBoostBiased  = MuxSelect_Ch1bHighGainBoostBiased&~CHANNEL_MASK,                               /**< Channel B + High gain amp + Boost + bias */
    MuxSelect_HighGainBoostBiased     = MuxSelect_Ch1bHighGainBoostBiased&~(CHANNEL_MASK|AB_MASK),                     /**< High gain amp + Boost + bias */
 
-   // Identify tool by measuring ID resistor on A sub-channel
-   MuxSelect_Identify                = MuxSelect_ChaLowGainBiased,  /**< Channel Xa + Low gain amp + Bias */
-
    MuxSelect_Idle                    = MuxSelect_Ch1aHighGainBoost,
    //muxSelect(ChannelNum_1, SubChannelNum_A, AmplifierNum_HighGain,  false, true),  /**< Idle value - disable bias and gain boost */
 
@@ -279,7 +277,7 @@ static constexpr int      MAX_DUTY     = 100;
 /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohm element
 static constexpr int      MIN_DUTY     = 0;
 
-/// PID interval (1 rectified mains cycle)
-static constexpr float    PID_INTERVAL = 10*USBDM::ms;
+/// PID interval (1 cycle of the rectified mains)
+static constexpr float    PID_INTERVAL = 10_ms;
 
 #endif /* SOURCES_PERIPHERALS_H_ */

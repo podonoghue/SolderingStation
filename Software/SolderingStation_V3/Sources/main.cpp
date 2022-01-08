@@ -101,6 +101,7 @@ static void resetToBootloader() {
 }
 
 int main() {
+
    // Power-on message
 //   StringFormatter_T<40> sf;
 //   sf.write("SW:V").writeln(bootInformation.softwareVersion)
@@ -136,8 +137,10 @@ int main() {
       waitMS(1000);
    }
 #endif
+#if defined(DEBUG_BUILD)
+   console.writeln(Rcm::getResetSourceDescription());
    console.writeln("Starting\n");
-
+#endif
    initialise();
 
    control.eventLoop();

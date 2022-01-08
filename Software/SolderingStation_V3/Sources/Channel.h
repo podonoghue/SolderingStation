@@ -72,13 +72,16 @@ private:
    Weller_WT50       wellerMeasurement{*this};
    T12               t12Measurement{*this};
 
+   int   stateChangedCountdown = 0;
+   const TipSettings *selectedTip;
+
+   /// Reference to non-volatile settings stored in Flash
+   ChannelSettings  &nvSettings;
+
 public:
 
    /// Number of preset temperatures provided
    static constexpr unsigned NUM_PRESETS  = 3;
-
-   /// Reference to non-volatile settings stored in Flash
-   ChannelSettings  &nvSettings;
 
    /// Measurement class
    Measurement *measurement = &dummyMeasurement;
@@ -99,6 +102,10 @@ public:
       setUserTemperature(settings.presets[preset]);
       chDrive.write(0b00);
       led.off();
+
+      selectedTip  = nvSettings.selectedTip;
+      stateChangedCountdown = 0;
+
       checkTipSelected();
    }
 
@@ -140,6 +147,14 @@ public:
       }
       checkTipSelected();
    }
+
+    /**< Identify measurment = Channel Xa + Low gain amp + Bias */
+   static constexpr MuxSelect MuxSelect_Identify = MuxSelect_ChaLowGainBiased;
+
+   /** Identify measurement ratio adcValue->Volts */
+   static constexpr float IdentifyMeasurementRatio =
+         (LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF*ADC_LOW_GAIN_REF_VOLTAGE)/
+         USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
 
    /**
     * Get the sequence of ADC measurements to do
@@ -219,9 +234,14 @@ public:
 
          // Tool type check
 
-         constexpr float Vref = 3.3; // volts
-         constexpr float Rs   = 22000;
-         float Vt = (adcValue*ADC_REF_VOLTAGE)/USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION)/2; // volts
+         // Reference voltage for voltage divider (Volts)
+         static constexpr float Vref = VCC_REF_VOLTAGE;
+
+         // Top resistor (ohms)
+         static constexpr float Rs   = 22000;
+
+         // Voltage at voltage divider (volts)
+         float Vt = adcValue*IdentifyMeasurementRatio;
 
          // Calculate ID resistor from voltage divider
          int Rt = round(Vt*Rs/(Vref-Vt));
@@ -255,7 +275,7 @@ public:
          return;
       }
       // Update tip selection if needed
-      const TipSettings *ts = nvSettings.selectedTip;
+      const TipSettings *ts = selectedTip;
       if ((ts == nullptr)|| ts->isFree() || (ts->getIronType() != ironType)) {
          setTip(tips.getAvailableTipForIron(ironType));
       }
@@ -266,7 +286,7 @@ public:
     * Update controller parameters from currently selected tip
     */
    void refreshControllerParameters() {
-      const TipSettings *ts = nvSettings.selectedTip;
+      const TipSettings *ts = selectedTip;
       measurement->setCalibrationValues(ts);
    }
 
@@ -279,9 +299,17 @@ public:
       if (ironType == IronType_Unknown) {
          return;
       }
-      setTip(tips.changeTip(nvSettings.selectedTip, delta));
+      setTip(tips.changeTip(selectedTip, delta));
    }
 
+   void saveNonvolatileState() {
+      //      USBDM::console.writeln("saveNonvolatileState()");
+      stateChangedCountdown  = 0;
+      if (selectedTip != nvSettings.selectedTip) {
+         //         USBDM::console.writeln("State saved");
+         nvSettings.selectedTip = selectedTip;
+      }
+   }
    /**
     * Set selected tip for this channel
     *
@@ -293,7 +321,13 @@ public:
       }
       usbdm_assert(tipSettings != nullptr, "Illegal tip");
       usbdm_assert(tipSettings->getIronType() == ironType, "Tip not suitable for iron");
-      nvSettings.selectedTip = tipSettings;
+
+      selectedTip = tipSettings;
+
+      // Write change to NV storage 1000 ticks from now
+      stateChangedCountdown = 1000;
+//      USBDM::console.writeln("Save state pending");
+
       refreshControllerParameters();
    }
    /**
@@ -303,9 +337,9 @@ public:
     */
    const TipSettings* getTip() const {
       if (ironType == IronType_Unknown) {
-         return &Tips::NoTipSettings;
+         return Tips::getDefaultTip();
       }
-      return nvSettings.selectedTip;
+      return selectedTip;
    }
 
    /**
@@ -315,9 +349,9 @@ public:
     */
    const char *getTipName() {
       if (ironType == IronType_Unknown) {
-         return Tips::NoTipSettings.getTipName();
+         return Tips::getDefaultTip()->getTipName();
       }
-      const TipSettings *ts = nvSettings.selectedTip;
+      const TipSettings *ts = selectedTip;
 
       if (ts == nullptr) {
          return "----";
@@ -409,7 +443,7 @@ public:
          chDrive.write(0b00);
       }
       else {
-         const TipSettings *ts = nvSettings.selectedTip;
+         const TipSettings *ts = selectedTip;
          (void) ts;
          usbdm_assert((ts != nullptr) && !ts->isFree() && (ts->getIronType() == ironType), "Wrong tip selected");
       }
@@ -556,7 +590,9 @@ public:
     *   - Controller
     */
    void update() {
-
+      if ((stateChangedCountdown > 0) && (--stateChangedCountdown == 0)) {
+         saveNonvolatileState();
+      }
       // Update drive to heaters as needed
       chDrive.write(measurement->update(targetTemperature));
 

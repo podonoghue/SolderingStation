@@ -482,7 +482,7 @@ public:
             break;
       }
       // Set comparison fields
-      adc->SC2 |= (adc->SC2&~(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)))|
+      adc->SC2 = adc->SC2 | (adc->SC2&~(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)))|
             (adcCompare&(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)));
    }
 
@@ -493,10 +493,10 @@ public:
     */
    void enableContinuousConversions(AdcContinuous adcContinuous = AdcContinuous_Enabled) const {
       if (adcContinuous) {
-         adc->SC3 |= ADC_SC3_ADCO_MASK;
+         adc->SC3 = adc->SC3 | ADC_SC3_ADCO_MASK;
       }
       else {
-         adc->SC3 &= ~ADC_SC3_ADCO_MASK;
+         adc->SC3 = adc->SC3 & ~ADC_SC3_ADCO_MASK;
       }
    }
 
@@ -509,10 +509,10 @@ public:
    void enableDma(AdcDma adcDma = AdcDma_Enabled) const {
       // Set up DMA
       if (adcDma) {
-         adc->SC2 |= ADC_SC2_DMAEN_MASK;
+         adc->SC2 = adc->SC2 | ADC_SC2_DMAEN_MASK;
       }
       else {
-         adc->SC2 &= ~ADC_SC2_DMAEN_MASK;
+         adc->SC2 = adc->SC2 & ~ADC_SC2_DMAEN_MASK;
       }
    }
 #endif
@@ -584,9 +584,9 @@ public:
        * @return Offset measurement. (pga_offset * (64+1))
        */
       int measurePgaOffset() const {
-         adc->PGA |= ADC_PGA_PGAOFSM_MASK;
+         adc->PGA = adc->PGA | ADC_PGA_PGAOFSM_MASK;
          int offset = readAnalogue(PGA_CHANNEL);
-         adc->PGA &= ~ADC_PGA_PGAOFSM_MASK;
+         adc->PGA = adc->PGA & ~ADC_PGA_PGAOFSM_MASK;
          return offset;
       }
 #else
@@ -722,6 +722,8 @@ public:
 
    /**
     * Configures all mapped pins associated with ADC
+    *
+    * @note Locked pins will be unaffected
     */
    static void configureAllPins() {
    
@@ -735,6 +737,8 @@ public:
     * Disabled all mapped pins associated with ADC
     *
     * @note Only the lower 16-bits of the PCR registers are modified
+    *
+    * @note Locked pins will be unaffected
     */
    static void disableAllPins() {
    
@@ -746,26 +750,20 @@ public:
 
    /**
     * Basic enable of ADC
-    * Includes enabling clock and configuring all pins if mapPinsOnEnable is selected in configuration
+    * Includes enabling clock and configuring all mapped pins if mapPinsOnEnable is selected in configuration
     */
    static void enable() {
-   
-      // Enable clock to peripheral
       Info::enableClock();
-   
       configureAllPins();
    }
 
    /**
-    * Disables the clock to ADC and all mappable pins
+    * Disables the clock to ADC and all mapped pins
     */
    static void disable() {
-   
       disableNvicInterrupts();
-      
+      adc->SC1[0] = ADC_SC1_ADCH(-1);
       disableAllPins();
-   
-      // Disable clock to peripheral
       Info::disableClock();
    }
 // End Template _mapPinsOption.xml
@@ -1054,14 +1052,14 @@ public:
     *       However, enabling it beforehand will reduce the latency of the 1st conversion in a sequence.
     */
    static void enableAsynchronousClock() {
-      adc->CFG2 |= ADC_CFG2_ADACKEN_MASK;
+      adc->CFG2 = adc->CFG2 | ADC_CFG2_ADACKEN_MASK;
    }
 
    /**
     * Disable ADC internal asynchronous clock source
     */
    static void disableAsynchronousClock() {
-      adc->CFG2 &= ~ADC_CFG2_ADACKEN_MASK;
+      adc->CFG2 = adc->CFG2 & ~ADC_CFG2_ADACKEN_MASK;
    }
 
    /**
@@ -1169,7 +1167,7 @@ public:
             break;
       }
       // Set comparison fields
-      adc->SC2 |= (adc->SC2&~(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)))|
+      adc->SC2 = adc->SC2 | (adc->SC2&~(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)))|
             (adcCompare&(ADC_SC2_ACFE(1)|ADC_SC2_ACFGT(1)|ADC_SC2_ACREN(1)));
    }
 
@@ -1180,10 +1178,10 @@ public:
     */
    static void enableContinuousConversions(AdcContinuous adcContinuous) {
       if (adcContinuous) {
-         adc->SC3 |= ADC_SC3_ADCO_MASK;
+         adc->SC3 = adc->SC3 | ADC_SC3_ADCO_MASK;
       }
       else {
-         adc->SC3 &= ~ADC_SC3_ADCO_MASK;
+         adc->SC3 = adc->SC3 & ~ADC_SC3_ADCO_MASK;
       }
    }
 
@@ -1196,10 +1194,10 @@ public:
    static void enableDma(AdcDma adcDma = AdcDma_Enabled) {
       // Set up DMA
       if (adcDma) {
-         adc->SC2 |= ADC_SC2_DMAEN_MASK;
+         adc->SC2 = adc->SC2 | ADC_SC2_DMAEN_MASK;
       }
       else {
-         adc->SC2 &= ~ADC_SC2_DMAEN_MASK;
+         adc->SC2 = adc->SC2 & ~ADC_SC2_DMAEN_MASK;
       }
    }
 #endif
@@ -1326,9 +1324,9 @@ public:
        * @return Offset measurement. (pga_offset * (64+1))
        */
       static int measurePgaOffset() {
-         adc->PGA |= ADC_PGA_PGAOFSM_MASK;
+         adc->PGA = adc->PGA | ADC_PGA_PGAOFSM_MASK;
          int offset = readAnalogue(PGA_CHANNEL);
-         adc->PGA &= ~ADC_PGA_PGAOFSM_MASK;
+         adc->PGA = adc->PGA & ~ADC_PGA_PGAOFSM_MASK;
          return offset;
       }
 #else

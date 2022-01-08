@@ -60,14 +60,6 @@ namespace USBDM {
     */
    static constexpr bool ForceLockoutUnbondedPins = true;
 
-   static constexpr float ns      = 1E-9f; //!< Scale factor for nanoseconds
-   static constexpr float us      = 1E-6f; //!< Scale factor for microseconds
-   static constexpr float ms      = 1E-3f; //!< Scale factor for milliseconds
-   static constexpr float seconds = 1.0f;  //!< Scale factor for seconds
-   static constexpr float percent = 1.0f;  //!< Scale factor for percentage as float
-   static constexpr float MHz     = 1E6f;  //!< Scale factor for MHz as float
-   static constexpr float kHz     = 1E3f;  //!< Scale factor for kHz as float
-   static constexpr float Hz      = 1.0f;  //!< Scale factor for Hz as float
 
    /* MCGFFCLK - Fixed frequency clock (input to FLL) */
    extern volatile uint32_t SystemMcgffClock;
@@ -153,7 +145,7 @@ namespace USBDM {
     * @return  Size of array in elements
     */
    template<typename T, size_t N>
-      constexpr size_t sizeofArray(T (&)[N]) {
+      consteval size_t sizeofArray(T (&)[N]) {
          return N;
       }
 
@@ -889,7 +881,7 @@ public:
 #ifdef PCC
       PccInfo::enableRtcClock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_RTC_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_RTC_MASK;
 #endif
    }
 
@@ -900,7 +892,7 @@ public:
 #ifdef PCC
       PccInfo::disableRtcClock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_RTC_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_RTC_MASK;
 #endif
    }
 
@@ -1038,7 +1030,7 @@ public:
       const uint32_t sopt2;
 
       //! Clock Mode
-      const ClockMode clockMode:8;
+      const ClockMode clockMode;
 
       //! Control Register 1 - FRDIV, IRCLKEN, IREFSTEN, (-CLKS, -IREFS)
       const uint8_t c1;
@@ -2537,7 +2529,7 @@ public:
    static void initRegs() {
    #ifdef SIM_SCGC4_USBOTG_MASK
       // The USB interface must be disabled for clock changes to have effect
-      sim->SCGC4 &= ~SIM_SCGC4_USBOTG_MASK;
+      sim->SCGC4 = sim->SCGC4 & ~SIM_SCGC4_USBOTG_MASK;
    #endif
    
       sim->SOPT1 = sopt1;
@@ -2773,7 +2765,7 @@ public:
 #ifdef PCC
       PccInfo::enableAdc0Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_ADC0_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_ADC0_MASK;
 #endif
    }
 
@@ -2784,7 +2776,7 @@ public:
 #ifdef PCC
       PccInfo::disableAdc0Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_ADC0_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_ADC0_MASK;
 #endif
    }
 
@@ -2990,7 +2982,7 @@ public:
 #ifdef PCC
       PccInfo::enableCmp0Clock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_CMP_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_CMP_MASK;
 #endif
    }
 
@@ -3001,7 +2993,7 @@ public:
 #ifdef PCC
       PccInfo::disableCmp0Clock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_CMP_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_CMP_MASK;
 #endif
    }
 
@@ -3141,7 +3133,7 @@ public:
 #ifdef PCC
       PccInfo::enableCmp1Clock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_CMP_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_CMP_MASK;
 #endif
    }
 
@@ -3152,7 +3144,7 @@ public:
 #ifdef PCC
       PccInfo::disableCmp1Clock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_CMP_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_CMP_MASK;
 #endif
    }
 
@@ -3256,7 +3248,7 @@ public:
 #ifdef PCC
       PccInfo::enableCmtClock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_CMT_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_CMT_MASK;
 #endif
    }
 
@@ -3267,7 +3259,7 @@ public:
 #ifdef PCC
       PccInfo::disableCmtClock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_CMT_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_CMT_MASK;
 #endif
    }
 
@@ -3407,7 +3399,7 @@ public:
 #ifdef PCC
       PccInfo::enableCrc0Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_CRC_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_CRC_MASK;
 #endif
    }
 
@@ -3418,7 +3410,7 @@ public:
 #ifdef PCC
       PccInfo::disableCrc0Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_CRC_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_CRC_MASK;
 #endif
    }
 
@@ -3466,7 +3458,7 @@ public:
 #ifdef PCC
       // DMA is always clocked
 #else
-      SIM->SCGC7 |= SIM_SCGC7_DMA_MASK;
+      SIM->SCGC7 = SIM->SCGC7 | SIM_SCGC7_DMA_MASK;
 #endif
    }
 
@@ -3477,7 +3469,7 @@ public:
 #ifdef PCC
       // DMA is always clocked
 #else
-      SIM->SCGC7 &= ~SIM_SCGC7_DMA_MASK;
+      SIM->SCGC7 = SIM->SCGC7 & ~SIM_SCGC7_DMA_MASK;
 #endif
    }
 
@@ -3536,7 +3528,7 @@ public:
 #ifdef PCC
       PccInfo::enableDmamux0Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_DMAMUX0_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_DMAMUX0_MASK;
 #endif
    }
 
@@ -3547,7 +3539,7 @@ public:
 #ifdef PCC
       PccInfo::disableDmamux0Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_DMAMUX0_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_DMAMUX0_MASK;
 #endif
    }
 
@@ -3616,7 +3608,7 @@ public:
 #ifdef PCC
       PccInfo::enableEwmClock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_EWM_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_EWM_MASK;
 #endif
    }
 
@@ -3627,7 +3619,7 @@ public:
 #ifdef PCC
       PccInfo::disableEwmClock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_EWM_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_EWM_MASK;
 #endif
    }
 
@@ -3781,7 +3773,7 @@ public:
 #ifdef PCC
       PccInfo::enableFtflClock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_FTFL_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_FTFL_MASK;
 #endif
    }
 
@@ -3792,7 +3784,7 @@ public:
 #ifdef PCC
       PccInfo::disableFtflClock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_FTFL_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_FTFL_MASK;
 #endif
    }
 
@@ -3934,7 +3926,7 @@ public:
 #ifdef PCC
       PccInfo::enableFtm0Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_FTM0_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_FTM0_MASK;
 #endif
    }
 
@@ -3945,7 +3937,7 @@ public:
 #ifdef PCC
       PccInfo::disableFtm0Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_FTM0_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_FTM0_MASK;
 #endif
    }
 
@@ -4107,7 +4099,7 @@ public:
 #ifdef PCC
       PccInfo::enableFtm1Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_FTM1_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_FTM1_MASK;
 #endif
    }
 
@@ -4118,7 +4110,7 @@ public:
 #ifdef PCC
       PccInfo::disableFtm1Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_FTM1_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_FTM1_MASK;
 #endif
    }
 
@@ -4287,7 +4279,7 @@ public:
 #ifdef PCC
       PccInfo::enableI2c0Clock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_I2C0_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_I2C0_MASK;
 #endif
    }
 
@@ -4298,7 +4290,7 @@ public:
 #ifdef PCC
       PccInfo::disableI2c0Clock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_I2C0_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_I2C0_MASK;
 #endif
    }
 
@@ -4397,7 +4389,7 @@ public:
 #ifdef PCC
       PccInfo::enableI2s0Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_I2S_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_I2S_MASK;
 #endif
    }
 
@@ -4408,7 +4400,7 @@ public:
 #ifdef PCC
       PccInfo::disableI2s0Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_I2S_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_I2S_MASK;
 #endif
    }
 
@@ -4729,7 +4721,7 @@ public:
 #ifdef PCC
       PccInfo::enableLptmr0Clock();
 #else
-      SIM->SCGC5 |= SIM_SCGC5_LPTMR_MASK;
+      SIM->SCGC5 = SIM->SCGC5 | SIM_SCGC5_LPTMR_MASK;
 #endif
    }
 
@@ -4740,7 +4732,7 @@ public:
 #ifdef PCC
       PccInfo::disableLptmr0Clock();
 #else
-      SIM->SCGC5 &= ~SIM_SCGC5_LPTMR_MASK;
+      SIM->SCGC5 = SIM->SCGC5 & ~SIM_SCGC5_LPTMR_MASK;
 #endif
    }
 
@@ -4916,7 +4908,7 @@ public:
 #ifdef PCC
       PccInfo::enablePdb0Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_PDB_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_PDB_MASK;
 #endif
    }
 
@@ -4927,7 +4919,7 @@ public:
 #ifdef PCC
       PccInfo::disablePdb0Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_PDB_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_PDB_MASK;
 #endif
    }
 
@@ -5026,7 +5018,7 @@ public:
 #ifdef PCC
       PccInfo::enablePitClock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_PIT_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_PIT_MASK;
 #endif
    }
 
@@ -5037,7 +5029,7 @@ public:
 #ifdef PCC
       PccInfo::disablePitClock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_PIT_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_PIT_MASK;
 #endif
    }
 
@@ -5242,7 +5234,7 @@ public:
 #ifdef PCC
       PccInfo::enableSpi0Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_SPI0_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_SPI0_MASK;
 #endif
    }
 
@@ -5253,7 +5245,7 @@ public:
 #ifdef PCC
       PccInfo::disableSpi0Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_SPI0_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_SPI0_MASK;
 #endif
    }
 
@@ -5414,7 +5406,7 @@ public:
 #ifdef PCC
       PccInfo::enableTsi0Clock();
 #else
-      SIM->SCGC5 |= SIM_SCGC5_TSI0_MASK;
+      SIM->SCGC5 = SIM->SCGC5 | SIM_SCGC5_TSI0_MASK;
 #endif
    }
 
@@ -5425,7 +5417,7 @@ public:
 #ifdef PCC
       PccInfo::disableTsi0Clock();
 #else
-      SIM->SCGC5 &= ~SIM_SCGC5_TSI0_MASK;
+      SIM->SCGC5 = SIM->SCGC5 & ~SIM_SCGC5_TSI0_MASK;
 #endif
    }
 
@@ -5522,7 +5514,7 @@ public:
 #ifdef PCC
       PccInfo::enableUart0Clock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_UART0_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_UART0_MASK;
 #endif
    }
 
@@ -5533,7 +5525,7 @@ public:
 #ifdef PCC
       PccInfo::disableUart0Clock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_UART0_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_UART0_MASK;
 #endif
    }
 
@@ -5647,7 +5639,7 @@ public:
 #ifdef PCC
       PccInfo::enableUart1Clock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_UART1_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_UART1_MASK;
 #endif
    }
 
@@ -5658,7 +5650,7 @@ public:
 #ifdef PCC
       PccInfo::disableUart1Clock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_UART1_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_UART1_MASK;
 #endif
    }
 
@@ -5755,7 +5747,7 @@ public:
 #ifdef PCC
       PccInfo::enableUart2Clock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_UART2_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_UART2_MASK;
 #endif
    }
 
@@ -5766,7 +5758,7 @@ public:
 #ifdef PCC
       PccInfo::disableUart2Clock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_UART2_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_UART2_MASK;
 #endif
    }
 
@@ -5872,7 +5864,7 @@ public:
 #ifdef PCC
       PccInfo::enableUsb0Clock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_USBOTG_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_USBOTG_MASK;
 #endif
    }
 
@@ -5883,7 +5875,7 @@ public:
 #ifdef PCC
       PccInfo::disableUsb0Clock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_USBOTG_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_USBOTG_MASK;
 #endif
    }
 
@@ -5967,7 +5959,7 @@ public:
 #ifdef PCC
       PccInfo::enableUsbdcd0Clock();
 #else
-      SIM->SCGC6 |= SIM_SCGC6_USBDCD_MASK;
+      SIM->SCGC6 = SIM->SCGC6 | SIM_SCGC6_USBDCD_MASK;
 #endif
    }
 
@@ -5978,7 +5970,7 @@ public:
 #ifdef PCC
       PccInfo::disableUsbdcd0Clock();
 #else
-      SIM->SCGC6 &= ~SIM_SCGC6_USBDCD_MASK;
+      SIM->SCGC6 = SIM->SCGC6 & ~SIM_SCGC6_USBDCD_MASK;
 #endif
    }
 
@@ -6033,7 +6025,7 @@ public:
 #ifdef PCC
       PccInfo::enableVrefClock();
 #else
-      SIM->SCGC4 |= SIM_SCGC4_VREF_MASK;
+      SIM->SCGC4 = SIM->SCGC4 | SIM_SCGC4_VREF_MASK;
 #endif
    }
 
@@ -6044,7 +6036,7 @@ public:
 #ifdef PCC
       PccInfo::disableVrefClock();
 #else
-      SIM->SCGC4 &= ~SIM_SCGC4_VREF_MASK;
+      SIM->SCGC4 = SIM->SCGC4 & ~SIM_SCGC4_VREF_MASK;
 #endif
    }
 

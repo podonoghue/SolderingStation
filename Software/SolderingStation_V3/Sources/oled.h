@@ -1,5 +1,5 @@
 /*
- * Oled.h
+ * @file oled.h
  *
  *  Created on: 31 Oct 2019
  *      Author: podonoghue
@@ -10,15 +10,15 @@
 #ifndef SOURCES_OLED_H_
 #define SOURCES_OLED_H_
 
-#include "fonts.h"
 #include "i2c.h"
+#include "fonts.h"
 #include "formatted_io.h"
 
 namespace USBDM {
 
 enum OledVccControl : uint8_t {
    OledVccControl_Internal = 0,
-         OledVccControl_External = 1,
+   OledVccControl_External = 1,
 };
 
 enum WriteMode {
@@ -37,40 +37,49 @@ enum SSD1306_Colours {
 
 enum SSD1306_Commands : uint8_t {
    SSD1306_MEMORYMODE                            = 0x20, ///< See datasheet
-         SSD1306_COLUMNADDR                            = 0x21, ///< See datasheet
-         SSD1306_PAGEADDR                              = 0x22, ///< See datasheet
-         SSD1306_SETCONTRAST                           = 0x81, ///< See datasheet
-         SSD1306_CHARGEPUMP                            = 0x8D, ///< See datasheet
-         SSD1306_SEGREMAP                              = 0xA0, ///< See datasheet
-         SSD1306_DISPLAYALLON_RESUME                   = 0xA4, ///< See datasheet
-         SSD1306_DISPLAYALLON                          = 0xA5, ///< Not currently used
-         SSD1306_NORMALDISPLAY                         = 0xA6, ///< See datasheet
-         SSD1306_INVERTDISPLAY                         = 0xA7, ///< See datasheet
-         SSD1306_SETMULTIPLEX                          = 0xA8, ///< See datasheet
-         SSD1306_DISPLAYOFF                            = 0xAE, ///< See datasheet
-         SSD1306_DISPLAYON                             = 0xAF, ///< See datasheet
-         SSD1306_COMSCANINC                            = 0xC0, ///< Not currently used
-         SSD1306_COMSCANDEC                            = 0xC0, ///< See datasheet
-         SSD1306_SETDISPLAYOFFSET                      = 0xD3, ///< See datasheet
-         SSD1306_SETDISPLAYCLOCKDIV                    = 0xD5, ///< See datasheet
-         SSD1306_SETPRECHARGE                          = 0xD9, ///< See datasheet
-         SSD1306_SETCOMPINS                            = 0xDA, ///< See datasheet
-         SSD1306_SETVCOMDETECT                         = 0xDB, ///< See datasheet
+   SSD1306_COLUMNADDR                            = 0x21, ///< See datasheet
+   SSD1306_PAGEADDR                              = 0x22, ///< See datasheet
+   SSD1306_SETCONTRAST                           = 0x81, ///< See datasheet
+   SSD1306_CHARGEPUMP                            = 0x8D, ///< See datasheet
+   SSD1306_SEGREMAP                              = 0xA0, ///< See datasheet
+   SSD1306_DISPLAYALLON_RESUME                   = 0xA4, ///< See datasheet
+   SSD1306_DISPLAYALLON                          = 0xA5, ///< Not currently used
+   SSD1306_NORMALDISPLAY                         = 0xA6, ///< See datasheet
+   SSD1306_INVERTDISPLAY                         = 0xA7, ///< See datasheet
+   SSD1306_SETMULTIPLEX                          = 0xA8, ///< See datasheet
+   SSD1306_DISPLAYOFF                            = 0xAE, ///< See datasheet
+   SSD1306_DISPLAYON                             = 0xAF, ///< See datasheet
+   SSD1306_COMSCANINC                            = 0xC0, ///< Not currently used
+   SSD1306_COMSCANDEC                            = 0xC0, ///< See datasheet
+   SSD1306_SETDISPLAYOFFSET                      = 0xD3, ///< See datasheet
+   SSD1306_SETDISPLAYCLOCKDIV                    = 0xD5, ///< See datasheet
+   SSD1306_SETPRECHARGE                          = 0xD9, ///< See datasheet
+   SSD1306_SETCOMPINS                            = 0xDA, ///< See datasheet
+   SSD1306_SETVCOMDETECT                         = 0xDB, ///< See datasheet
 
-         SSD1306_SETLOWCOLUMN                          = 0x00, ///< Not currently used
-         SSD1306_SETHIGHCOLUMN                         = 0x10, ///< Not currently used
-         SSD1306_SETSTARTLINE                          = 0x40, ///< See datasheet
+   SSD1306_SETLOWCOLUMN                          = 0x00, ///< Not currently used
+   SSD1306_SETHIGHCOLUMN                         = 0x10, ///< Not currently used
+   SSD1306_SETSTARTLINE                          = 0x40, ///< See datasheet
 
-         SSD1306_RIGHT_HORIZONTAL_SCROLL               = 0x26, ///< Init rt scroll
-         SSD1306_LEFT_HORIZONTAL_SCROLL                = 0x27, ///< Init left scroll
-         SSD1306_VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL  = 0x29, ///< Init diag scroll
-         SSD1306_VERTICAL_AND_LEFT_HORIZONTAL_SCROLL   = 0x2A, ///< Init diag scroll
-         SSD1306_DEACTIVATE_SCROLL                     = 0x2E, ///< Stop scroll
-         SSD1306_ACTIVATE_SCROLL                       = 0x2F, ///< Start scroll
-         SSD1306_SET_VERTICAL_SCROLL_AREA              = 0xA3, ///< Set scroll range
+   SSD1306_RIGHT_HORIZONTAL_SCROLL               = 0x26, ///< Init rt scroll
+   SSD1306_LEFT_HORIZONTAL_SCROLL                = 0x27, ///< Init left scroll
+   SSD1306_VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL  = 0x29, ///< Init diag scroll
+   SSD1306_VERTICAL_AND_LEFT_HORIZONTAL_SCROLL   = 0x2A, ///< Init diag scroll
+   SSD1306_DEACTIVATE_SCROLL                     = 0x2E, ///< Stop scroll
+   SSD1306_ACTIVATE_SCROLL                       = 0x2F, ///< Start scroll
+   SSD1306_SET_VERTICAL_SCROLL_AREA              = 0xA3, ///< Set scroll range
 };
 
 class Oled : public USBDM::FormattedIO {
+public:
+
+   // Change as needed for actual display
+   static constexpr int            WIDTH         = 128;
+   static constexpr int            HEIGHT        =  64;
+   static constexpr OledVccControl VCC_CONTROL   = OledVccControl_Internal;
+
+   enum Orientation {Orientation_Normal, Orientation_Rotated_180};
+   static constexpr Orientation orientation = Orientation_Rotated_180;
 
 private:
 
@@ -98,7 +107,7 @@ private:
    /**
     * Write a character to the LCD in graphics mode at the current x,y location
     *
-    * @param [in]  ch - character to send
+    * @param[in]  ch - character to send
     */
    virtual void _writeChar(char ch) override;
 
@@ -120,23 +129,23 @@ public:
 
    // Address (LSB = R/W bit = 0)
    static constexpr unsigned   I2C_ADDRESS   = 0b01111000;
-   static constexpr unsigned   I2C_SPEED     = 400*kHz;
+   static constexpr unsigned   I2C_SPEED     = 400_kHz;
 
-   static constexpr int            WIDTH         = 128;
-   static constexpr int            HEIGHT        =  64;
-   static constexpr OledVccControl VCC_CONTROL   = OledVccControl_Internal;
-
-   enum Orientation {Orientation_Normal, Orientation_Rotated_180};
-   static constexpr Orientation orientation = Orientation_Rotated_180;
+   // Size of image array in memory
+   static constexpr size_t IMAGE_DATA_SIZE = WIDTH * ((HEIGHT + 7) / 8);
 
 #pragma pack(push,1)
    /// Buffer type for display data
    /// This is prefixed by a command byte for transmission to OLED
-   struct Buffer {
+   union Buffer {
+      struct {
       /// Command byte
       uint8_t  controlByte;
       /// Data values
-      uint8_t  buffer[WIDTH * ((HEIGHT + 7) / 8)];
+      uint8_t  data[IMAGE_DATA_SIZE];
+      };
+      /// All data for transmission
+      uint8_t rawData[IMAGE_DATA_SIZE+1];
    };
 #pragma pack(pop)
 
@@ -167,9 +176,9 @@ public:
    /**
     * Write a custom character to the LCD in graphics mode at the current x,y location
     *
-    * @param [in] image  Image describing the character
-    * @param [in] width  Width of the image
-    * @param [in] height Height of character
+    * @param[in] image  Image describing the character
+    * @param[in] width  Width of the image
+    * @param[in] height Height of character
     */
    Oled &putCustomChar(const uint8_t *image, int width, int height) {
       writeImage(image, x, y, width, height);

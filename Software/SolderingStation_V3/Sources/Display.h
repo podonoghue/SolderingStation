@@ -11,7 +11,7 @@
 #include "string.h"
 #include "Peripherals.h"
 #include "i2c.h"
-#include "Oled.h"
+#include "oled.h"
 #include "SwitchPolling.h"
 #include "TipSettings.h"
 #include "BoundedInteger.h"
