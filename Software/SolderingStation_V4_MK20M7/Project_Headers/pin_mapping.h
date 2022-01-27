@@ -128,12 +128,20 @@ namespace USBDM {
    /** Dummy port information for pins without an associated PCR */
    constexpr PortInfo  __attribute__((unused)) NoPortInfo {0, 0, IRQn_None, 0, NvicPriority_NotInstalled};
 
-   /** Class to static check signal mapping is valid */
-   template<class Info, int signalNum> class CheckSignal {
-      static_assert((signalNum<Info::numSignals), "Non-existent signal - Modify Configure.usbdm");
-      static_assert((signalNum>=Info::numSignals)||(Info::info[signalNum].gpioBit != UNMAPPED_PCR), "Signal is not mapped to a pin - Modify Configure.usbdm");
-      static_assert((signalNum>=Info::numSignals)||(Info::info[signalNum].gpioBit != INVALID_PCR),  "Signal doesn't exist in this device/package");
-      static_assert((signalNum>=Info::numSignals)||((Info::info[signalNum].gpioBit == UNMAPPED_PCR)||(Info::info[signalNum].gpioBit == INVALID_PCR)||(Info::info[signalNum].gpioBit >= 0)), "Illegal signal");
+   /**
+    * Class to static check signal mapping is valid
+    * Conditions are chained so only a single assert is reported
+    */
+   template<class Info, int signalNum> class CheckSignalMapping {
+      static constexpr bool check1 = signalNum<Info::numSignals;
+      static constexpr bool check2 = !check1 || (Info::info[signalNum].gpioBit != UNMAPPED_PCR);
+      static constexpr bool check3 = !check1 || !check2 || (Info::info[signalNum].gpioBit != INVALID_PCR);
+      static constexpr bool check4 = !check1 || !check2 || !check3 || (Info::info[signalNum].gpioBit >= 0);
+   
+      static_assert(check1, "Non-existent signal - Modify Configure.usbdm");
+      static_assert(check2, "Signal is not mapped to a pin - Modify Configure.usbdm");
+      static_assert(check3, "Signal doesn't exist in this device/package");
+      static_assert(check4, "Illegal signal");
    };
 
    /**
@@ -2509,31 +2517,31 @@ public:
    #if defined(SIM_SOPT8_FTM0OCH0SRC)
    //! System Options Register 8
    static constexpr uint32_t sopt8 = 
-      SIM_SOPT8_FTM3OCH7SRC(Symbol 'sim_sopt8_ftm3och7src' not found) |   // FTM3 channel 7 output source
-      SIM_SOPT8_FTM3OCH6SRC(Symbol 'sim_sopt8_ftm3och6src' not found) |   // FTM3 channel 6 output source
-      SIM_SOPT8_FTM3OCH5SRC(Symbol 'sim_sopt8_ftm3och5src' not found) |   // FTM3 channel 5 output source
-      SIM_SOPT8_FTM3OCH4SRC(Symbol 'sim_sopt8_ftm3och4src' not found) |   // FTM3 channel 4 output source
-      SIM_SOPT8_FTM3OCH3SRC(Symbol 'sim_sopt8_ftm3och3src' not found) |   // FTM3 channel 3 output source
-      SIM_SOPT8_FTM3OCH2SRC(Symbol 'sim_sopt8_ftm3och2src' not found) |   // FTM3 channel 2 output source
-      SIM_SOPT8_FTM3OCH1SRC(Symbol 'sim_sopt8_ftm3och1src' not found) |   // FTM3 channel 1 output source
-      SIM_SOPT8_FTM3OCH0SRC(Symbol 'sim_sopt8_ftm3och0src' not found) |   // FTM3 channel 0 output source
-      SIM_SOPT8_FTM0OCH7SRC(Symbol 'sim_sopt8_ftm0och7src' not found) |   // FTM0 channel 7 output source
-      SIM_SOPT8_FTM0OCH6SRC(Symbol 'sim_sopt8_ftm0och6src' not found) |   // FTM0 channel 6 output source
-      SIM_SOPT8_FTM0OCH5SRC(Symbol 'sim_sopt8_ftm0och5src' not found) |   // FTM0 channel 5 output source
-      SIM_SOPT8_FTM0OCH4SRC(Symbol 'sim_sopt8_ftm0och4src' not found) |   // FTM0 channel 4 output source
-      SIM_SOPT8_FTM0OCH3SRC(Symbol 'sim_sopt8_ftm0och3src' not found) |   // FTM0 channel 3 output source
-      SIM_SOPT8_FTM0OCH2SRC(Symbol 'sim_sopt8_ftm0och2src' not found) |   // FTM0 channel 2 output source
-      SIM_SOPT8_FTM0OCH1SRC(Symbol 'sim_sopt8_ftm0och1src' not found) |   // FTM0 channel 1 output source
-      SIM_SOPT8_FTM0OCH0SRC(Symbol 'sim_sopt8_ftm0och0src' not found);    // FTM0 channel 0 output source
+      SIM_SOPT8_FTM3OCH7SRC(-1) |   // FTM3 channel 7 output source
+      SIM_SOPT8_FTM3OCH6SRC(-1) |   // FTM3 channel 6 output source
+      SIM_SOPT8_FTM3OCH5SRC(-1) |   // FTM3 channel 5 output source
+      SIM_SOPT8_FTM3OCH4SRC(-1) |   // FTM3 channel 4 output source
+      SIM_SOPT8_FTM3OCH3SRC(-1) |   // FTM3 channel 3 output source
+      SIM_SOPT8_FTM3OCH2SRC(-1) |   // FTM3 channel 2 output source
+      SIM_SOPT8_FTM3OCH1SRC(-1) |   // FTM3 channel 1 output source
+      SIM_SOPT8_FTM3OCH0SRC(-1) |   // FTM3 channel 0 output source
+      SIM_SOPT8_FTM0OCH7SRC(-1) |   // FTM0 channel 7 output source
+      SIM_SOPT8_FTM0OCH6SRC(-1) |   // FTM0 channel 6 output source
+      SIM_SOPT8_FTM0OCH5SRC(-1) |   // FTM0 channel 5 output source
+      SIM_SOPT8_FTM0OCH4SRC(-1) |   // FTM0 channel 4 output source
+      SIM_SOPT8_FTM0OCH3SRC(-1) |   // FTM0 channel 3 output source
+      SIM_SOPT8_FTM0OCH2SRC(-1) |   // FTM0 channel 2 output source
+      SIM_SOPT8_FTM0OCH1SRC(-1) |   // FTM0 channel 1 output source
+      SIM_SOPT8_FTM0OCH0SRC(-1);    // FTM0 channel 0 output source
    #endif
 
    #if defined(SIM_SOPT9_TPM1CH0SRC)
    //! System Options Register 9
    static constexpr uint32_t sopt9 = 
-      SIM_SOPT9_TPM2CLKSEL(Symbol 'sim_sopt9_tpm2clksel' not found)  |   // TPM2 External Clock Pin Select
-      SIM_SOPT9_TPM1CLKSEL(Symbol 'sim_sopt9_tpm1clksel' not found)  |   // TPM1 External Clock Pin Select
-      SIM_SOPT9_TPM2CH0SRC(Symbol 'sim_sopt9_tpm2ch0src' not found)  |   // TPM2 channel 0 input capture source select
-      SIM_SOPT9_TPM1CH0SRC(Symbol 'sim_sopt9_tpm1ch0src' not found);     // TPM1 channel 0 input capture source select
+      SIM_SOPT9_TPM2CLKSEL(-1)  |   // TPM2 External Clock Pin Select
+      SIM_SOPT9_TPM1CLKSEL(-1)  |   // TPM1 External Clock Pin Select
+      SIM_SOPT9_TPM2CH0SRC(-1)  |   // TPM2 channel 0 input capture source select
+      SIM_SOPT9_TPM1CH0SRC(-1);     // TPM1 channel 0 input capture source select
    #endif
 
    /**
@@ -4402,7 +4410,7 @@ public:
  */
 class FtflInfo {
 public:
-   // Template:ftfl_32k_flexrom
+   // Template:ftfl
 
    //! Hardware base address as uint32_t 
    static constexpr uint32_t baseAddress = FTFL_BasePtr;
@@ -7319,7 +7327,7 @@ public:
 ///  PGA0_DM        | LowGainDirectAdcChannel       | ADC0_SE19                                          | p10                       | ADC channel direct to sample point
 ///  PGA0_DP        | Ch1Identify_notUsed           | ADC0_SE0                                           | p9                        | ADC channel for channel 1 ID pin
 ///  PGA1_DM        | Ch2Identify_notUsed           | ADC0_SE21                                          | p12                       | ADC channel for channel 2 ID pin
-///  PGA1_DP        | ProgrammableGainAdcChannel    | PGA1                                               | p11                       | ADC channel with external amplifier
+///  PGA1_DP        |                               | PGA1                                               | p11                       | ADC channel with external amplifier
 ///  PGA1_DP        | FixedGainAdcChannel           | ADC0_SE3                                           | p11                       | ADC channel with external amplifier
 ///  PIT_CH0        | PollingTimerChannel           | PIT_CH0                                            | Internal                  | PIT channel to use for switch polling
 ///  PIT_CH1        | ControlTimerChannel           | PIT_CH1                                            | Internal                  | PIT channel to use for sample and control timing
@@ -7327,7 +7335,7 @@ public:
 ///  PTA1           | -                             | UART0_RX                                           | p23                       | Debug console Rx
 ///  PTA2           | -                             | UART0_TX                                           | p24                       | Debug console Tx
 ///  PTA3           |                               | SWD_DIO                                            | p25                       | SWD Data I/O
-///  PTA4           | Spare1/Debug                  | GPIOA_4                                            | p26                       | Spare #1/Debug pin
+///  PTA4           | Spare1                        | GPIOA_4                                            | p26                       | Spare #1
 ///  PTA13          | Overcurrent                   | CMP2_IN1                                           | p29                       | Overcurrent comparator
 ///  PTA18          | -                             | EXTAL0                                             | p32                       | 16MHz Crystal
 ///  PTA19          | -                             | XTAL0                                              | p33                       | 16MHz Crystal
@@ -7352,8 +7360,8 @@ public:
 ///  PTC10          | AmplifierControl              | GPIOC_10                                           | p55                       | Multiplexor select 1
 ///  PTC11          | AmplifierControl/AmplifierBias| GPIOC_11                                           | p56                       | /Amplifier bias control
 ///  PTD0           | Buttons/QuadButton            | GPIOD_0                                            | p57                       | All buttons for polling/Quadrature encoder button
-///  PTD1           | Buttons/Ch1Button             | GPIOD_1                                            | p58                       | /Channel 2 button
-///  PTD2           | Buttons/Ch2Button             | GPIOD_2                                            | p59                       | /Channel 1 button
+///  PTD1           | Buttons/Ch2Button             | GPIOD_1                                            | p58                       | /Channel 2 button
+///  PTD2           | Buttons/Ch1Button             | GPIOD_2                                            | p59                       | /Channel 1 button
 ///  PTD3           | Buttons/MenuButton            | GPIOD_3                                            | p60                       | /Select button
 ///  PTD4           | Ch2VoltageSelect              | GPIOD_4                                            | p61                       | Channel 2 voltage select/Channel 2 voltage select (12V)
 ///  PTD5           | Ch2VoltageSelect              | GPIOD_5                                            | p62                       | Channel 2 voltage select (24V)
@@ -7398,7 +7406,7 @@ public:
 ///  VREGIN         | -                             | VREGIN                                             | p8                        | +3V3
 ///  PGA0_DP        | Ch1Identify_notUsed           | ADC0_SE0                                           | p9                        | ADC channel for channel 1 ID pin
 ///  PGA0_DM        | LowGainDirectAdcChannel       | ADC0_SE19                                          | p10                       | ADC channel direct to sample point
-///  PGA1_DP        | ProgrammableGainAdcChannel    | PGA1                                               | p11                       | ADC channel with external amplifier
+///  PGA1_DP        |                               | PGA1                                               | p11                       | ADC channel with external amplifier
 ///  PGA1_DP        | FixedGainAdcChannel           | ADC0_SE3                                           | p11                       | ADC channel with external amplifier
 ///  PGA1_DM        | Ch2Identify_notUsed           | ADC0_SE21                                          | p12                       | ADC channel for channel 2 ID pin
 ///  VDDA           | -                             | VDDA                                               | p13                       | +3V3
@@ -7411,7 +7419,7 @@ public:
 ///  PTA1           | -                             | UART0_RX                                           | p23                       | Debug console Rx
 ///  PTA2           | -                             | UART0_TX                                           | p24                       | Debug console Tx
 ///  PTA3           |                               | SWD_DIO                                            | p25                       | SWD Data I/O
-///  PTA4           | Spare1/Debug                  | GPIOA_4                                            | p26                       | Spare #1/Debug pin
+///  PTA4           | Spare1                        | GPIOA_4                                            | p26                       | Spare #1
 ///  PTA13          | Overcurrent                   | CMP2_IN1                                           | p29                       | Overcurrent comparator
 ///  VDD2           | -                             | VDD                                                | p30                       | +3V3
 ///  VSS2           | -                             | VSS                                                | p31                       | Gnd
@@ -7441,8 +7449,8 @@ public:
 ///  PTC10          | AmplifierControl              | GPIOC_10                                           | p55                       | Multiplexor select 1
 ///  PTC11          | AmplifierControl/AmplifierBias| GPIOC_11                                           | p56                       | /Amplifier bias control
 ///  PTD0           | Buttons/QuadButton            | GPIOD_0                                            | p57                       | All buttons for polling/Quadrature encoder button
-///  PTD1           | Buttons/Ch1Button             | GPIOD_1                                            | p58                       | /Channel 2 button
-///  PTD2           | Buttons/Ch2Button             | GPIOD_2                                            | p59                       | /Channel 1 button
+///  PTD1           | Buttons/Ch2Button             | GPIOD_1                                            | p58                       | /Channel 2 button
+///  PTD2           | Buttons/Ch1Button             | GPIOD_2                                            | p59                       | /Channel 1 button
 ///  PTD3           | Buttons/MenuButton            | GPIOD_3                                            | p60                       | /Select button
 ///  PTD4           | Ch2VoltageSelect              | GPIOD_4                                            | p61                       | Channel 2 voltage select/Channel 2 voltage select (12V)
 ///  PTD5           | Ch2VoltageSelect              | GPIOD_5                                            | p62                       | Channel 2 voltage select (24V)
@@ -7462,7 +7470,7 @@ public:
 ///  PTC7           | ZeroCrossingInput             | CMP0_IN1                                           | p52                       | Mains zero crossing detector
 ///  PTA13          | Overcurrent                   | CMP2_IN1                                           | p29                       | Overcurrent comparator
 ///  PTA18          | -                             | EXTAL0                                             | p32                       | 16MHz Crystal
-///  PTA4           | Spare1/Debug                  | GPIOA_4                                            | p26                       | Spare #1/Debug pin
+///  PTA4           | Spare1                        | GPIOA_4                                            | p26                       | Spare #1
 ///  PTB0           | QuadPhases                    | GPIOB_0                                            | p35                       | Quadrature encoder B
 ///  PTB1           | QuadPhases                    | GPIOB_1                                            | p36                       | Quadrature encoder A
 ///  PTB16          | ToolStands                    | GPIOB_16                                           | p39                       | Tool stand detectors
@@ -7481,8 +7489,8 @@ public:
 ///  PTC10          | AmplifierControl              | GPIOC_10                                           | p55                       | Multiplexor select 1
 ///  PTC11          | AmplifierControl/AmplifierBias| GPIOC_11                                           | p56                       | /Amplifier bias control
 ///  PTD0           | Buttons/QuadButton            | GPIOD_0                                            | p57                       | All buttons for polling/Quadrature encoder button
-///  PTD1           | Buttons/Ch1Button             | GPIOD_1                                            | p58                       | /Channel 2 button
-///  PTD2           | Buttons/Ch2Button             | GPIOD_2                                            | p59                       | /Channel 1 button
+///  PTD1           | Buttons/Ch2Button             | GPIOD_1                                            | p58                       | /Channel 2 button
+///  PTD2           | Buttons/Ch1Button             | GPIOD_2                                            | p59                       | /Channel 1 button
 ///  PTD3           | Buttons/MenuButton            | GPIOD_3                                            | p60                       | /Select button
 ///  PTD4           | Ch2VoltageSelect              | GPIOD_4                                            | p61                       | Channel 2 voltage select/Channel 2 voltage select (12V)
 ///  PTD5           | Ch2VoltageSelect              | GPIOD_5                                            | p62                       | Channel 2 voltage select (24V)
@@ -7492,7 +7500,7 @@ public:
 ///  PTE1           | Spare5                        | GPIOE_1                                            | p2                        | Spare 5
 ///  PTB2           | -                             | I2C0_SCL                                           | p37                       | I2C Clock (OLED)
 ///  PTB3           | -                             | I2C0_SDA                                           | p38                       | I2C Data (OLED)
-///  PGA1_DP        | ProgrammableGainAdcChannel    | PGA1                                               | p11                       | ADC channel with external amplifier
+///  PGA1_DP        |                               | PGA1                                               | p11                       | ADC channel with external amplifier
 ///  PIT_CH0        | PollingTimerChannel           | PIT_CH0                                            | Internal                  | PIT channel to use for switch polling
 ///  PIT_CH1        | ControlTimerChannel           | PIT_CH1                                            | Internal                  | PIT channel to use for sample and control timing
 ///  RESET_b        |                               | RESET_b                                            | p34                       | Reset_b

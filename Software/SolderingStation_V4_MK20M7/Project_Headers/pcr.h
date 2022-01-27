@@ -17,12 +17,21 @@
  */
 #include <stddef.h>
 #include <math.h>
+#include <algorithm>
 #include "derivative.h"
 #include "error.h"
 
 #if __cplusplus <= 201703L
 #define consteval constexpr
 #endif
+
+/*
+ * Default port information
+ */
+namespace USBDM {
+
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
 
 #define USE_DIMENSION_CHECK false
 #if (USE_DIMENSION_CHECK)
@@ -45,19 +54,21 @@ public:
 
    auto &operator =(const Ticks &other) volatile  {value = other.value;  return *this; }
 
-   auto getValue() const { return value; }
-   auto getValue() const volatile { return value; }
+   constexpr auto getValue() const { return value; }
+   unsigned getValue() const volatile { return value; }
 
    constexpr auto operator *(unsigned other) const { return Ticks(value*other); }
    constexpr auto operator *(float    other) const { return Ticks(value*other); }
 
    constexpr auto operator /(unsigned other) const { return Ticks(value/other); }
    constexpr auto operator /(float    other) const { return Ticks(value/other); }
+   constexpr auto operator /(Ticks    other) const { return (value/other.getValue()); }
 
-   constexpr auto operator +(const Ticks &other) const { return Ticks(value+other.value); }
-   constexpr auto operator -(const Ticks &other) const { return Ticks(value+other.value); }
+   constexpr auto operator +(const Ticks &other)   const { return Ticks(value+other.value); }
+   constexpr auto operator -(const Ticks &other)   const { return Ticks(value+other.value); }
+   constexpr auto operator -(const unsigned other) const { return Ticks(value-other); }
 
-   constexpr explicit operator unsigned() const { return value; }
+   constexpr operator unsigned() const { return value; }
    explicit operator unsigned() const volatile { return value; }
 };
 
@@ -70,7 +81,7 @@ public:
    constexpr Seconds()                       : value(0.0) {}
    constexpr Seconds(float value)            : value(value) {}
    constexpr Seconds(const Seconds& other)   : value(other.value) {}
-   Seconds(const volatile Seconds& other)    : value(other.value) {}
+   Seconds(const volatile Seconds& other)    : value(other.getValue()) {}
 
    auto &operator =(float other)                   {value = other;       return *this; }
    auto &operator =(const Seconds &other)          {value = other.value; return *this; }
@@ -79,16 +90,23 @@ public:
    auto &operator =(const Seconds &other) volatile {value = other.value; return *this; }
 
    constexpr auto getValue() const { return value; }
+   float getValue() const volatile { return value; }
 
-   constexpr auto operator *(float other) const { return Seconds(value*other); }
+   constexpr auto operator *(float other)    const { return Seconds(value*other); }
+   constexpr auto operator *(unsigned other) const { return Seconds(value*other); }
+   constexpr auto operator *(int other)      const { return Seconds(value*other); }
 
-   constexpr auto operator /(float other) const { return Seconds(value/other); }
+   constexpr auto operator /(float other)    const { return Seconds(value/other); }
+   constexpr auto operator /(unsigned other) const { return Seconds(value/other); }
+   constexpr auto operator /(int other)      const { return Seconds(value/other); }
+
+   constexpr auto operator /(Seconds other) const { return float(value/other.getValue()); }
 
    constexpr auto operator +(Seconds other) const { return Seconds(value+other.value); }
    constexpr auto operator -(Seconds other) const { return Seconds(value+other.value); }
 
-   explicit operator float() const { return value; }
-   operator float() const volatile { return value; }
+   constexpr operator float() const { return value; }
+   explicit operator float() const volatile { return value; }
 };
 
 class Hertz {
@@ -108,22 +126,40 @@ public:
    auto &operator =(const Hertz &other) volatile {value = other.value; return *this; }
 
    constexpr auto getValue() const { return value; }
+   float getValue() const volatile { return value; }
 
-   constexpr auto operator *(float other) const { return Hertz(value*other); }
+   constexpr auto operator *(float other)    const { return Hertz(value*other); }
+   constexpr auto operator *(unsigned other) const { return Hertz(value*other); }
+   constexpr auto operator *(int other)      const { return Hertz(value*other); }
 
-   constexpr auto operator /(float other) const { return Hertz(value/other); }
+   constexpr auto operator /(float other)    const { return Hertz(value/other); }
+   constexpr auto operator /(unsigned other) const { return Hertz(value/other); }
+   constexpr auto operator /(int other)      const { return Hertz(value/other); }
+
+   constexpr auto operator /(Hertz other) const { return (float)(value/other.getValue()); }
 
    constexpr auto operator +(Hertz other) const { return Hertz(value+other.value); }
    constexpr auto operator -(Hertz other) const { return Hertz(value+other.value); }
 
-   explicit operator float() const { return value; }
+   constexpr operator float()    const { return value; }
+   constexpr operator unsigned() const { return (int)round(value); }
 };
 
-constexpr auto operator *(float left, Seconds right) { return Seconds(left*right.getValue()); }
-constexpr auto operator *(float left, Hertz right)   { return Hertz(left*right.getValue()); }
+constexpr auto operator *(float left,     Seconds right)  { return Seconds(left*right.getValue()); }
+constexpr auto operator *(unsigned left,  Seconds right)  { return Seconds(left*right.getValue()); }
+constexpr auto operator *(int left,       Seconds right)  { return Seconds(left*right.getValue()); }
 
-constexpr auto operator /(float left, Seconds right) { return Hertz(left/right.getValue()); }
-constexpr auto operator /(float left, Hertz right)   { return Seconds(left/right.getValue()); }
+constexpr auto operator *(float left,     Hertz right)    { return Hertz(left*right.getValue()); }
+constexpr auto operator *(unsigned left,  Hertz right)    { return Hertz(left*right.getValue()); }
+constexpr auto operator *(int left,       Hertz right)    { return Hertz(left*right.getValue()); }
+
+constexpr auto operator /(float left,     Seconds right) { return Hertz(left/right.getValue()); }
+constexpr auto operator /(unsigned left,  Seconds right) { return Hertz(left/right.getValue()); }
+constexpr auto operator /(int left,       Seconds right) { return Hertz(left/right.getValue()); }
+
+constexpr auto operator /(float left,     Hertz right)   { return Seconds(left/right.getValue()); }
+constexpr auto operator /(unsigned left,  Hertz right)   { return Seconds(left/right.getValue()); }
+constexpr auto operator /(int left,       Hertz right)   { return Seconds(left/right.getValue()); }
 
 #else
    using Ticks    = unsigned;
@@ -160,11 +196,6 @@ constexpr auto operator /(float left, Hertz right)   { return Seconds(left/right
 
 //   consteval auto operator"" _percent(unsigned long long int num)  { return static_cast<double>(num)*0.01; };
 //   consteval auto operator"" _percent(long double num)             { return static_cast<double>(num)*0.01; };
-
-/*
- * Default port information
- */
-namespace USBDM {
 
 /**
  * Convenience names for common priority levels
@@ -446,7 +477,7 @@ constexpr uint32_t operator &(uint32_t mask, PcrValue pcrValue) {
  *
  * @note Not all pins support this function
  */
-enum PinPull {
+enum PinPull : uint32_t {
    PinPull_None = PORT_PCR_PE(0),                //!< No pull device
    PinPull_Up   = PORT_PCR_PE(1)|PORT_PCR_PS(1), //!< Weak pull-up
    PinPull_Down = PORT_PCR_PE(1)|PORT_PCR_PS(0), //!< Weak pull-down
@@ -457,7 +488,7 @@ enum PinPull {
  *
  * @note Few pins support this function
  */
-enum PinDriveStrength {
+enum PinDriveStrength : uint32_t {
    PinDriveStrength_Low  = PORT_PCR_DSE(0), //!< Low drive strength
    PinDriveStrength_High = PORT_PCR_DSE(1), //!< High drive strength
 };
@@ -467,7 +498,7 @@ enum PinDriveStrength {
  *
  * @note Not all pins support this function
  */
-enum PinDriveMode {
+enum PinDriveMode : uint32_t {
    PinDriveMode_PushPull      = PORT_PCR_ODE(0), //!< Push-pull output
    PinDriveMode_OpenDrain     = PORT_PCR_ODE(1), //!< Open-drain output
    PinDriveMode_OpenCollector = PinDriveMode_OpenDrain,       //!< For oldies like me
@@ -478,7 +509,7 @@ enum PinDriveMode {
  *
  * @note Few pins support this function
  */
-enum PinSlewRate {
+enum PinSlewRate : uint32_t {
    PinSlewRate_Slow = PORT_PCR_SRE(1),  //!< Slow slew rate on output
    PinSlewRate_Fast = PORT_PCR_SRE(0),  //!< Fast slew rate on output
 };
@@ -488,7 +519,7 @@ enum PinSlewRate {
  *
  * @note Few pins support this function
  */
-enum PinFilter {
+enum PinFilter : uint32_t {
    PinFilter_None      = PORT_PCR_PFE(0),  //!< No pin filter
    PinFilter_Passive   = PORT_PCR_PFE(1),  //!< Pin filter enabled
 #ifdef PORT_DFCR_CS_MASK
@@ -499,7 +530,7 @@ enum PinFilter {
 /**
  * Pin Control Register (PCR) lock
  */
-enum PinLock {
+enum PinLock : uint32_t {
    PinLock_Unlocked  = PORT_PCR_LK(0),  //!< PCR not locked after 1st write
    PinLock_Locked    = PORT_PCR_LK(1),  //!< PCR locked after 1st write
 };
@@ -509,7 +540,7 @@ enum PinLock {
  *
  * @note Not all pins support this function
  */
-enum PinAction {
+enum PinAction : uint32_t {
    PinAction_None        = PORT_PCR_IRQC(0),   //!< No interrupt or DMA function
 
    PinAction_DmaRising   = PORT_PCR_IRQC(1),   //!< Generate DMA request on rising edge
@@ -526,7 +557,7 @@ enum PinAction {
 /**
  * Pin Multiplexor setting
  */
-enum PinMux {
+enum PinMux : uint32_t {
    PinMux_Analogue  = PORT_PCR_MUX(0), //!< Analogue function
    PinMux_Analog    = PinMux_Analogue, //!< Analogue function
    PinMux_Tsi       = PinMux_Analogue, //!< Touch Sense function is analogue
@@ -548,6 +579,7 @@ constexpr PcrValue operator|(PinSlewRate      op1, PinPull op2)          { retur
 constexpr PcrValue operator|(PinFilter        op1, PinPull op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinAction        op1, PinPull op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinMux           op1, PinPull op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinLock          op1, PinPull op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 
 constexpr PcrValue operator|(PcrValue         op1, PinDriveStrength op2) { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinPull          op1, PinDriveStrength op2) { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
@@ -557,6 +589,7 @@ constexpr PcrValue operator|(PinSlewRate      op1, PinDriveStrength op2) { retur
 constexpr PcrValue operator|(PinFilter        op1, PinDriveStrength op2) { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinAction        op1, PinDriveStrength op2) { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinMux           op1, PinDriveStrength op2) { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinLock          op1, PinDriveStrength op2) { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 
 constexpr PcrValue operator|(PcrValue         op1, PinDriveMode op2)     { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinPull          op1, PinDriveMode op2)     { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
@@ -566,6 +599,7 @@ constexpr PcrValue operator|(PinSlewRate      op1, PinDriveMode op2)     { retur
 constexpr PcrValue operator|(PinFilter        op1, PinDriveMode op2)     { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinAction        op1, PinDriveMode op2)     { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinMux           op1, PinDriveMode op2)     { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinLock          op1, PinDriveMode op2)     { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 
 constexpr PcrValue operator|(PcrValue         op1, PinSlewRate op2)      { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinPull          op1, PinSlewRate op2)      { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
@@ -575,6 +609,7 @@ constexpr PcrValue operator|(PinSlewRate      op1, PinSlewRate op2)      { retur
 constexpr PcrValue operator|(PinFilter        op1, PinSlewRate op2)      { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinAction        op1, PinSlewRate op2)      { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinMux           op1, PinSlewRate op2)      { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinLock          op1, PinSlewRate op2)      { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 
 constexpr PcrValue operator|(PcrValue         op1, PinFilter op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinPull          op1, PinFilter op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
@@ -584,6 +619,7 @@ constexpr PcrValue operator|(PinSlewRate      op1, PinFilter op2)        { retur
 constexpr PcrValue operator|(PinFilter        op1, PinFilter op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinAction        op1, PinFilter op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinMux           op1, PinFilter op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinLock          op1, PinFilter op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 
 constexpr PcrValue operator|(PcrValue         op1, PinAction op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinPull          op1, PinAction op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
@@ -593,6 +629,7 @@ constexpr PcrValue operator|(PinSlewRate      op1, PinAction op2)        { retur
 constexpr PcrValue operator|(PinFilter        op1, PinAction op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinAction        op1, PinAction op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinMux           op1, PinAction op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinLock          op1, PinAction op2)        { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 
 constexpr PcrValue operator|(PcrValue         op1, PinMux op2)           { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinPull          op1, PinMux op2)           { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
@@ -602,6 +639,24 @@ constexpr PcrValue operator|(PinSlewRate      op1, PinMux op2)           { retur
 constexpr PcrValue operator|(PinFilter        op1, PinMux op2)           { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinAction        op1, PinMux op2)           { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
 constexpr PcrValue operator|(PinMux           op1, PinMux op2)           { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinLock          op1, PinMux op2)           { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+
+constexpr PcrValue operator|(PcrValue         op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinPull          op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinDriveStrength op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinDriveMode     op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinSlewRate      op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinFilter        op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinAction        op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinMux           op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+constexpr PcrValue operator|(PinLock          op1, PinLock op2)          { return (PcrValue)((uint32_t)op1|(uint32_t)op2); }
+
+template<typename ... V>
+constexpr PcrValue pcrOr(const V &... v) {
+  std::common_type_t<PcrValue> result = {};
+  (void)std::initializer_list<uint32_t>{ (result = (result | v), 0U)... };
+  return result;
+}
 
 /**
  * Force a PcrValue to refer to the GPIO function i.e. MUX field = PinMux_Gpio
@@ -1665,6 +1720,9 @@ class PcrTable_T : public Pcr_T<Info::info[index].clockInfo, Info::info[index].p
  * @}
  ** PeripheralPinTables
  */
+
+#pragma GCC pop_options
+
 } // End namespace USBDM
 
 #endif /* HEADER_PCR_H */

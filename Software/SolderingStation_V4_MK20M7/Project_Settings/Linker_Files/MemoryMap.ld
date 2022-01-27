@@ -1,6 +1,5 @@
-/* MemoryMap-mk-sramu.ld (180.ARM_Peripherals/Project_Settings/Linker_Files/)
+/* MemoryMap-mk.ld (180.ARM_Peripherals/Project_Settings/Linker_Files/)
  *
- * Memory map for devices with SRAM_U allocation for bit-band/bme
  */
  
 /* ---- <<< Use Configuration Wizard in Context Menu >>> ---- */
@@ -8,14 +7,14 @@
 /* <o> Stack Size
    <i> Required amount of stack space
    <i> In CMSIS this will determine the ISR stack size
-   <0x0-0x8000:4>  <constant>
+   <0x0-0x100000:4>  <constant>
 */
 __stack_size = 0x4000;
 
 /* <o> Minimum Heap Size 
    <i> This is the minimum allocated.  
    <i> Available heap may be larger.
-   <0x0-0x8000:4>  <constant>
+   <0x0-0x100000:4>  <constant>
 */
 __heap_size  = 0x4000;
 
@@ -26,7 +25,7 @@ __heap_size  = 0x4000;
    <i>  C Example:
    <i>    // Variable allocated in bitband/bme accessible region (SRAM_U)
    <i>    // May be uint8_t, uint16_t or uint32_t
-   <i>    __attribute__ ((section(".sram_u"))) uint32_t variable;
+   <i>    __attribute__ ((section(".bitband_ram"))) uint32_t variable;
    <i>
    <i>    // Each word of array maps to an individual bit in bit-band
    <i>    __attribute__ ((section(".bitband"))) uint32_t variable_bits[8*sizeof(variable)];
@@ -55,7 +54,6 @@ BOOT_LOADER_SIZE  = DEFINED(BOOT_LOADER_SIZE)  ? BOOT_LOADER_SIZE : 16384 * FORC
  
 MEMORY
 {
-  bitband        (rw)  : ORIGIN = 0x22000000, LENGTH = 0x02000000
   aips0          (rw)  : ORIGIN = 0x40000000, LENGTH = 0x00080000
   aips1          (rw)  : ORIGIN = 0x40080000, LENGTH = 0x0007F000
   gpio           (rw)  : ORIGIN = 0x400FF000, LENGTH = 0x00001000
@@ -87,13 +85,17 @@ MEMORY
  */
   ram_low        (rwx) : ORIGIN = 0x1FFF8000, LENGTH = 0x00008000
 /*
+    <o>  bitband address <constant>
+    <o1> bitband size    <constant>
+ */
+  bitband        (rwx) : ORIGIN = 0x22000000, LENGTH = 0x00100000
+/*
  * Guard region above stack for GDB 
  */
-  gdbGuard       (r)   : ORIGIN = 0x20000000, LENGTH = 0x00000020
+  gdbGuard       (r)   : ORIGIN = 0x22100000, LENGTH = 0x00000020
 };
 
-REGION_ALIAS("ram","ram_low");
-
+REGION_ALIAS("ram","bitband");
 
 
 /*
@@ -103,10 +105,10 @@ REGION_ALIAS("ram","ram_low");
   <i> These settings control which region (regular flash or FlexNVM) is used for various linker sections.
 */
 /*  <s1>  Text (main code apart from reset)  <constant> text_rom      */
-REGION_ALIAS("text_rom",       "flash");
+REGION_ALIAS("text_rom",         "flash");
 /*  <s1>  Read-only data  <constant> data_rom      */
 REGION_ALIAS("rodata_rom",       "flash");
-
+/* </h> */
 /*
   <h> Section placement in RAM
   <i> The RAM on Cortex-M4 Kinetis devices is divided into upper and lower memory regions.
@@ -129,11 +131,10 @@ REGION_ALIAS("noinit_ram",     "ram_low");
 REGION_ALIAS("mtb_ram",        "ram_low");
 /*  <s1>  USB Endpoint buffers               <constant> bdts_ram       */
 REGION_ALIAS("bdts_ram",       "ram_low");
+/*  <s1>  Bitband RAM - must be in ram_high  <constant> bdts_ram       */
+REGION_ALIAS("bitband_ram",    "ram_high");
 /* </h> */
 
-/* These must be in upper RAM */
-REGION_ALIAS("sram_u_ram",     "ram_high");
-REGION_ALIAS("bitband_ram",    "ram_high");
 
 INCLUDE Linker-rom.ld
 
