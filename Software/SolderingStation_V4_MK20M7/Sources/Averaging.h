@@ -33,7 +33,7 @@ public:
     */
    static constexpr float convertToAdcVoltage(float adcValue) {
       // Convert ADC value to voltage
-      return adcValue * (ADC_LOW_GAIN_REF_VOLTAGE/USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION));
+      return adcValue * (ADC_REF_VOLTAGE/USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION));
    }
 
    /**
@@ -163,7 +163,7 @@ public:
  *
  * @tparam N is the weighting in above equation.
  */
-template<unsigned N=2>
+template<unsigned N>
 class MovingAverage : protected AdcAverage {
 
 private:
@@ -298,7 +298,15 @@ public:
 using AveragingMethod = MovingAverage<10>; // 10*10ms = declining weights over 100ms average
 //using AveragingMethod = DummyAverage;
 
-class TemperatureAverage : public AveragingMethod {
+/**
+ * Class representing a modified moving average for Temperature values.
+ *
+ * A(i) = (s(i) + (N-1)A(i-1))/N = S(i)/N + (N-1)s(i-1)/N + (N-1)(N-1)S(i-2)/N*N ...
+ *
+ * @tparam N is the weighting in above equation.
+ */
+template<unsigned N>
+class TemperatureAverage : public MovingAverage<N> {
 
 public:
    /**
@@ -341,11 +349,11 @@ public:
  * Class representing an average customised for a NTC thermistor
  * MF58 10k B3950
  */
-class ThermistorMF58Average : public TemperatureAverage {
+class ThermistorMF58Average : public TemperatureAverage<40> {
 
 public:
 
-   /// Measurement path being used
+   /// Measurement path being used - Pre-amplifier x2 + Bias
    static constexpr MuxSelect MEASUREMENT = MuxSelect_LowGainBiased;
 
 private:
@@ -464,8 +472,16 @@ public:
 
 /**
  * Class representing an average customised for a thermocouple
+ *
+ * A(i) = (s(i) + (N-1)A(i-1))/N = S(i)/N + (N-1)s(i-1)/N + (N-1)(N-1)S(i-2)/N*N ...
+ *
+ * @tparam N is the weighting in above equation.
  */
-class ThermocoupleAverage : public TemperatureAverage {
+template<unsigned N>
+class ThermocoupleAverage : public TemperatureAverage<N> {
+
+private:
+   using super = TemperatureAverage<N>;
 
 private:
    // Temperature calibration values
@@ -479,8 +495,8 @@ private:
 
 public:
 
-   /// Measurement path being used - Pre-amplifier x5 + PGA x64 = 320
-   static constexpr MuxSelect MEASUREMENT = MuxSelect_ProgGainBoostx16;
+   /// Measurement path being used - Pre-amplifier x14.2
+   static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGain;
 
    /**
     * Converts ADC voltage to thermocouple voltage
@@ -492,8 +508,8 @@ public:
     */
    static float convertAdcVoltageToThermocoupleVoltage(float voltage) {
 
-      /// Gain of measurement path - Pre-amplifier x5 + PGA x16 = 180
-      const float gain  = nvinit.hardwareCalibration.preAmplifierWithBoost*16;
+      /// Gain of measurement path - Pre-amplifier x14.2
+      const float gain  = nvinit.hardwareCalibration.preAmplifierWithBoost;
 
       return voltage * gain;
    }
@@ -505,10 +521,10 @@ public:
     *
     * @return Temperature in Celsius
     */
-   float convertAdcVoltageToCelsius(float voltage) const {
+   float convertAdcVoltageToCelsius(float adcVoltage) const {
 
       // Convert ADC voltage to TC voltage
-      voltage = convertAdcVoltageToThermocoupleVoltage(voltage);
+      float voltage = convertAdcVoltageToThermocoupleVoltage(adcVoltage);
 
       // Calibration fitting was done using mV
       voltage *= 1000;
@@ -542,7 +558,7 @@ public:
     * @return Thermocouple temperature in Celsius
     */
    virtual float getTemperature() const override {
-      return convertAdcVoltageToCelsius(getAveragedAdcVoltage());
+      return convertAdcVoltageToCelsius(super::getAveragedAdcVoltage());
    }
 
    /**
@@ -551,7 +567,7 @@ public:
     * @return Thermocouple temperature in Celsius
     */
    virtual float getInstantTemperature() const override {
-      return convertAdcVoltageToCelsius(getLastAdcVoltage());
+      return convertAdcVoltageToCelsius(super::getLastAdcVoltage());
    }
 
    /**
@@ -560,7 +576,7 @@ public:
     * @return Thermocouple voltage
     */
    virtual float getThermocoupleVoltage() const override {
-      return convertAdcVoltageToThermocoupleVoltage(getAveragedAdcVoltage());
+      return convertAdcVoltageToThermocoupleVoltage(super::getAveragedAdcVoltage());
    }
 
    /**
@@ -588,7 +604,7 @@ public:
          // Thermocouple open
          return false;
       }
-      TemperatureAverage::accumulate(value);
+      super::accumulate(value);
       return true;
    }
 };
@@ -596,7 +612,7 @@ public:
 /**
  * Class representing an average customised for the chip internal temperature sensor
  */
-class ChipTemperatureAverage : public TemperatureAverage {
+class ChipTemperatureAverage : public TemperatureAverage<10> {
 
 private:
 
@@ -637,7 +653,7 @@ public:
 /**
  * Class representing an dummy average - always zero
  */
-class ZeroAverage : public TemperatureAverage {
+class ZeroAverage : public TemperatureAverage<0> {
 
 public:
    virtual float getTemperature() const override {
@@ -648,11 +664,11 @@ public:
 /**
  * Class representing an average customised for a Weller PTC Thermistor
  */
-class WellerThermistorAverage : public TemperatureAverage {
+class WellerThermistorAverage : public TemperatureAverage<10> {
 
 public:
-   /// Measurement path being used
-   static constexpr MuxSelect MEASUREMENT = MuxSelect_ProgGainBoostBiasedx16;
+   /// Measurement path being used - Pre-amplifier x14.2 + Bias
+   static constexpr MuxSelect MEASUREMENT = MuxSelect_HighGainBiased;
 
 private:
 
@@ -677,8 +693,8 @@ private:
     */
    static float convertAdcVoltageToPtcResistance(float voltage) {
 
-      /// Gain of measurement path - Pre-amplifier x5 + PGA x16 = 180
-      const float gain  = nvinit.hardwareCalibration.preAmplifierWithBoost*16;
+      /// Gain of measurement path - Pre-amplifier x14.2
+      const float gain  = nvinit.hardwareCalibration.preAmplifierWithBoost;
 
       if (voltage>2.99) {
          // Assume ADC at maximum => open resistor

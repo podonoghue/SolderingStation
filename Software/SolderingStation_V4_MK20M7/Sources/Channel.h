@@ -18,8 +18,24 @@
 #include "Tips.h"
 #include "T12.h"
 #include "WellerWT50.h"
+#include "Jbc.h"
+#include "AttenTweezers.h"
 
 class StepResponseDriver;
+
+class Debug3 {
+public:
+   static void init() {
+      Spare3::setOutput();
+   }
+
+   Debug3() {
+      Spare3::high();
+   }
+   ~Debug3() {
+      Spare3::low();
+   }
+};
 
 /// States for the channel
 enum ChannelState {
@@ -29,7 +45,7 @@ enum ChannelState {
    ch_overload,   ///< Overload has been detected
    ch_fixedPower, ///< Tip supplied with constant power (T not maintained)
    ch_setback,    ///< Tip temperature has been lowered as idle for set-back period
-   ch_active,     ///< Tip is being heated to user target temperature
+   ch_active,     ///< Tip is being controlled at user target temperature
 };
 
 /**
@@ -40,8 +56,8 @@ class Channel {
    friend StepResponseDriver;
 
 private:
-   // How long the tool has been idle
-   int               toolIdleTime        = 0;
+   // How long the tool has been idle in milliseconds
+   unsigned          toolIdleTime        = 0;
 
    // Measured temperature of tool
    float             currentTemperature  = 0;
@@ -67,16 +83,43 @@ private:
    // Channel dual drive
    const USBDM::GpioField  &chDrive;
 
+   // Channel voltage select
+   const USBDM::GpioField  &chVoltageSelect;
+
    // Supported irons
    DummyMeasurement  dummyMeasurement{*this};
    Weller_WT50       wellerMeasurement{*this};
    T12               t12Measurement{*this};
+   JBC_C210          jbcC210Measurement{*this};
+   AttenTweezers     attenMeasurement{*this};
 
    int   stateChangedCountdown = 0;
    const TipSettings *selectedTip;
 
    /// Reference to non-volatile settings stored in Flash
    ChannelSettings  &nvSettings;
+
+   /**
+    * Turn off voltage to channel
+    */
+   void voltageOff() {
+      chVoltageSelect.write(VoltageSelect_Off);
+   }
+
+   /**
+    * Enable voltage to channel based upon value obtained from measurement
+    */
+   void voltageOn() {
+
+      chVoltageSelect.write(VoltageSelect_Off);
+      VoltageSelection voltageSelection = VoltageSelect_Off;
+      switch (measurement->heaterVoltage) {
+         case 12 : voltageSelection = VoltageSelect_12V; break;
+         case 24 : voltageSelection = VoltageSelect_24V; break;
+         default : break;
+      }
+      chVoltageSelect.write(voltageSelection);
+   }
 
 public:
 
@@ -91,22 +134,27 @@ public:
    /**
     * Constructor for channel
     *
-    * @param [in] settings    Non-volatile channel settings to associate with this channel
-    * @param [in] led         Channel LED
-    * @param [in] chDrive     Channel drive
+    * @param [in] settings       Non-volatile channel settings to associate with this channel
+    * @param [in] led            Channel LED
+    * @param [in] chDrive        Channel output drive
+    * @param [in] voltageSelect  Channel voltage select control
     */
-   Channel(ChannelSettings &settings, const USBDM::Gpio &led, const USBDM::GpioField &chDrive) :
+   Channel(ChannelSettings &settings, const USBDM::Gpio &led, const USBDM::GpioField &chDrive, const USBDM::GpioField &voltageSelect) :
       led(led),
       chDrive(chDrive),
+      chVoltageSelect(voltageSelect),
       nvSettings(settings) {
       setUserTemperature(settings.presets[preset]);
       chDrive.write(0b00);
       led.off();
+      voltageOff();
 
       selectedTip  = nvSettings.selectedTip;
       stateChangedCountdown = 0;
 
       checkTipSelected();
+
+      Debug3::init();
    }
 
    virtual ~Channel() {}
@@ -122,30 +170,42 @@ public:
    void setIronType(IronType ironType) {
 
       if (ironType != this->ironType) {
-
          // Tool type changed
-//         USBDM::console<<"Tool changed to "<<TipSettings::getIronTypeName(ironType)<<'\n';
+
+         // Iron type always changes via IronType_Unknown to ensure power transitions are safe
+         if (this->ironType != IronType_Unknown) {
+            ironType = IronType_Unknown;
+         }
+         // Turn off on tool type change
+         voltageOff();
+         setState(ch_off);
+
+         USBDM::console.writeln("Tool changed to ", TipSettings::getIronTypeName(ironType));
+
+         // Update iron type and measurement handler
+         this->ironType = ironType;
+         switch(ironType) {
+            case IronType_T12:
+               measurement = &t12Measurement;
+               break;
+            case IronType_Weller:
+               measurement = &wellerMeasurement;
+               break;
+            case IronType_JBC_C210:
+               measurement = &jbcC210Measurement;
+               break;
+            case IronType_AttenTweezers:
+               measurement = &attenMeasurement;
+               break;
+            default:
+               measurement = &dummyMeasurement;
+         }
+         checkTipSelected();
+
          if (ironType == IronType_Unknown) {
             setState(ch_noTool);
          }
-         else {
-            // Turn off on tool type change
-            setState(ch_off);
-         }
       }
-      // Update iron type and measurement handler
-      this->ironType = ironType;
-      switch(ironType) {
-         case IronType_T12:
-            measurement = &t12Measurement;
-            break;
-         case IronType_Weller:
-            measurement = &wellerMeasurement;
-            break;
-         default:
-            measurement = &dummyMeasurement;
-      }
-      checkTipSelected();
    }
 
     /**< Identify measurment = Channel Xa + Low gain amp + Bias */
@@ -153,7 +213,7 @@ public:
 
    /** Identify measurement ratio adcValue->Volts */
    static constexpr float IdentifyMeasurementRatio =
-         (LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF*ADC_LOW_GAIN_REF_VOLTAGE)/
+         (LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF*ADC_REF_VOLTAGE)/
          USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION);
 
    /**
@@ -170,7 +230,7 @@ public:
             MuxSelect_Complete,
       };
       MuxSelect const *newSequence;
-      if (!isRunning() && (identifyCounter++ > 20)) {
+      if (!isRunning()  && (identifyCounter++ > 10)) {
          // Regularly check for tool change
          newSequence = identifySequence;
          identifyCounter = 0;
@@ -252,13 +312,15 @@ public:
          IronType  detectedIronType = IronType_Unknown;
 
          switch(roundedRt) {
-            case  2200 : detectedIronType = IronType_T12;      break;
-            case 10000 : detectedIronType = IronType_Weller;   break;
-            default    : detectedIronType = IronType_Unknown;  break;
+            case  2200 : detectedIronType = IronType_T12;            break;
+            case  3300 : detectedIronType = IronType_JBC_C210;       break;
+            case  5600 : detectedIronType = IronType_AttenTweezers;  break;
+            case 10000 : detectedIronType = IronType_Weller;         break;
+            default    : detectedIronType = IronType_Unknown;        break;
          }
          setIronType(detectedIronType);
-//         USBDM::console.write("Identify: ").write("R = ").writeln(Rt);
-//         USBDM::console.write("Identify: ").write("R = ").write(Rt).write(", ").write(roundedRt).write(" => ").writeln(TipSettings::getIronTypeName(detectedIronType));
+//         USBDM::console.writeln("Identify: ", "R = ", Rt);
+//         USBDM::console.writeln("Identify: ", "R = ", Rt, ", ", roundedRt, " => ", TipSettings::getIronTypeName(detectedIronType));
       }
       else {
          // Pass to tool specific handling
@@ -425,6 +487,13 @@ public:
 
       state = newState;
 
+      if (isRunning()) {
+         voltageOn();
+      }
+      else {
+         voltageOff();
+      }
+
       measurement->enableControlLoop(isControlled());
       led.write(isRunning());
 
@@ -461,6 +530,7 @@ public:
       measurement->enableControlLoop(false);
       measurement->setDutyCycle(0);
       chDrive.write(0b00);
+      voltageOff();
    }
 
    /**
@@ -589,15 +659,24 @@ public:
     *   - Power
     *   - Controller
     */
-   void update() {
+   void updateController() {
       if ((stateChangedCountdown > 0) && (--stateChangedCountdown == 0)) {
          saveNonvolatileState();
       }
+      {
+      Debug3 db;
       // Update drive to heaters as needed
-      chDrive.write(measurement->update(targetTemperature));
-
+      measurement->updateController(getTargetTemperature());
+      }
       // Update current temperature from internal averages
       currentTemperature = measurement->getTemperature();
+   }
+
+   /**
+    * Update drive to elements
+    */
+   void updateDrive() {
+      chDrive.write(measurement->getDrive());
    }
 
    /**
@@ -627,9 +706,9 @@ public:
     *
     * @param milliseconds Amount to increment the idle time by
     */
-   void incrementIdleTime(int milliseconds) {
+   void incrementIdleTime(unsigned milliseconds) {
 
-      if (toolIdleTime<(INT_MAX-milliseconds)) {
+      if (toolIdleTime<(UINT_MAX-milliseconds)) {
          toolIdleTime += milliseconds;
       }
 
@@ -643,36 +722,18 @@ public:
       }
    }
 
-   /**
-    * Indicates if the tool has been unused (off) for a while.
-    *
-    * @return True  - Unused
-    * @return False - Used
-    */
-   bool isToolIdle() {
-      return !isRunning() && (toolIdleTime >= 100);
-   }
-
+//   /**
+//    * Indicates if the tool has been unused (off) for a while.
+//    *
+//    * @return True  - Unused
+//    * @return False - Used
+//    */
+//   bool isToolIdle() {
+//      return !isRunning();
+//   }
+//
    void report(bool doHeading = false) {
       measurement->report(doHeading);
-
-//      USBDM::console.setFloatFormat(2, USBDM::Padding_LeadingSpaces, 2);
-//      float tipV   = 1000*tipTemperature.getVoltage();
-//      float tipT   = tipTemperature.getTemperature();
-//      float coldT  = coldJunctionTemperature.getTemperature();
-//
-//      USBDM::console.
-//      write("Tip = ").write(tipT+coldT).
-//      write(" (").write(tipT).write("+").write(+coldT).
-//      write("),(").write(tipV).write(" mV").
-//      write(",").write(coldJunctionTemperature.getResistance()).write(" ohms)").
-//      write(" ").write(tipV).write(" ").write(coldT).write(" ").
-//      //         write(" C, Ch1 Cold = ").write(ch1ColdJunctionTemperature.getConvertedValue()).
-//      //         write(" C, Ch2 Tip  = ").write(ch2TipTemperature.getConvertedValue()+ch2ColdJunctionTemperature.getConvertedValue()).
-//      //         write(" C, Ch2 Cold = ").write(ch2ColdJunctionTemperature.getConvertedValue()).
-//      //         write(" C, Chip = ").write(chipTemperature.getConvertedValue()).
-//      writeln();
-//      USBDM::console.resetFormat();
    }
 
    /**
@@ -682,7 +743,12 @@ public:
     * @param dutyCycle Duty cycle to set
     */
    void setDutyCycle(unsigned dutyCycle) {
-      usbdm_assert(getState() == ch_fixedPower, "Only available in Fixed power state");
+      if (getState() != ch_fixedPower) {
+         measurement->setDutyCycle(0);
+         return;
+      }
+      // triggered in debug mode if tool changed etc
+//      usbdm_assert(getState() == ch_fixedPower, "Only available in Fixed power state");
       measurement->setDutyCycle(dutyCycle);
    }
 

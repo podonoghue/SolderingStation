@@ -36,36 +36,39 @@ public:
 
 private:
    /// Indicates the display needs updating
-   bool needRefresh       = true;
+   bool fNeedRefresh       = true;
 
    /// Used to hold off re-triggerring sequence until completed
-   bool holdOff           = false;
+   bool fHoldOff           = false;
 
-   bool doReportPid       = false;
-   bool doReportPidTitle  = false;
+   bool fDoReportPid       = false;
+   bool fDoReportPidTitle  = false;
 
    /// Measurements to do near zero-crossing
-   MuxSelect sequence[10];
+   MuxSelect fSequence[10];
 
    /// Number of measurements to do near zero-crossing (valid entries in sequence)
-   unsigned sequenceIndex = 0;
+   unsigned fSequenceIndex = 0;
 
    /// Moving window average for Chip temperature (internal MCU sensor)
-   ChipTemperatureAverage chipTemperatureAverage;
+   ChipTemperatureAverage fChipTemperatureAverage;
 
    /// Counter to initiate PID reporting
-   unsigned reportCount = 0;
+   unsigned fReportCount = 0;
 
    /// How often to refresh display
-   /// Multiple of zero-crossing interval
-   static constexpr unsigned REFRESH_INTERVAL = round(0.5/PID_INTERVAL);
+   /// Expressed as multiple of PID_INTERVAL
+   static constexpr unsigned REFRESH_INTERVAL = round(0.5_s/SAMPLE_INTERVAL);
 
    /// How often to log PID
-   /// Multiple of zero-crossing interval
-   static constexpr unsigned PID_LOG_INTERVAL = round(0.25/PID_INTERVAL);
+   /// Expressed as multiple of PID_INTERVAL
+   static constexpr unsigned PID_LOG_INTERVAL = round(0.25_s/SAMPLE_INTERVAL);
 
    /// Idle time for display dimming (in milliseconds)
-   unsigned idleTime = 0;
+   unsigned fDisplayIdleTime = 0;
+
+   /// Used to alternate between channels
+   bool fOddEven = false;
 
 public:
    /**
@@ -80,7 +83,7 @@ public:
     * @return
     */
    float getChipTemperature() {
-      return chipTemperatureAverage.getTemperature();
+      return fChipTemperatureAverage.getTemperature();
    }
 
    /**
@@ -125,12 +128,6 @@ public:
    void zeroCrossingHandler();
 
    /**
-    * Timer interrupt handler for updating PID
-    * This includes the heater drives
-    */
-   void pidHandler();
-
-   /**
     * Interrupt handler for ADC conversions
     *
     * @param [in] result     Conversion result from ADC channel
@@ -152,7 +149,7 @@ public:
     * @note It does not do the update.
     */
    void setNeedsRefresh() {
-      needRefresh = true;
+      fNeedRefresh = true;
    }
 
    /**
@@ -161,7 +158,7 @@ public:
     * @return
     */
    bool needsRefresh() {
-      return needRefresh;
+      return fNeedRefresh;
    }
 
    /**

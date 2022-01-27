@@ -10,6 +10,10 @@
 
 using namespace USBDM;
 
+FontArraySubset<FontVeryLarge,
+' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'l', 'o', 'w', '-', '.', '*', 'm', 's', 'O', 'f'>
+fontVeryLargeReduced;
+
 /**
  * Display information about one channel on OLED.
  * Used to draw left and right halves of screen
@@ -18,23 +22,23 @@ using namespace USBDM;
  * @param offset     Y offset for display
  */
 void Display::displayChannelStatus(Channel &, unsigned ) {
-//   using namespace USBDM;
-//
-//   oled.moveXY(0, offset);
-//   oled.setFont(fontMedium);
-//
-//   float Tc = ch.getThermisterTemperature();
-//   float Tt = ch.getThermocoupleTemperature();
-//
-//   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-////   oled.write("Rc ").write(ch.getThermisterResistance()/1000).write("k,");
-//   oled.write(Tc).writeln("C");
-//
-//   oled.setFloatFormat(2, Padding_LeadingSpaces, 0);
-////   oled.write("Vt ").write(round(ch.getThermocoupleVoltage()*100000)/100).write("mV,");
-//   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-//   oled.write(Tt).writeln("C");
-//   oled.write("T = ").write(Tc+Tt).writeln("C");
+   //   using namespace USBDM;
+   //
+   //   oled.moveXY(0, offset);
+   //   oled.setFont(fontMedium);
+   //
+   //   float Tc = ch.getThermisterTemperature();
+   //   float Tt = ch.getThermocoupleTemperature();
+   //
+   //   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+   ////   oled.writeln("Rc ", ch.getThermisterResistance()/1000, "k,");
+   //   oled.writeln(Tc, "C");
+   //
+   //   oled.setFloatFormat(2, Padding_LeadingSpaces, 0);
+   ////   oled.write("Vt ", round(ch.getThermocoupleVoltage()*100000)/100, "mV,");
+   //   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+   //   oled.writeln(Tt, "C");
+   //   oled.writeln("T = ", Tc+Tt, "C");
 }
 
 /**
@@ -51,7 +55,7 @@ void Display::displayChannelStatuses() {
    oled.drawHorizontalLine(0, Oled::WIDTH, middle-1, WriteMode_Write);
 
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.write("Chip ").write(control.getChipTemperature()).write("C");
+   oled.write("Chip ", control.getChipTemperature(), "C");
 
    oled.refreshImage();
 
@@ -74,7 +78,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
 
    oled.setPadding(Padding_LeadingSpaces).setWidth(3);
 
-   oled.setFont(fontVeryLarge);
+   oled.setFont(fontVeryLargeReduced);
    if ((ch.getState() == ch_noTip) || (ch.getState() == ch_overload)) {
       oled.moveXY(offset+6, 8).write("---");
    }
@@ -95,7 +99,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    }
 
    if (selected) {
-      oled.drawRect(offset,  10, offset+57,  10+fontVeryLarge.height-9, WriteMode_Xor);
+      oled.drawRect(offset,  10, offset+57,  10+fontVeryLargeReduced.HEIGHT-9, WriteMode_Xor);
    }
 
    oled.setFont(fontLarge);
@@ -113,7 +117,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    oled.moveXY(offset,  50).write(ch.getTipName());
 
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.moveXY(offset+35,  50).write((int)round(power)).writeln('W');
+   oled.moveXY(offset+35,  50).write((int)round(power), 'W');
 
    float percentagePower = ((oled.WIDTH/2)-3)*(ch.measurement->getPercentagePower()/100);
 #if 0
@@ -176,24 +180,24 @@ void Display::displayTimeMenuItem(const char *description, unsigned seconds, boo
    oled.setFont(fontLarge);
    oled.moveXY(0, 0).writeln(description);
 
-   oled.setFont(fontVeryLarge);
+   oled.setFont(fontVeryLargeReduced);
    oled.moveXY(0, 30).write(modified?'*':' ');
 
    if (seconds>0) {
       if (seconds>=60) {
-         oled.setPadding(Padding_LeadingSpaces).setWidth(2).write(seconds/60).write("m");
+         oled.setPadding(Padding_LeadingSpaces).setWidth(2).write(seconds/60, "m");
       }
       else {
          oled.write("   ");
       }
       seconds %= 60;
-      oled.setPadding(Padding_LeadingZeroes).setWidth(2).write(seconds).write("s");
+      oled.setPadding(Padding_LeadingZeroes).setWidth(2).write(seconds, "s");
    }
    else {
       oled.write(" Off");
    }
 
-//   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
+   //   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
 
    oled.refreshImage();
 
@@ -213,12 +217,12 @@ void Display::displayFloatMenuItem(const char *description, int value, bool modi
    oled.setFont(fontLarge);
    oled.moveXY(0, 0).writeln(description);
 
-   oled.setFont(fontVeryLarge);
+   oled.setFont(fontVeryLargeReduced);
    oled.moveXY(10, 30).write(modified?'*':' ');
-   oled.write(value/1000).write('.');
+   oled.write(value/1000, '.');
    oled.setPadding(Padding_LeadingZeroes).setWidth(3).write(value%1000);
 
-//   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
+   //   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
 
    oled.refreshImage();
 
@@ -238,12 +242,12 @@ void Display::displayTemperatureMenuItem(const char *description, unsigned tempe
    oled.setFont(fontLarge);
    oled.moveXY(0, 0).writeln(description);
 
-   oled.setFont(fontVeryLarge);
+   oled.setFont(fontVeryLargeReduced);
    oled.setPadding(Padding_LeadingSpaces).setWidth(4);
-   oled.moveXY(0, 30).write(modified?'*':' ').write(temperature);
+   oled.moveXY(0, 30).write(modified?'*':' ', temperature);
    oled.moveXY(80, 35).setFont(fontMedium).write("C");
 
-//   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
+   //   oled.moveXY(28, 55).setFont(fontSmall).write(" <-           ->");
 
    oled.refreshImage();
 
@@ -260,7 +264,6 @@ void Display::displayTemperatureMenuItem(const char *description, unsigned tempe
  * @param [in]     selection     Selected item index
  */
 void Display::displayMenuList(const char *title, MenuItem const items[], unsigned modifiersUsed, BoundedMenuState &selection) {
-   Font &font = fontSmall;
 
    oled.clearDisplay();
 
@@ -270,7 +273,7 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY());
 
    oled.moveXY(0, oled.getY()+2);
-   oled.setFont(font);
+   oled.setFont(fontSmall);
 
    for(int menuLine=0; menuLine<=min(NUM_MENU_ENTRIES-1, selection.getMax()); menuLine++) {
       char prefix[10] = {0};
@@ -301,7 +304,7 @@ void Display::displayMenuList(const char *title, MenuItem const items[], unsigne
       oled.writeln(item.name);
       if (itemIndex == selection) {
          // Highlight selected item
-         oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+         oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+fontSmall.HEIGHT-1, WriteMode_Xor);
       }
    }
 
@@ -328,8 +331,7 @@ void Display::displayChoice(const char *title, const char *prompt, const char *o
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY());
    oled.moveXY(0, oled.getY()+2);
 
-   Font &font = fontSmall;
-   oled.setFont(font);
+   oled.setFont(fontSmall);
    oled.writeln(prompt);
    oled.moveXY(0, oled.getY()+2);
 
@@ -341,7 +343,7 @@ void Display::displayChoice(const char *title, const char *prompt, const char *o
       oled.moveXY(1, oled.getY()+1);
       oled.writeln(options[line]);
       if (line == selection) {
-         oled.drawRect(0,  menuY, oled.WIDTH, menuY+font.height, WriteMode_Xor);
+         oled.drawRect(0,  menuY, oled.WIDTH, menuY+fontSmall.HEIGHT, WriteMode_Xor);
       }
    }
 
@@ -357,8 +359,6 @@ void Display::displayChoice(const char *title, const char *prompt, const char *o
  * @param[in] message   Message to display
  */
 void Display::showMessage(const char *title, const char *message) {
-   Font &font = fontSmall;
-
    oled.clearDisplay();
 
    oled.setFont(fontMedium);
@@ -367,7 +367,7 @@ void Display::showMessage(const char *title, const char *message) {
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY());
 
    oled.moveXY(0, oled.getY()+2);
-   oled.setFont(font);
+   oled.setFont(fontSmall);
    oled.writeln(message);
 
    oled.refreshImage();
@@ -410,23 +410,23 @@ void Display::displayCalibration(const char *title, Channel &ch, unsigned target
 
    oled.moveXY(0, oled.getY()+4);
    oled.setFont(fontSmall);
-   oled.write("Target ----> ").write(targetTemperature).writeln(" C");
+   oled.writeln("Target ----> ", targetTemperature, " C");
 
    oled.moveXY(0, oled.getY()+3);
-   oled.write("Measured     ").write((int)round(ch.getCurrentTemperature())).writeln(" C");
+   oled.writeln("Measured     ", (int)round(ch.getCurrentTemperature()), " C");
 
    oled.moveXY(0, oled.getY()+3);
-   oled.write("Controlled   ").write(ch.getUserTemperature()).writeln(" C");
+   oled.writeln("Controlled   ", ch.getUserTemperature(), " C");
 
    oled.moveXY(0, oled.getY()+5);
    ch.measurement->reportCalibrationValues(oled, true);
 
-//   oled.write(" Power ").write(ch.getPower());
-//   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-//   oled.write("Vt ").write(1000*ch.tipTemperature.getVoltage()).write("mV");
+   //   oled.write(" Power ", ch.getPower());
+   //   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+   //   oled.write("Vt ", 1000*ch.tipTemperature.getVoltage(), "mV");
 
-//   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-//   oled.write(", Tc ").write(ch.coldJunctionTemperature.getTemperature()).write("C");
+   //   oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
+   //   oled.write(", Tc ", ch.coldJunctionTemperature.getTemperature(), "C");
 
    oled.refreshImage();
 
@@ -452,37 +452,36 @@ void Display::displayPidSettings(const char *tipname, unsigned selection, char s
    oled.moveXY(0, 0);
    oled.writeln(" PID Settings");
    oled.moveXY(0, oled.getY()+3);
-   oled.write(" Tip: ").writeln(tipname);
+   oled.writeln(" Tip: ", tipname);
    oled.drawHorizontalLine(0, oled.WIDTH, oled.getY()+1);
    oled.moveXY(0, oled.getY()+5);
 
-   Font &font = fontMedium;
-   oled.setFont(font);
+   oled.setFont(fontMedium);
    oled.setFloatFormat(3, Padding_LeadingSpaces, 2);
 
    int menuY= oled.getY();
-   oled.write(stars[0]).write("Kp      ").writeln(kp/SCALE_FACTOR);
+   oled.writeln(stars[0], "Kp      ", kp/SCALE_FACTOR);
    if (selection == 0) {
-      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+fontMedium.HEIGHT-1, WriteMode_Xor);
    }
    oled.moveXY(0, oled.getY()+2);
    menuY= oled.getY();
-   oled.write(stars[1]).write("Ki      ").writeln(ki/SCALE_FACTOR);
+   oled.writeln(stars[1], "Ki      ", ki/SCALE_FACTOR);
    if (selection == 1) {
-      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+fontMedium.HEIGHT-1, WriteMode_Xor);
    }
    oled.moveXY(0, oled.getY()+2);
    menuY= oled.getY();
-   oled.write(stars[2]).write("Kd      ").writeln(kd/SCALE_FACTOR);
+   oled.writeln(stars[2], "Kd      ", kd/SCALE_FACTOR);
    if (selection == 2) {
-      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+fontMedium.HEIGHT-1, WriteMode_Xor);
    }
    oled.moveXY(0, oled.getY()+2);
    menuY= oled.getY();
    oled.setFloatFormat(1, Padding_LeadingSpaces, 2);
-   oled.write(stars[3]).write("I limit ").writeln(iLimit/SCALE_FACTOR);
+   oled.writeln(stars[3], "I limit ", iLimit/SCALE_FACTOR);
    if (selection == 3) {
-      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+font.height-1, WriteMode_Xor);
+      oled.drawRect(0,  menuY-1, oled.WIDTH, menuY+fontMedium.HEIGHT-1, WriteMode_Xor);
    }
 
    oled.refreshImage();
@@ -510,8 +509,8 @@ void Display::displayHeater(const char *title, Channel &ch, unsigned dutyCycle) 
    oled.moveXY(0, oled.getY()+3);
    oled.setFont(fontSmall);
    oled.setFloatFormat(1);
-   oled.write("Chip = ").write(chipTemp).writeln(" C");
-   oled.write("DutyCyle=").write(dutyCycle).write(" (").write(power).writeln(" W)");
+   oled.writeln("Chip = ", chipTemp, " C");
+   oled.writeln("DutyCyle=", dutyCycle, " (", power, " W)");
    oled.moveXY(0, oled.getY()+3);
    ch.measurement->reportCalibrationValues(oled);
    oled.refreshImage();
@@ -541,10 +540,10 @@ bool Display::reportSettingsChange(const TipSettings &oldTs, const TipSettings &
    oled.writeln("   Old       New");
    oled.moveXY(0, oled.getY()+3);
    for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
-      oled.setFloatFormat(0).write("(").write(oldTs.getCalibrationTempValue(index)).write(",")
-          .setFloatFormat(1, Padding_LeadingSpaces, 2).write(oldTs.getCalibrationMeasurementValue(index)).write(")(")
-          .setFloatFormat(0).write(newTs.getCalibrationTempValue(index)).write(",")
-          .setFloatFormat(1, Padding_LeadingSpaces, 2).write(newTs.getCalibrationMeasurementValue(index)).writeln(")");
+      oled.setFloatFormat(0).write("(", oldTs.getCalibrationTempValue(index), ",")
+                .setFloatFormat(1, Padding_LeadingSpaces, 2).write(oldTs.getCalibrationMeasurementValue(index), ")(")
+                .setFloatFormat(0).write(newTs.getCalibrationTempValue(index), ",")
+                .setFloatFormat(1, Padding_LeadingSpaces, 2).writeln(newTs.getCalibrationMeasurementValue(index), ")");
    }
    oled.moveXY(0, oled.getY()+3);
    oled.writeln("Long press to discard");

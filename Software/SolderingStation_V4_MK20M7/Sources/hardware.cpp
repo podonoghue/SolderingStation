@@ -41,6 +41,10 @@ const GpioTable_T<GpioCInfo, 0, ActiveHigh>                  ch1SelectedLed;    
 const GpioTable_T<GpioCInfo, 6, ActiveHigh>                  ch2SelectedLed;                               // PTC6(p51)
 /// Channel 2 drive (Bit Field)
 const GpioFieldTable_T<GpioCInfo, 4, 3, ActiveLow>           ch2Drive;                                     // PTC3(p46), PTC4(p49)
+/// Channel 1 voltage select (Bit Field)
+const GpioFieldTable_T<GpioDInfo, 7, 6, ActiveLow>           ch1VoltageSelect;                             // PTD6(p63), PTD7(p64)
+/// Channel 2 voltage select (Bit Field)
+const GpioFieldTable_T<GpioDInfo, 5, 4, ActiveLow>           ch2VoltageSelect;                             // PTD4(p61), PTD5(p62)
 
 
 /**
@@ -51,7 +55,7 @@ const GpioFieldTable_T<GpioCInfo, 4, 3, ActiveLow>           ch2Drive;          
  * @note Only the lower 16-bits of the PCR registers are initialised
  */
 void mapAllPins() {
-#if false
+#if true
 
 
 #endif

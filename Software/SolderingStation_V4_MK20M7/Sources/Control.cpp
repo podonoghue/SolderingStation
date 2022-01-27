@@ -17,13 +17,17 @@
 
 using namespace USBDM;
 
-class DebLed {
+class Debug1 {
 public:
-   DebLed() {
-      Debug::high();
+   static void init() {
+      Spare1::setOutput();
    }
-   ~DebLed() {
-      Debug::low();
+
+   Debug1() {
+      Spare1::high();
+   }
+   ~Debug1() {
+      Spare1::low();
    }
 };
 
@@ -33,10 +37,10 @@ public:
 void Control::initialise() {
    using namespace USBDM;
 
-   Debug::setOutput();
+   Debug1::init();
 
    // Vref_out is needed for PGA/ADC reference
-   Vref::configure(VrefBuffer_HighPower, VrefReg_Enable, VrefIcomp_Enable, VrefChop_Enable);
+//   Vref::configure(VrefBuffer_HighPower, VrefReg_Enable, VrefIcomp_Enable, VrefChop_Enable);
 
    // Static function to use as ADC call-back
    static AdcCallbackFunction adc_cb = [](uint32_t result, int channel){
@@ -57,54 +61,24 @@ void Control::initialise() {
    // Calibrate ADC
    unsigned retry = 10;
    while ((FixedGainAdc::calibrate() != E_NO_ERROR) && (retry-->0)) {
-      console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
+      console.writeln("ADC calibration failed, retry #", retry);
    }
    FixedGainAdc::setAveraging(AdcAveraging_8);
    FixedGainAdc::setCallback(adc_cb);
    FixedGainAdc::enableNvicInterrupts(NvicPriority_MidHigh);
-
-   ProgrammableGainAdc::configure(
-         ADC_RESOLUTION,
-         AdcClockSource_Bus,
-         AdcSample_20,
-         AdcPower_Normal,
-         AdcMuxsel_B,
-         AdcClockRange_Normal,
-         AdcAsyncClock_Disabled);
-
-   ProgrammableGainAdc::setReference(AdcRefSel_VrefOut);
-
-   // Calibrate ADC
-   retry = 10;
-   while ((ProgrammableGainAdc::calibrate() != E_NO_ERROR) && (retry-->0)) {
-      console.WRITE("ADC calibration failed, retry #").WRITELN(retry);
-   }
-   ProgrammableGainAdc::setAveraging(AdcAveraging_8);
-   ProgrammableGainAdc::setCallback(adc_cb);
-   ProgrammableGainAdc::enableNvicInterrupts(NvicPriority_MidHigh);
-   ProgrammableGainAdc::configurePga(AdcPgaMode_NormalPower, AdcPgaGain_4);
 
    // Configure PIT for use in timing
    ControlTimerChannel::configureIfNeeded();
    ControlTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
 
    // Configure comparator for mains zero-crossing detection
-   // Trigger is actually on the falling edge of rectified waveform near zero
+   // Trigger is actually on the falling edge of rectified waveform near zero crossing
    static CmpCallbackFunction zero_crossing_cb = [](CmpStatus){
       control.zeroCrossingHandler();
    };
 
-   // Sensitivity of overload amplifier and shunt (V/A)
-   static constexpr float OVERLOAD_VOLT_PER_AMP = .05*(1.0+22.0/10.0); // .160 V/A
-
-   // Current limit based on transformer AMPS (160 VA, 24Vrms, 20% overload)
-   static constexpr float CURRENT_LIMIT = 1.2 * 1.414 * (160.0/24.0);  // 11.3 A
-
-   static_assert((CURRENT_LIMIT*OVERLOAD_VOLT_PER_AMP)<CMP_REF_VOLTAGE); // ~1.8V
-
-   // Threshold for zero-crossing comparator
-   static constexpr uint8_t ZERO_CROSSING_DAC_THRESHOLD =
-         (CURRENT_LIMIT*OVERLOAD_VOLT_PER_AMP)*(ZeroCrossingComparator::MAXIMUM_DAC_VALUE/CMP_REF_VOLTAGE);
+   // Zero-crossing threshold
+   static constexpr uint8_t ZERO_CROSSING_DAC_THRESHOLD = 0.5*(ZeroCrossingComparator::MAXIMUM_DAC_VALUE/CMP_REF_VOLTAGE);
 
    ZeroCrossingComparator::configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
    ZeroCrossingComparator::setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 255);
@@ -123,8 +97,18 @@ void Control::initialise() {
       control.setNeedsRefresh();
    };
 
+   // Sensitivity of overload amplifier and shunt (V/A)
+   static constexpr float OVERLOAD_VOLT_PER_AMP = .05*(1.0+22.0/10.0); // .160 V/A
+
+   // Current limit based on transformer AMPS (160 VA, 24Vrms, 20% overload)
+   static constexpr float CURRENT_LIMIT = 1.2 * 1.414 * (160.0/24.0);  // 11.3 A
+
+   static_assert((CURRENT_LIMIT*OVERLOAD_VOLT_PER_AMP)<CMP_REF_VOLTAGE); // ~1.8V
+
+   // Threshold for zero-crossing comparator
    // Threshold for over-current comparator (0.305 V/A) (10Apeak limit ~3.05V)
-   static constexpr uint8_t OVERCURRENT_DAC_THRESHOLD = 1.5*(OverCurrentComparator::MAXIMUM_DAC_VALUE/CMP_REF_VOLTAGE);
+   static constexpr uint8_t OVERCURRENT_DAC_THRESHOLD =
+         (CURRENT_LIMIT*OVERLOAD_VOLT_PER_AMP)*(ZeroCrossingComparator::MAXIMUM_DAC_VALUE/CMP_REF_VOLTAGE);
 
    OverCurrentComparator::configure(CmpPower_HighSpeed, CmpHysteresis_3, CmpPolarity_Noninverted);
    OverCurrentComparator::setInputFiltered(CmpFilterSamples_7, CmpFilterClockSource_BusClock, 20);
@@ -141,9 +125,10 @@ void Control::initialise() {
    // Enable amplifier input clamp
    Clamp::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
 
+#if 0
    /**
     * Watchdog handler
-    * Will execute on power-off
+    * May also execute on power-off
     */
    static auto wdogCallback = []() {
       ch1Drive.write(0b00);
@@ -172,6 +157,7 @@ void Control::initialise() {
    Wdog::lockRegisters();
    Wdog::setCallback(wdogCallback);
    Wdog::enableNvicInterrupts(NvicPriority_VeryHigh);
+#endif
 }
 
 /**
@@ -199,8 +185,8 @@ void Control::enable(unsigned chNum) {
    Channel &channel = channels[chNum];
 
    channel.setState(ch_active);
-   doReportPidTitle = true;
-   reportCount      = 0;
+   fDoReportPidTitle = true;
+   fReportCount      = 0;
 }
 
 /**
@@ -248,17 +234,17 @@ static constexpr unsigned LOW_GAIN_SAMPLE_DELAY   = 100;
  */
 void Control::zeroCrossingHandler() {
 
-   DebLed xx;
+   Debug1 xx;
 
-   if (holdOff) {
+   if (fHoldOff) {
        return;
    }
 
-   holdOff = true;
+   fHoldOff = true;
 
 //   // Schedule ADC conversions
 //   static PitCallbackFunction cb = [](){
-//      DebLed xx;
+//      Debug1 xx;
 //      // Do chip temperature measurement
 //      // This also starts the entire sequence of chained conversions
 //      // This is delayed until after the thermocouple amplifier has recovered
@@ -285,35 +271,40 @@ void Control::zeroCrossingHandler() {
    }
 
    // PID reporting
-   if (++reportCount >= PID_LOG_INTERVAL) {
-      reportCount = 0;
-      doReportPid = true;
+   if (++fReportCount >= PID_LOG_INTERVAL) {
+      fReportCount = 0;
+      fDoReportPid = true;
    }
 
    // Get measurements to do
    int sequenceLength = 0;
-   sequenceLength += ch1.getMeasurementSequence(sequence+sequenceLength, CH1_MASK);
-   sequenceLength += ch2.getMeasurementSequence(sequence+sequenceLength, CH2_MASK);
-   sequence[sequenceLength] = MuxSelect_Complete;
+   fOddEven = !fOddEven;
+   if (fOddEven) {
+      sequenceLength += ch1.getMeasurementSequence(fSequence+sequenceLength, CH1_MASK);
+   }
+   else {
+      sequenceLength += ch2.getMeasurementSequence(fSequence+sequenceLength, CH2_MASK);
+   }
+   fSequence[sequenceLength] = MuxSelect_Complete;
 
    // Used to sort measurements according to AMPLIFIER and BIAS settings
    // Avoids enabling/disabling bias multiple times
    static auto comp = [](const void *p1, const void *p2) {
       const MuxSelect *left  = static_cast<const MuxSelect*>(p1);
       const MuxSelect *right = static_cast<const MuxSelect*>(p2);
-      return ((*right^BIAS_MASK)&(AMPLIFIER_MASK|BIAS_MASK))-((*left^BIAS_MASK)&(AMPLIFIER_MASK|BIAS_MASK));
+      return ((*right^BIAS_MASK)&(BIAS_MASK))-((*left^BIAS_MASK)&(BIAS_MASK));
    };
 
    // Sort (excluding sentinel value) so that:
    // - High-gain measurements are done first. This prevents saturation of the high gain amplifier.
    // - Bias is only changed once in sequence
-   qsort(sequence, sequenceLength, sizeof(sequence[0]), comp);
+   qsort(fSequence, sequenceLength, sizeof(fSequence[0]), comp);
 
    // Restart sequence
-   sequenceIndex = 0;
+   fSequenceIndex = 0;
 
    // Set up initial measurement arrangement (including bias and gain)
-   AmplifierControl::write(sequence[0]);
+   AmplifierControl::write(fSequence[0]);
 
    // Do chip temperature measurement
    // This also starts the entire sequence of chained conversions
@@ -330,6 +321,10 @@ void Control::zeroCrossingHandler() {
  *   Several consecutive conversions are then chained in sequence.
  */
 void Control::adcHandler(uint32_t result, int adcChannel) {
+   Debug1 xx;
+
+   // Pat the watchdog
+   Wdog::writeRefresh(0xA602, 0xB480);
 
    // Conversion started last time == result to process this time
    static MuxSelect lastConversion = MuxSelect_Complete;
@@ -337,14 +332,12 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
    Channel &ch1 = channels[1];
    Channel &ch2 = channels[2];
 
-   DebLed db;
-
    Clamp::on();
 
    if (adcChannel == ChipTemperatureAdcChannel::CHANNEL) {
       // First conversion in sequence
       // Process chip temperature
-      chipTemperatureAverage.accumulate(result);
+      fChipTemperatureAverage.accumulate(result);
 
       // Unclamp amplifier inputs (mux output)
       // Delayed to here to allow drive to drop
@@ -379,7 +372,7 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
       }
    }
    // Get conversion to start this cycle
-   MuxSelect currentConversion = sequence[sequenceIndex++];
+   MuxSelect currentConversion = fSequence[fSequenceIndex++];
 
    if (currentConversion == MuxSelect_Complete) {
       // Completed all thermocouple/thermistor conversion sequences
@@ -387,11 +380,22 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
       // Clamp amplifier input to prevent op-amp saturation
       Clamp::on();
 
-      // Run PID and update drive
-      pidHandler();
+      // Update drives
+      ch1.updateDrive();
+      ch2.updateDrive();
 
+      // Run PIDs
+      {
+         if (fOddEven) {
+            ch1.updateController();
+         }
+         else {
+            ch2.updateController();
+         }
+      }
       // Allow new sequence
-      holdOff = false;
+      fHoldOff = false;
+
       // Pat the watchdog
       Wdog::writeRefresh(0xA602, 0xB480);
 
@@ -405,15 +409,12 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 //   bool biasHasChange = (currentConversion ^ lastConversion) & BIAS_MASK;
 
    // Allow extra time for high gain amplifier to settle
-   bool isHighGainAmplifier = (currentConversion & AMPLIFIER_MASK);
+   bool isHighGainAmplifier = (currentConversion & GAIN_BOOST_MASK);
 
    // Allow extra settling time on 1st sample
-   unsigned delay = (sequenceIndex == 1)?INITAL_SAMPLE_DELAY:0;
+   unsigned delay = (fSequenceIndex == 1)?INITAL_SAMPLE_DELAY:0;
 
    if (isHighGainAmplifier) {
-      // Set up PGA gain
-      ProgrammableGainAdc::configurePga(AdcPgaMode_NormalPower, muxPgaGain(currentConversion));
-
       // Longer settling time for high-gain amplifier
       delay += HIGH_GAIN_SAMPLE_DELAY;
    }
@@ -431,13 +432,8 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
    // Schedule next ADC conversion
    // This is delayed to allow for mux, bias and amplifier settling time
    static PitCallbackFunction cb = [](){
-      DebLed db;
-      if (lastConversion&AMPLIFIER_MASK) {
-         ProgrammableGainAdcChannel::startConversion(AdcInterrupt_Enabled);
-      }
-      else {
-         FixedGainAdcChannel::startConversion(AdcInterrupt_Enabled);
-      }
+//      Debug1 db;
+      FixedGainAdcChannel::startConversion(AdcInterrupt_Enabled);
    };
 
    Clamp::off();
@@ -446,23 +442,10 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 }
 
 /**
- * Timer interrupt handler for updating PID
- * This includes the heater drives
- */
-void Control::pidHandler() {
-   Debug::off();
-
-   channels[1].update();
-   channels[2].update();
-
-   Debug::on();
-}
-
-/**
  * Refresh the display of channel information
  */
 void Control::refresh() {
-   needRefresh = false;
+   fNeedRefresh = false;
 
    if (isDisplayInUse()) {
       // Update display
@@ -490,11 +473,11 @@ void Control::reportChannel(Channel &ch) {
  */
 void Control::reportPid(Channel &ch) {
 
-   doReportPid = false;
+   fDoReportPid = false;
 
    if (ch.isRunning()) {
-      ch.report(doReportPidTitle);
-      doReportPidTitle = false;
+      ch.report(fDoReportPidTitle);
+      fDoReportPidTitle = false;
       console.resetFormat();
    }
 }
@@ -508,10 +491,10 @@ void Control::eventLoop()  {
    setNeedsRefresh();
 
    for(;;) {
-      if (doReportPid) {
+      if (fDoReportPid) {
          reportPid(channels[1]);
       }
-      if (needRefresh) {
+      if (fNeedRefresh) {
          // Redraw screen
          refresh();
       }
@@ -539,8 +522,8 @@ void Control::eventLoop()  {
       // Assume visible change due to event
       setNeedsRefresh();
 
-      //         console.write("Position = ").write(event.change).write(", Event = ").writeln(getEventName(event));
-      //         console.write("Event = ").writeln(getEventName(event));
+      //         console.writeln("Position = ", event.change, ", Event = ", getEventName(event));
+      //         console.writeln("Event = ", getEventName(event));
 
       switch(event.type) {
          case ev_Ch1Hold      :
@@ -604,20 +587,20 @@ void Control::eventLoop()  {
  * @param milliseconds Amount to increment the idle time by
  */
 void Control::updateDisplayInUse(unsigned milliseconds) {
-   if (channels[1].isToolIdle() && channels[2].isToolIdle()) {
-      idleTime += milliseconds;
+   if (channels[1].isRunning() || channels[2].isRunning()) {
+      fDisplayIdleTime = 0;
    }
    else {
-      idleTime = 0;
+      fDisplayIdleTime += milliseconds;
    }
 }
 
 void Control::wakeUpDisplay() {
-   idleTime = 0;
+   fDisplayIdleTime = 0;
 }
 
 /**
- * Checks is the display is in use
+ * Checks if the display is in use
  * Considered in use for 2 minutes after any activity or while either channel is on
  *
  * @return True  Display is needed
@@ -626,5 +609,5 @@ void Control::wakeUpDisplay() {
 bool Control::isDisplayInUse() {
    static constexpr unsigned DISPLAY_OFF_TIME = 300*1000; // milliseconds
 
-   return (idleTime<DISPLAY_OFF_TIME);
+   return (fDisplayIdleTime<DISPLAY_OFF_TIME);
 }

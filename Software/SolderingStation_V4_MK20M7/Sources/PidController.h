@@ -39,7 +39,7 @@ public:
     * @param[in] outMin    Minimum output value
     * @param[in] outMax    Maximum output value
     */
-   PidController(float interval, float outMin, float outMax) : Controller(interval, outMin, outMax) {
+   PidController(USBDM::Seconds interval, float outMin, float outMax) : Controller(interval, outMin, outMax) {
    }
 
    /**

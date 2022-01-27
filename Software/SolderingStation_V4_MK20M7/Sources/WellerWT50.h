@@ -29,7 +29,7 @@ private:
          muxSelectAddSubChannel(WellerThermistorAverage::MEASUREMENT, SubChannelNum_B);
 
    /// Loop controller
-   PidController controller{PID_INTERVAL, MIN_DUTY, MAX_DUTY};
+   PidController controller{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
 
 public:
    Weller_WT50(Channel &ch) : Measurement(ch, 11.0, 24) {}
@@ -46,13 +46,26 @@ public:
    }
 
    /**
-    * Run end of cycle update:
-    *   - Drive state
-    *   - Temperature averages
-    *   - Power average
-    *   - Controller iteration
+    * Run end of controller cycle update:
+    *   - Temperature
+    *   - Power
+    *   - Controller (PID etc)
+    *
+    * @param targetTemperature Target temperature
     */
-   virtual uint8_t update(float targetTemperature) override {
+   virtual void updateController(float targetTemperature) override {
+
+      // Run PID
+      float dc = controller.newSample(targetTemperature, getTemperature());
+      controller.setDutyCycle(dc);
+   }
+
+   /**
+    * Get drive value for each main half-cycle
+    *
+    * @return Drive value for channel
+    */
+   virtual DriveSelection getDrive() override {
 
       // Update drive to heaters as needed
       controller.advance();
@@ -60,24 +73,8 @@ public:
       // Update power average (as percentage)
       power.accumulate(controller.getDutyCycle());
 
-      // Run PID
-
-      float dc = controller.newSample(targetTemperature, getTemperature());
-#if 0
-      // Safety check
-      // Turn off after 30s at >20% drive
-      static unsigned highOnTime = 0;
-      if (dc < 20) {
-         highOnTime = 0;
-      }
-      highOnTime++;
-      if (highOnTime>30/PID_INTERVAL) {
-         dc = 0;
-      }
-#endif
-      controller.setDutyCycle(dc);
-
-      return controller.isOn()?0b11:0b00;
+      // Get output value
+      return controller.isOn()?DriveSelection_Both:DriveSelection_Off;
    }
 
    /**
@@ -231,8 +228,7 @@ public:
       console.write(controller.getElapsedTime());
       controller.report();
 
-      console.write(",").write(getInstantTemperature());
-      console.writeln();
+      console.writeln(",", getInstantTemperature());
       console.resetFormat();
    }
 

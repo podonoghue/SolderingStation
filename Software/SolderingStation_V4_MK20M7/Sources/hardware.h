@@ -44,61 +44,52 @@ namespace USBDM {
 extern void mapAllPins();
 
 /// ADC connected to Vrefh = 3.0V
-typedef const Adc0                                           FixedGainAdc;                                 
+typedef Adc0                                                 FixedGainAdc;                                 
 
 /// ADC channel for channel 1 ID pin
-typedef const Adc0::Channel<0>                               Ch1Identify_notUsed;                          // PGA0_DP(p9)
+typedef Adc0::Channel<0>                                     Ch1Identify_notUsed;                          // PGA0_DP(p9)
 
 /// ADC channel with external amplifier
-typedef const Adc0::Channel<3>                               FixedGainAdcChannel;                          // PGA1_DP(p11)
+typedef Adc0::Channel<3>                                     FixedGainAdcChannel;                          // PGA1_DP(p11)
 
 /// ADC channel direct to sample point
-typedef const Adc0::Channel<19>                              LowGainDirectAdcChannel;                      // PGA0_DM(p10)
+typedef Adc0::Channel<19>                                    LowGainDirectAdcChannel;                      // PGA0_DM(p10)
 
 /// ADC channel for channel 2 ID pin
-typedef const Adc0::Channel<21>                              Ch2Identify_notUsed;                          // PGA1_DM(p12)
+typedef Adc0::Channel<21>                                    Ch2Identify_notUsed;                          // PGA1_DM(p12)
 
 /// Internal temperature sensor
-typedef const Adc0::Channel<26>                              ChipTemperatureAdcChannel;                    // TEMP_SENSOR(Internal)
-
-/// ADC connected to Vrefout ~1.2V
-typedef const Adc1                                           ProgrammableGainAdc;                          
-
-/// ADC channel with external amplifier (Programmable gain amplifier)
-typedef const Adc1::PgaChannel                               ProgrammableGainAdcChannel;                   // PGA1_DP(p11)
+typedef Adc0::Channel<26>                                    ChipTemperatureAdcChannel;                    // TEMP_SENSOR(Internal)
 
 /// CMP, Analogue Comparator
-typedef const Cmp0                                           ZeroCrossingComparator;                       
+typedef Cmp0                                                 ZeroCrossingComparator;                       
 
 /// Mains zero crossing detector
-typedef const Cmp0::Pin<Cmp0::Input_Ptc7>                    ZeroCrossingInput;                            // PTC7(p52)
+typedef Cmp0::Pin<Cmp0::Input_Ptc7>                          ZeroCrossingInput;                            // PTC7(p52)
 
 /// CMP, Analogue Comparator
-typedef const Cmp2                                           OverCurrentComparator;                        
+typedef Cmp2                                                 OverCurrentComparator;                        
 
 /// Overcurrent comparator
-typedef const Cmp2::Pin<Cmp2::Input_Pta13>                   Overcurrent;                                  // PTA13(p29)
-
-/// Debug pin
-typedef const GpioTable_T<GpioAInfo, 4, ActiveHigh>          Debug;                                        // PTA4(p26)
+typedef Cmp2::Pin<Cmp2::Input_Pta13>                         Overcurrent;                                  // PTA13(p29)
 
 /// Spare #1
-typedef const GpioTable_T<GpioAInfo, 4, ActiveHigh>          Spare1;                                       // PTA4(p26)
+typedef GpioTable_T<GpioAInfo, 4, ActiveHigh>                Spare1;                                       // PTA4(p26)
 
 /// Quadrature encoder B (Bit Field)
-typedef const GpioFieldTable_T<GpioBInfo, 1, 0, ActiveLow>   QuadPhases;                                   // PTB0(p35), PTB1(p36)
+typedef GpioFieldTable_T<GpioBInfo, 1, 0, ActiveLow>         QuadPhases;                                   // PTB0(p35), PTB1(p36)
 
 /// Spare #3
-typedef const GpioTable_T<GpioBInfo, 19, ActiveHigh>         Spare3;                                       // PTB19(p42)
+typedef GpioTable_T<GpioBInfo, 19, ActiveHigh>               Spare3;                                       // PTB19(p42)
 
 /// Tool stand detectors (Bit Field)
-typedef const GpioFieldTable_T<GpioBInfo, 17, 16, ActiveLow> ToolStands;                                   // PTB16(p39), PTB17(p40)
+typedef GpioFieldTable_T<GpioBInfo, 17, 16, ActiveLow>       ToolStands;                                   // PTB16(p39), PTB17(p40)
 
 /// Spare #2
-typedef const GpioTable_T<GpioBInfo, 18, ActiveHigh>         Spare2;                                       // PTB18(p41)
+typedef GpioTable_T<GpioBInfo, 18, ActiveHigh>               Spare2;                                       // PTB18(p41)
 
 /// Amplifier bias control
-typedef const GpioTable_T<GpioCInfo, 11, ActiveHigh>         AmplifierBias;                                // PTC11(p56)
+typedef GpioTable_T<GpioCInfo, 11, ActiveHigh>               AmplifierBias;                                // PTC11(p56)
 
 /// Channel 1 drive (Bit Field)
 extern const GpioFieldTable_T<GpioCInfo, 2, 1, ActiveLow>    ch1Drive;                                     // PTC1(p44), PTC2(p45)
@@ -110,43 +101,43 @@ extern const GpioTable_T<GpioCInfo, 0, ActiveHigh>           ch1SelectedLed;    
 extern const GpioTable_T<GpioCInfo, 6, ActiveHigh>           ch2SelectedLed;                               // PTC6(p51)
 
 /// Amplifier gain control
-typedef const GpioTable_T<GpioCInfo, 8, ActiveLow>           AmplifierGain;                                // PTC8(p53)
+typedef GpioTable_T<GpioCInfo, 8, ActiveLow>                 AmplifierGain;                                // PTC8(p53)
 
 /// Multiplexor and amplifier control (Bit Field)
-typedef const GpioFieldTable_T<GpioCInfo, 11, 8, 0b1>        AmplifierControl;                             // PTC8(p53), PTC9(p54), PTC10(p55), PTC11(p56)
+typedef GpioFieldTable_T<GpioCInfo, 11, 8, 0b1>              AmplifierControl;                             // PTC8(p53), PTC9(p54), PTC10(p55), PTC11(p56)
 
 /// Amplifier input clamp
-typedef const GpioTable_T<GpioCInfo, 5, ActiveHigh>          Clamp;                                        // PTC5(p50)
+typedef GpioTable_T<GpioCInfo, 5, ActiveHigh>                Clamp;                                        // PTC5(p50)
 
 /// Channel 2 drive (Bit Field)
 extern const GpioFieldTable_T<GpioCInfo, 4, 3, ActiveLow>    ch2Drive;                                     // PTC3(p46), PTC4(p49)
 
 /// Quadrature encoder button
-typedef const GpioTable_T<GpioDInfo, 0, ActiveLow>           QuadButton;                                   // PTD0(p57)
-
-/// Channel 1 button
-typedef const GpioTable_T<GpioDInfo, 2, ActiveLow>           Ch2Button;                                    // PTD2(p59)
-
-/// All buttons for polling (Bit Field)
-typedef const GpioFieldTable_T<GpioDInfo, 3, 0, ActiveLow>   Buttons;                                      // PTD0(p57), PTD1(p58), PTD2(p59), PTD3(p60)
-
-/// Channel 1 voltage select (Bit Field)
-typedef const GpioFieldTable_T<GpioDInfo, 7, 6, ActiveLow>   Ch1VoltageSelect;                             // PTD6(p63), PTD7(p64)
-
-/// Channel 2 voltage select (Bit Field)
-typedef const GpioFieldTable_T<GpioDInfo, 5, 4, ActiveLow>   Ch2VoltageSelect;                             // PTD4(p61), PTD5(p62)
+typedef GpioTable_T<GpioDInfo, 0, ActiveLow>                 QuadButton;                                   // PTD0(p57)
 
 /// Channel 2 button
-typedef const GpioTable_T<GpioDInfo, 1, ActiveLow>           Ch1Button;                                    // PTD1(p58)
+typedef GpioTable_T<GpioDInfo, 1, ActiveLow>                 Ch2Button;                                    // PTD1(p58)
+
+/// All buttons for polling (Bit Field)
+typedef GpioFieldTable_T<GpioDInfo, 3, 0, ActiveLow>         Buttons;                                      // PTD0(p57), PTD1(p58), PTD2(p59), PTD3(p60)
+
+/// Channel 1 voltage select (Bit Field)
+extern const GpioFieldTable_T<GpioDInfo, 7, 6, ActiveLow>    ch1VoltageSelect;                             // PTD6(p63), PTD7(p64)
+
+/// Channel 2 voltage select (Bit Field)
+extern const GpioFieldTable_T<GpioDInfo, 5, 4, ActiveLow>    ch2VoltageSelect;                             // PTD4(p61), PTD5(p62)
+
+/// Channel 1 button
+typedef GpioTable_T<GpioDInfo, 2, ActiveLow>                 Ch1Button;                                    // PTD2(p59)
 
 /// Select button
-typedef const GpioTable_T<GpioDInfo, 3, ActiveLow>           MenuButton;                                   // PTD3(p60)
+typedef GpioTable_T<GpioDInfo, 3, ActiveLow>                 MenuButton;                                   // PTD3(p60)
 
 /// Spare 4
-typedef const GpioTable_T<GpioEInfo, 0, ActiveHigh>          Spare4;                                       // PTE0(p1)
+typedef GpioTable_T<GpioEInfo, 0, ActiveHigh>                Spare4;                                       // PTE0(p1)
 
 /// Spare 5
-typedef const GpioTable_T<GpioEInfo, 1, ActiveHigh>          Spare5;                                       // PTE1(p2)
+typedef GpioTable_T<GpioEInfo, 1, ActiveHigh>                Spare5;                                       // PTE1(p2)
 
 /// PIT channel to use for switch polling
 typedef const Pit::Channel<0>                                PollingTimerChannel;                          // PIT_CH0(Internal)
@@ -155,7 +146,7 @@ typedef const Pit::Channel<0>                                PollingTimerChannel
 typedef const Pit::Channel<1>                                ControlTimerChannel;                          // PIT_CH1(Internal)
 
 /// VREF, Voltage Reference
-typedef const Vref                                           V_ref;                                        
+typedef Vref                                                 V_ref;                                        
 
 } // End namespace USBDM
 

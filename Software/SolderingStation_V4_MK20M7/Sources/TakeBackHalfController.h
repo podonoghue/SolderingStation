@@ -18,8 +18,13 @@
 class TakeBackHalfController : public Controller {
 
 private:
+   // Proportional term
    float fGamma = 0;
+
+   // Differential term
    float fBeta1 = 0;
+
+   // Differential term
    float fBeta2 = 0;
 
    /// Temperature in previous zero crossing?

@@ -23,18 +23,22 @@ private:
    unsigned selectedChannel = 1;
 
    // Channel1
-   Channel channel1{nvinit.ch1Settings, USBDM::ch1SelectedLed, USBDM::ch1Drive};
+   Channel channel1{nvinit.ch1Settings, USBDM::ch1SelectedLed, USBDM::ch1Drive, USBDM::ch1VoltageSelect};
 
    // Channel2
-   Channel channel2{nvinit.ch2Settings, USBDM::ch2SelectedLed, USBDM::ch2Drive};
+   Channel channel2{nvinit.ch2Settings, USBDM::ch2SelectedLed, USBDM::ch2Drive, USBDM::ch2VoltageSelect};
 
 public:
 
    Channels() {
       using namespace USBDM;
 
+      ch1VoltageSelect.setOutput();
+      ch2VoltageSelect.setOutput();
+
       ch1Drive.setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Fast);
       ch2Drive.setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Fast);
+
       ch1SelectedLed.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
       ch2SelectedLed.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
    }

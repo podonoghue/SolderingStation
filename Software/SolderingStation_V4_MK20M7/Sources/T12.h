@@ -21,22 +21,24 @@ class T12 : public Measurement {
 
 private:
 
+   using ThermocoupleAveraging = ThermocoupleAverage<20>;
+
    /// Thermocouple in cartridge
-   ThermocoupleAverage   thermocouple;
+   ThermocoupleAveraging   thermocouple;
 
    /// Thermistor in handle
    ThermistorMF58Average coldJunctionThermistor;
 
    /// Measurement to use for thermocouple on sub-channel A
    static constexpr MuxSelect Measurement1_Thermocouple = 
-         muxSelectAddSubChannel(ThermocoupleAverage::MEASUREMENT, SubChannelNum_A);
+         muxSelectAddSubChannel(ThermocoupleAveraging::MEASUREMENT, SubChannelNum_A);
 
    /// Measurement to use for thermistor on sub_channel B
    static constexpr MuxSelect Measurement2_ColdRef      = 
          muxSelectAddSubChannel(ThermistorMF58Average::MEASUREMENT, SubChannelNum_B);
 
    /// Loop controller
-   PidController controller{PID_INTERVAL, MIN_DUTY, MAX_DUTY};
+   PidController controller{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
 
 public:
    T12(Channel &ch) : Measurement(ch, 8.5, 24) {}
@@ -53,13 +55,26 @@ public:
    }
 
    /**
-    * Run end of cycle update:
-    *   - Drive state
-    *   - Temperature averages
-    *   - Power average
-    *   - Controller iteration
+    * Run end of controller cycle update:
+    *   - Temperature
+    *   - Power
+    *   - Controller (PID etc)
+    *
+    * @param targetTemperature Target temperature
     */
-   virtual uint8_t update(float targetTemperature) override {
+   virtual void updateController(float targetTemperature) override {
+
+      // Run PID
+      float dc = controller.newSample(targetTemperature, getTemperature());
+      controller.setDutyCycle(dc);
+   }
+
+   /**
+    * Get drive value for each main half-cycle
+    *
+    * @return Drive value for channel
+    */
+   virtual DriveSelection getDrive() override {
 
       // Update drive to heaters as needed
       controller.advance();
@@ -67,24 +82,8 @@ public:
       // Update power average (as percentage)
       power.accumulate(controller.getDutyCycle());
 
-      // Run PID
-
-      float dc = controller.newSample(targetTemperature, getTemperature());
-#if 0
-      // Safety check
-      // Turn off after 20s at >20% drive
-      static unsigned highOnTime = 0;
-      if (dc < 20) {
-         highOnTime = 0;
-      }
-      highOnTime++;
-      if (highOnTime>20/PID_INTERVAL) {
-         dc = 0;
-      }
-#endif
-      controller.setDutyCycle(dc);
-
-      return controller.isOn()?0b11:0b00;
+      // Get output value
+      return controller.isOn()?DriveSelection_Both:DriveSelection_Off;
    }
 
    /**
@@ -120,9 +119,7 @@ public:
       float thermocoupleVoltage_mV  = 1000*thermocouple.getThermocoupleVoltage();
       float coldJunctionTemp        = coldJunctionThermistor.getTemperature();
 
-      console.write(calibrationIndex);
-      console.write(" : TC = ").write(thermocoupleVoltage_mV);
-      console.write("mV, Cold = ").writeln(coldJunctionTemp);
+      console.writeln(calibrationIndex, " : TC = ", thermocoupleVoltage_mV, "mV, Cold = ", coldJunctionTemp);
 
       if ((thermocoupleVoltage_mV < 4) || (thermocoupleVoltage_mV > 12)) {
          return false;
@@ -181,7 +178,7 @@ public:
       settings->setCalibrationPoint(CalibrationIndex_325,  296.06,  5.81); // 7.546
       settings->setCalibrationPoint(CalibrationIndex_400,  369.61,  6.64); // 8.974
 
-      settings->setInitialPidControlValues(10.0,0.2,0.0,20.0);
+      settings->setInitialPidControlValues(5.0,0.2,0.0,20.0);
    }
 
    /**
@@ -261,8 +258,7 @@ public:
       console.write(controller.getElapsedTime());
       controller.report();
 
-      console.write(",").write(getInstantTemperature());
-      console.writeln();
+      console.writeln(",", getInstantTemperature());
       console.resetFormat();
    }
 

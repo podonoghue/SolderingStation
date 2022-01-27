@@ -18,10 +18,11 @@ using namespace USBDM;
  *
  * @param settings Parameter to use
  */
-void TakeBackHalfController::setControlParameters(const TipSettings *) {
-   fGamma = 1.0; // 1.0;
-   fBeta1 = 0.2; // 0.2;
-   fBeta2 = 0.4; // 0.4;
+void TakeBackHalfController::setControlParameters(const TipSettings *ts) {
+   ts->getKd();
+   fGamma = ts->getKp(); // 1.0;
+   fBeta1 = ts->getKd()/fInterval; // 0.2;
+   fBeta2 = 2*ts->getKd()/fInterval; // 0.4;
 }
 
 /**
@@ -37,8 +38,8 @@ void TakeBackHalfController::enable(bool enable) {
       if (!fEnabled) {
          // Just enabled
          fTickCount   = 0;
-//            lastInput        = initialTemperature;
-//            fTemperatureErrorPrevZC = targetTemperature - initialTemperature;
+         //            lastInput        = initialTemperature;
+         //            fTemperatureErrorPrevZC = targetTemperature - initialTemperature;
          fCurrentOutput          = 0.0;
          fCurrentOutputPrevZC    = 0.0;
       }
@@ -60,6 +61,8 @@ void TakeBackHalfController::enable(bool enable) {
  */
 float TakeBackHalfController::newSample(float targetTemperature, float actualTemperature) {
 
+   fCurrentTarget = targetTemperature;
+
    const float lastInput = fCurrentInput;
 
    // Save for next iteration
@@ -71,19 +74,22 @@ float TakeBackHalfController::newSample(float targetTemperature, float actualTem
 
    fTickCount++;
 
-   const float fTemperatureError = targetTemperature - actualTemperature;
-   const float fTemperatureDeriv = (actualTemperature - lastInput) / fInterval;
+   fCurrentError = targetTemperature - actualTemperature;
+   const float deltaTemp = (actualTemperature - lastInput);
 
-   // Integral term.
-   fCurrentOutput += (fGamma * fTemperatureError);
+   // Proportional term.
+   fProportional = (fGamma * fCurrentError);
+
+   fCurrentOutput += fProportional;
 
    // Improvement: use derivative to minimise overshoot/undershoot.
-   if ((fTemperatureError > 0.0) && (fTemperatureDeriv < 0.0)) {
-      fCurrentOutput -= fBeta1 * fTemperatureDeriv;
+   if ((fCurrentError > 0.0) && (deltaTemp < 0.0)) {
+      fDifferential = fBeta1 * deltaTemp;
    }
-   else if ((fTemperatureError < 0.0) && (fTemperatureDeriv > 0.0)) {
-      fCurrentOutput -= fBeta2 * fTemperatureDeriv;
+   else if ((fCurrentError < 0.0) && (deltaTemp > 0.0)) {
+      fDifferential = fBeta2 * deltaTemp;
    }
+   fCurrentOutput -= fDifferential;
 
    // Output variable clipping.
    if (fCurrentOutput < fOutMin) {
@@ -93,11 +99,11 @@ float TakeBackHalfController::newSample(float targetTemperature, float actualTem
       fCurrentOutput = fOutMax;
    }
 
-   // Take-Back Half.
-   if ((fTemperatureError * fTemperatureErrorPrevZC) < 0.0) {
+   // Take-Back Half. (on zero crossing)
+   if ((fCurrentError * fTemperatureErrorPrevZC) < 0.0) {
       fCurrentOutput = 0.5 * (fCurrentOutput + fCurrentOutputPrevZC);
 
-      fTemperatureErrorPrevZC = fTemperatureError;
+      fTemperatureErrorPrevZC = fCurrentError;
       fCurrentOutputPrevZC    = fCurrentOutput;
    }
 
@@ -110,19 +116,8 @@ float TakeBackHalfController::newSample(float targetTemperature, float actualTem
  */
 void TakeBackHalfController::reportHeading(Channel &ch) const {
 
-      console.setFloatFormat(3, Padding_LeadingSpaces, 3);
-      console.
-         write("Gamma = ").write(fGamma).write(',').
-         write("Drive").write(',').
-         write(ch.getTipName()).write(',').
-         write("Inst. Temp").
-         writeln();
-
-      console.
-         write("Beta1 = ").write(fBeta1).writeln();
-
-      console.
-         write("Beta2 = ").write(fBeta2).writeln();
+   console.setFloatFormat(3, Padding_LeadingSpaces, 3);
+   console.writeln("Target, \"Drive (", ch.getTipName(),")\nGamma = ", fGamma, "\nBeta1 = ", fBeta1, "\nBeta2 = ", fBeta2, "\", Inst. Temp, Error, differential");
 }
 
 /**
@@ -131,11 +126,10 @@ void TakeBackHalfController::reportHeading(Channel &ch) const {
 void TakeBackHalfController::report() const {
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 4);
-//   console.write(getElapsedTime()).write(", ").write(fCurrentOutput).write(", ").write(fCurrentInput).write(", ").write(ch.tipTemperature.getLastSample()/50);
+   console.write(",", fCurrentTarget); // Set temperature
+   console.write(",", fCurrentOutput); // Drive %
+   console.write(",", fCurrentInput);  // Average temperature
+   console.write(",", fCurrentError);  // Error
+   console.write(",", fDifferential);  // Differential
 
-//   console.setFloatFormat(2, Padding_LeadingSpaces, 5);
-//   console.write(",").write(fCurrentError).write(",").write(fProportional).write(",").write(fIntegral).write(",").write(fDifferential);
-
-   console.writeln();
-   console.resetFormat();
 }

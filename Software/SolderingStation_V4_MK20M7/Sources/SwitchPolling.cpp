@@ -13,13 +13,13 @@
 using namespace USBDM;
 
 /// How often the switches are polled
-constexpr float POLL_INTERVAL          = 10_ms;                 // Polled every 10 ms
+constexpr Seconds POLL_INTERVAL        = 10_ms;                        // Polled every 10 ms
 
 /// Number of consistent samples to confirm debouncing
-constexpr unsigned DEBOUNCE_COUNT      = 40_ms/POLL_INTERVAL;   // 40 ms
+constexpr unsigned DEBOUNCE_COUNT      = round(40_ms/POLL_INTERVAL);   // Number if polls in 40 ms
 
 /// How long to hold a button for long press in samples
-constexpr unsigned HOLD_COUNT          = 1_s/POLL_INTERVAL;     // 1 s
+constexpr unsigned HOLD_COUNT          = round(1_s/POLL_INTERVAL);     // Number if polls in 1 s
 
 /**
  * Get name of event from event type

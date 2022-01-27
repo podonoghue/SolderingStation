@@ -23,7 +23,7 @@ protected:
    unsigned    fTickCount      = 0;
 
    /// Interval for sampling
-   const float fInterval;
+   const USBDM::Seconds fInterval;
 
    /// Current input sample
    float       fCurrentInput   = 0.0;
@@ -31,11 +31,14 @@ protected:
    /// Current output
    float       fCurrentOutput  = 0.0;
 
-   /// Current error calculation
+   /// Current target temperature
    float       fCurrentTarget  = 0.0;
 
    /// Current error calculation
    float       fCurrentError   = 0.0;
+
+   float       fDifferential   = 0.0;
+   float       fProportional   = 0.0;
 
    /// Minimum limit for output
    const float fOutMin;
@@ -48,7 +51,7 @@ protected:
    bool     fEnabled;
 
 public:
-   Controller(float interval, float outMin, float outMax) :
+   Controller(USBDM::Seconds interval, float outMin, float outMax) :
       DutyCycleCounter(101),
       fInterval(interval), fOutMin(outMin), fOutMax(outMax), fEnabled(false) {
    }
@@ -70,7 +73,7 @@ public:
     *
     * @return Elapsed time
     */
-   float getElapsedTime() const {
+   USBDM::Seconds getElapsedTime() const {
       return (fTickCount*fInterval);
    }
 

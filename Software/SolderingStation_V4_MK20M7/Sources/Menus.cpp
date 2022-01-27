@@ -220,9 +220,6 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationI
    if (tipsettings.isFree()) {
       return false;
    }
-   //   console.setFloatFormat(0, Padding_LeadingSpaces, 2);
-   //   console.write("Test = ").writeln(1.2f);
-
    bool doUpdate = true;
 
    // Temperature being calibrated to
@@ -339,7 +336,8 @@ EventType Menus::calibrateTipTemps(const SettingsData &) {
             TipSettings &nvTipSettings = *menuItems[selection].nvTipSettings;
 
             // This is a dummy settings object that is NOT in nv-storage i.e. RAM
-            TipSettings workingTipSettings(*menuItems[selection].nvTipSettings);
+            TipSettings workingTipSettings;
+            workingTipSettings = *menuItems[selection].nvTipSettings;
 
             // Find channel to use for calibration
             Channel *channel;
@@ -946,8 +944,8 @@ void Menus::settingsMenu() {
 #endif
    };
 
-   //   console.write("Size    = ").writeln(sizeof(settingsData));
-   //   console.write("Address = ").writeln(&settingsData);
+   //   console.writeln("Size    = ", sizeof(settingsData));
+   //   console.writeln("Address = ", &settingsData);
 
    CircularMenuState selection{(int)USBDM::sizeofArray(settingsData)-1, 0};
 
@@ -965,7 +963,7 @@ void Menus::settingsMenu() {
       // Assume refresh required on event
       refresh = true;
 
-      //      console.write(getEventName(event)).write(" : ").writeln(event.change);
+      //      console.writeln(getEventName(event), " : ", event.change);
 
       EventType key = ev_None;
 

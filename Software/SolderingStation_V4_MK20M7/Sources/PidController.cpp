@@ -17,10 +17,10 @@ using namespace USBDM;
  * @param settings Parameter to use
  */
 void PidController::setControlParameters(const TipSettings *settings) {
-   this->fKp       = settings->getKp();
-   this->fKi       = settings->getKi() * fInterval;
-   this->fKd       = settings->getKd() / fInterval;
-   this->fILimit   = settings->getILimit();
+   fKp       = settings->getKp();
+   fKi       = settings->getKi() * fInterval;
+   fKd       = settings->getKd() / fInterval;
+   fILimit   = settings->getILimit();
 }
 
 /**
@@ -80,23 +80,35 @@ float PidController::newSample(float targetTemperature, float actualTemperature)
    // Update input samples & error
    fCurrentError = fCurrentTarget - fCurrentInput;
 
-   if ((fCurrentOutput<fOutMin+1)){
+   if ((fCurrentOutput<(fOutMin+1))){
       // Hit bottom drive limit - de-integrate slower
       fIntegral += (fKi/2 * fCurrentError);
+   }
+   else if ((fCurrentError<-4) && (fIntegral>0)) {
+      // Overshoot
+      fIntegral += (5 * fKi * fCurrentError);
    }
    else {
       fIntegral += (fKi * fCurrentError);
    }
 
-   if ((fCurrentOutput>=fOutMax) && (fCurrentError>0) && (fIntegral > fILimit)) {
-      // Limit positive integral term when at 100% power and rising
-      fIntegral = fILimit;
-   }
-   if (fIntegral < -fILimit) {
-      // Limit negative integral term in general
-      fIntegral = -fILimit;
-   }
-   fDifferential = fKd * (fCurrentInput - lastInput);
+//   if (fabs(fCurrentError)>40) {
+      if (fIntegral>fILimit) {
+         fIntegral = fILimit;
+      }
+      else if (fIntegral<-fILimit) {
+         fIntegral = -fILimit;
+      }
+//   }
+//   if ((fCurrentOutput>=fOutMax) && (fCurrentError>0) && (fIntegral > fILimit)) {
+//      // Limit positive integral term when at 100% power and rising
+//      fIntegral = fILimit;
+//   }
+//   if (fIntegral < -fILimit) {
+//      // Limit negative integral term in general
+//      fIntegral = -fILimit;
+//   }
+   fDifferential = ((fKd * (fCurrentInput - lastInput)) + fDifferential)/2;
 
    fProportional = fKp * fCurrentError;
 
@@ -118,13 +130,9 @@ float PidController::newSample(float targetTemperature, float actualTemperature)
  */
 void PidController::reportHeading(Channel & ch) const {
 
-      console.setFloatFormat(1, Padding_None).
-         write("SetTemp, Drive,").write(ch.getTipName()).
-         write(",Error,P=").write(getKp());
-      console.setFloatFormat(3, Padding_None).
-         write(",I=").write(getKi());
-      console.setFloatFormat(1, Padding_None).
-         write("<").write(fILimit).write("@").write((int)round(fOutMax)).write("%,D,Instant. T");
+      console.setFloatFormat(1, Padding_None).write("SetTemp, Drive,", ch.getTipName(), ",Error,P=", getKp());
+      console.setFloatFormat(3, Padding_None).write(",I=", getKi());
+      console.setFloatFormat(1, Padding_None).write("<", fILimit, "@", (int)round(fOutMax), "%,D,Instant. T");
       console.writeln();
 }
 
@@ -134,11 +142,11 @@ void PidController::reportHeading(Channel & ch) const {
 void PidController::report() const {
 
    console.setFloatFormat(1, Padding_LeadingSpaces, 3);
-   console.write(",").write(fCurrentTarget); // Set temperature
-   console.write(",").write(fCurrentOutput); // Drive %
-   console.write(",").write(fCurrentInput);  // Average temperature
-   console.write(",").write(fCurrentError);  // Error
-   console.write(",").write(fProportional);  // P
-   console.write(",").write(fIntegral);      // I
-   console.write(",").write(fDifferential);  // D
+   console.write(",", fCurrentTarget); // Set temperature
+   console.write(",", fCurrentOutput); // Drive %
+   console.write(",", fCurrentInput);  // Average temperature
+   console.write(",", fCurrentError);  // Error
+   console.write(",", fProportional);  // P
+   console.write(",", fIntegral);      // I
+   console.write(",", fDifferential);  // D
 }

@@ -23,7 +23,7 @@ public:
    void initialise() {
       vccValue               = 3.30;
       preAmplifierNoBoost    = LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF;
-      preAmplifierWithBoost  = LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF;
+      preAmplifierWithBoost  = LOW_GAIN_MEASUREMENT_RATIO_BOOST_ON;
    }
 };
 

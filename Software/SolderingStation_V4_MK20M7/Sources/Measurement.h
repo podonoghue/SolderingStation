@@ -15,6 +15,17 @@ class Channel;
 
 class Measurement {
 
+public:
+
+   /// Resistance of heater element in ohms
+   const float heaterResistance;
+
+   /// Voltage of heater element in volts
+   const unsigned heaterVoltage;
+
+   /// Maximum power calculated from heater resistance and voltage
+   const float nominalMaxPower;
+
 protected:
 
    /// Owning channel
@@ -23,24 +34,16 @@ protected:
    /// Indicates if the tip is present
    bool tipPresent;
 
-   /// Resistance of heater element in ohms
-   const float heaterResistance;
-
-   /// Resistance of heater element in ohms
-   const float heaterVoltage;
-
-   /// Maximum power calculated from heater resistance and voltage
-   const float nominalMaxPower;
-
    /// Average power as percentage for display purposes
    SimpleMovingAverage<5> power;
 
 public:
-   Measurement(Channel &ch, float heaterResistance, float heaterVoltage) :
-      ch(ch),
-      tipPresent(false),
+   Measurement(Channel &ch, float heaterResistance, unsigned heaterVoltage) :
       heaterResistance(heaterResistance),
-      heaterVoltage(heaterVoltage), nominalMaxPower((heaterVoltage * heaterVoltage)/heaterResistance) {
+      heaterVoltage(heaterVoltage),
+      nominalMaxPower((heaterVoltage * heaterVoltage)/heaterResistance),
+      ch(ch),
+      tipPresent(false) {
 
    }
 
@@ -117,15 +120,21 @@ public:
    virtual void enableControlLoop(bool enable = true) = 0;
 
    /**
-    * Run end of cycle update:
-    *   - Update drive
+    * Run end of controller cycle update:
     *   - Temperature
     *   - Power
-    *   - Controller
+    *   - Controller (PID etc)
     *
-    * @return New drive value
+    * @param targetTemperature Target temperature
     */
-   virtual uint8_t update(float targetTemperature) = 0;
+   virtual void updateController(float targetTemperature) = 0;
+
+   /**
+    * Get drive value for each main half-cycle
+    *
+    * @return Drive value for channel
+    */
+   virtual DriveSelection getDrive() = 0;
 
    /**
     * Get average power
@@ -162,7 +171,7 @@ public:
 
 class DummyMeasurement : public Measurement {
 public:
-   DummyMeasurement(Channel &ch) : Measurement(ch, 8.0, 24) {}
+   DummyMeasurement(Channel &ch) : Measurement(ch, 8.0, 0) {}
 
    virtual float getTemperature() const override { return 1.0;};
    virtual float getInstantTemperature() const override { return 1.0; };
@@ -172,14 +181,13 @@ public:
    virtual MuxSelect const *getMeasurementSequence() const override {
       static const MuxSelect dummy[] = {MuxSelect_Complete, };
       return dummy;
-   };
-   virtual void processMeasurement(MuxSelect, uint32_t) override {};
-
-   virtual void enableControlLoop(bool) override {};
-
-   virtual uint8_t update(float) override { return 0b00; };
-   virtual void setDutyCycle(unsigned) {};
-   virtual void report(bool) const {};
+   }
+   virtual void processMeasurement(MuxSelect, uint32_t) override {}
+   virtual void enableControlLoop(bool) override {}
+   virtual void updateController(float) override {}
+   virtual DriveSelection getDrive() override { return DriveSelection_Off; }
+   virtual void setDutyCycle(unsigned) {}
+   virtual void report(bool) const {}
 };
 
 #endif /* SOURCES_MEASUREMENT_H_ */

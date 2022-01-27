@@ -12,6 +12,8 @@
 #include "NonvolatileSettings.h"
 #include "T12.h"
 #include "WellerWT50.h"
+#include "Jbc.h"
+#include "AttenTweezers.h"
 
 using namespace USBDM;
 
@@ -87,6 +89,10 @@ const InitialTipInfo TipSettings::initialTipInfo[SIZE_OF_TIP_ARRAY] = {
       {"WT50S", IronType_Weller },
       {"WT50M", IronType_Weller },
       {"WT50L", IronType_Weller },
+      {"C-20",  IronType_JBC_C210 },
+      {"C-18",  IronType_JBC_C210 },
+      {"C-IS",  IronType_JBC_C210 },
+      {"Atten", IronType_AttenTweezers },
 };
 
 /**
@@ -125,6 +131,8 @@ const char *TipSettings::getIronTypeName(IronType ironType) {
          "Unknown",
          "Weller",
          "T12",
+         "JBC-C210",
+         "Atten",
    };
    if (ironType >= USBDM::sizeofArray(names)) {
       return "----";
@@ -149,6 +157,12 @@ void TipSettings::loadDefaultCalibration(TipNameIndex tipNameIndex) {
       case IronType_Weller:
          Weller_WT50::initialiseSettings(this,  initInfo);
          break;
+      case IronType_JBC_C210:
+         JBC_C210::initialiseSettings(this,  initInfo);
+         break;
+      case IronType_AttenTweezers:
+         AttenTweezers::initialiseSettings(this,  initInfo);
+         break;
       default:
          usbdm_assert(false, "Illegal iron type");
          break;
@@ -167,7 +181,7 @@ void TipSettings::report(FormattedIO &io) {
    io.write("Ki     = ").writeln(getKi());
    io.write("Kd     = ").writeln(getKd());
    io.write("iLimit = ").writeln(getILimit());
-   io.write("flags  = 0b").writeln(nvFlags, Radix_2);
+   io.write("flags  = 0b").writeln((uint16_t)nvFlags, Radix_2);
    for (CalibrationIndex index=CalibrationIndex_250; index<=CalibrationIndex_400; ++index) {
       io.
          write("T = ").write(getCalibrationTempValue(index)).

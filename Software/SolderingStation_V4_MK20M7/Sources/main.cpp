@@ -9,6 +9,7 @@
 #include "Channels.h"
 #include "Control.h"
 #include "rcm.h"
+#include "NonvolatileSettings.h"
 
 using namespace USBDM;
 
@@ -102,6 +103,20 @@ static void resetToBootloader() {
 
 int main() {
 
+//
+//   for(;;) {
+//      Ch2_VoltageSelect::write(VoltageSelect_12V);
+//      wait(10_s);
+//      Ch2_VoltageSelect::write(VoltageSelect_Off);
+//      wait(500_ms);
+//      Ch2_VoltageSelect::write(VoltageSelect_24V);
+//      wait(10_s);
+//      Ch2_VoltageSelect::write(VoltageSelect_Off);
+//      wait(500_ms);
+//   }
+//
+    console.writeln("Reset Source = ", Rcm::getResetSourceDescription());
+
    // Power-on message
 //   StringFormatter_T<40> sf;
 //   sf.write("SW:V").writeln(bootInformation.softwareVersion)
@@ -139,13 +154,17 @@ int main() {
 #endif
 #if defined(DEBUG_BUILD)
 //   console.writeln(Rcm::getResetSourceDescription());
-   console.write("LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF = ").writeln(LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF);
-   console.write("LOW_GAIN_MEASUREMENT_RATIO_BOOST_ON  = ").writeln(LOW_GAIN_MEASUREMENT_RATIO_BOOST_ON);
-   console.write("BIAS_RESISTOR_VALUE                  = ").writeln(BIAS_RESISTOR_VALUE);
-   console.write("BIAS_VOLTAGE                         = ").writeln(BIAS_VOLTAGE);
+   console.writeln("nvinit.hardwareCalibration.preAmplifierNoBoost   = ", 1/(float)nvinit.hardwareCalibration.preAmplifierNoBoost);
+   console.writeln("nvinit.hardwareCalibration.preAmplifierWithBoost = ", 1/(float)nvinit.hardwareCalibration.preAmplifierWithBoost);
+   console.writeln("BIAS_RESISTOR_VALUE                   = ", BIAS_RESISTOR_VALUE);
+   console.writeln("BIAS_VOLTAGE                          = ", BIAS_VOLTAGE);
+   console.writeln("ADC_REF_VOLTAGE                       = ", ADC_REF_VOLTAGE);
+   console.writeln("LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF  = ", LOW_GAIN_MEASUREMENT_RATIO_BOOST_OFF);
+   console.writeln("getSingleEndedMaximum(ADC_RESOLUTION) = ", USBDM::FixedGainAdc::getSingleEndedMaximum(ADC_RESOLUTION));
+   console.writeln("IdentifyMeasurementRatio              = ", Channel::IdentifyMeasurementRatio);
 
-   console.writeln("Starting\n");
 #endif
+
    initialise();
 
    control.eventLoop();

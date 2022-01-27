@@ -15,6 +15,8 @@ enum IronType : uint8_t {
    IronType_Unknown,
    IronType_Weller,
    IronType_T12,
+   IronType_JBC_C210,
+   IronType_AttenTweezers,
 };
 
 class InitialTipInfo {
@@ -53,7 +55,7 @@ public:
       NO_TIP = 0,
 
       /// Total number of tips available for selection (excludes NO_TIP)
-      NUMBER_OF_VALID_TIPS   = 70,
+      NUMBER_OF_VALID_TIPS   = 74,
 
       /// Indicates unused entry in calibration table
       /// Corresponds to default flash value (0xFFFF)
