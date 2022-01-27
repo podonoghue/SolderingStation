@@ -10,7 +10,6 @@
    <item key="$$Hardware_Source_Filename"                  value="MK20D7.usbdmHardware" />
    <item key="$peripheral$ADC0_codeIdentifier"             value="FixedGainAdc" />
    <item key="$peripheral$ADC0_userDescription"            value="ADC connected to Vrefh = 3.0V" />
-   <item key="$peripheral$ADC1_codeIdentifier"             value="ProgrammableGainAdc" />
    <item key="$peripheral$ADC1_userDescription"            value="ADC connected to Vrefout ~1.2V" />
    <item key="$peripheral$CMP0_codeIdentifier"             value="ZeroCrossingComparator" />
    <item key="$peripheral$CMP2_codeIdentifier"             value="OverCurrentComparator" />
@@ -71,8 +70,8 @@
    <item key="$signal$CMP2_IN1_codeIdentifier"             value="Overcurrent" />
    <item key="$signal$CMP2_IN1_descriptionSetting"         value="Overcurrent comparator" />
    <item key="$signal$EXTAL0_descriptionSetting"           value="16MHz Crystal" />
-   <item key="$signal$GPIOA_4_codeIdentifier"              value="Spare1/Debug" />
-   <item key="$signal$GPIOA_4_descriptionSetting"          value="Spare #1/Debug pin" />
+   <item key="$signal$GPIOA_4_codeIdentifier"              value="Spare1" />
+   <item key="$signal$GPIOA_4_descriptionSetting"          value="Spare #1" />
    <item key="$signal$GPIOB_0_codeIdentifier"              value="QuadPhases" />
    <item key="$signal$GPIOB_0_descriptionSetting"          value="Quadrature encoder B" />
    <item key="$signal$GPIOB_16_codeIdentifier"             value="ToolStands" />
@@ -115,19 +114,23 @@
    <item key="$signal$GPIOC_9_descriptionSetting"          value="Multiplexor select 0" />
    <item key="$signal$GPIOD_0_codeIdentifier"              value="Buttons/QuadButton" />
    <item key="$signal$GPIOD_0_descriptionSetting"          value="All buttons for polling/Quadrature encoder button" />
-   <item key="$signal$GPIOD_1_codeIdentifier"              value="Buttons/Ch1Button" />
+   <item key="$signal$GPIOD_1_codeIdentifier"              value="Buttons/Ch2Button" />
    <item key="$signal$GPIOD_1_descriptionSetting"          value="/Channel 2 button" />
-   <item key="$signal$GPIOD_2_codeIdentifier"              value="Buttons/Ch2Button" />
+   <item key="$signal$GPIOD_2_codeIdentifier"              value="Buttons/Ch1Button" />
    <item key="$signal$GPIOD_2_descriptionSetting"          value="/Channel 1 button" />
    <item key="$signal$GPIOD_3_codeIdentifier"              value="Buttons/MenuButton" />
    <item key="$signal$GPIOD_3_descriptionSetting"          value="/Select button" />
    <item key="$signal$GPIOD_4_codeIdentifier"              value="Ch2VoltageSelect" />
+   <item key="$signal$GPIOD_4_createInstance"              value="true" />
    <item key="$signal$GPIOD_4_descriptionSetting"          value="Channel 2 voltage select/Channel 2 voltage select (12V)" />
    <item key="$signal$GPIOD_5_codeIdentifier"              value="Ch2VoltageSelect" />
+   <item key="$signal$GPIOD_5_createInstance"              value="true" />
    <item key="$signal$GPIOD_5_descriptionSetting"          value="Channel 2 voltage select (24V)" />
    <item key="$signal$GPIOD_6_codeIdentifier"              value="Ch1VoltageSelect" />
+   <item key="$signal$GPIOD_6_createInstance"              value="true" />
    <item key="$signal$GPIOD_6_descriptionSetting"          value="Channel 1 voltage select/Channel 1 voltage select (12V)" />
    <item key="$signal$GPIOD_7_codeIdentifier"              value="Ch1VoltageSelect" />
+   <item key="$signal$GPIOD_7_createInstance"              value="true" />
    <item key="$signal$GPIOD_7_descriptionSetting"          value="Channel 1 voltage select (24V)" />
    <item key="$signal$GPIOE_0_codeIdentifier"              value="Spare4" />
    <item key="$signal$GPIOE_0_descriptionSetting"          value="Spare 4" />
@@ -135,8 +138,6 @@
    <item key="$signal$GPIOE_1_descriptionSetting"          value="Spare 5" />
    <item key="$signal$I2C0_SCL_descriptionSetting"         value="I2C Clock (OLED)" />
    <item key="$signal$I2C0_SDA_descriptionSetting"         value="I2C Data (OLED)" />
-   <item key="$signal$PGA1_DP_createInstance"              value="true" />
-   <item key="$signal$PGA1_codeIdentifier"                 value="ProgrammableGainAdcChannel" />
    <item key="$signal$PGA1_descriptionSetting"             value="ADC channel with external amplifier" />
    <item key="$signal$PIT_CH0_codeIdentifier"              value="PollingTimerChannel" />
    <item key="$signal$PIT_CH0_descriptionSetting"          value="PIT channel to use for switch polling" />
@@ -178,17 +179,14 @@
    <item key="/CMP2/irqHandlingMethod"                     value="$ClassMethod" />
    <item key="/CMP2/irqLevel"                              value="NvicPriority_VeryHigh" />
    <item key="/DAC0/dac_c0_dactrgsel"                      value="false" />
-   <item key="/FTFL/peripheral_file"                       value="ftfl_32k_flexrom" />
    <item key="/GPIOB/irqHandlingMethod"                    value="$ClassMethod" />
    <item key="/GPIOD/irqHandlingMethod"                    value="$ClassMethod" />
    <item key="/HARDWARE/mapAllPins"                        value="true" />
+   <item key="/HARDWARE/warnMultipleSignalsOnPin"          value="true" />
    <item key="/LLWU/device_list"                           value="LPTMR0;CMP0;CMP1;CMP2;TSI;RTC_Alarm;;RTC_Seconds" />
    <item key="/MCG/ClockConfig[0]"                         value="ClockConfig_PEE_60MHz" />
    <item key="/MCG/ClockConfig[1]"                         value="ClockConfig_BLPE_4MHz" />
    <item key="/MCG/ClockConfig[2]"                         value="ClockConfig_PEE_48MHz" />
-   <item key="/MCG/DummyClockConfig[0]"                    value="ClockConfig_0" />
-   <item key="/MCG/DummyClockConfig[1]"                    value="ClockConfig_1" />
-   <item key="/MCG/DummyClockConfig[2]"                    value="ClockConfig_2" />
    <item key="/MCG/clock_mode[0]"                          value="ClockMode_PEE" />
    <item key="/MCG/clock_mode[1]"                          value="ClockMode_BLPE" />
    <item key="/MCG/clock_mode[2]"                          value="ClockMode_PEE" />
@@ -197,9 +195,6 @@
    <item key="/PIT/irqHandlingMethod"                      value="$ClassMethod" />
    <item key="/RTC/configure_rtc"                          value="false" />
    <item key="/RTC/rtc_cr_osce"                            value="false" />
-   <item key="/SIM/ClockConfig[0]"                         value="" />
-   <item key="/SIM/ClockConfig[1]"                         value="" />
-   <item key="/SIM/ClockConfig[2]"                         value="" />
    <item key="/SIM/sim_clkdiv2_usb"                        value="9" />
    <item key="/SIM/sim_sopt1_osc32ksel"                    value="3" />
    <item key="/SIM/sim_sopt2_pllfllsel[0]"                 value="1" />
