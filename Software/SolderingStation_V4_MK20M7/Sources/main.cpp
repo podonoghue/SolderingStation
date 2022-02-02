@@ -1,8 +1,13 @@
 /*
- * @file main.cpp
+ ============================================================================
+ * @file    main.cpp
+ * @brief   Main-line for Soldering station
+ *
+ *  Created on: 10/1/2016
+ *      Author: podonoghue
+ ============================================================================
  */
 #include "hardware.h"
-#include "BootloaderInfo.h"
 #include "stringFormatter.h"
 #include "Display.h"
 #include "SwitchPolling.h"
@@ -10,6 +15,7 @@
 #include "Control.h"
 #include "rcm.h"
 #include "NonvolatileSettings.h"
+#include "BootInformation.h"
 
 using namespace USBDM;
 
@@ -59,24 +65,22 @@ void _exit(int rc __attribute__((unused))) {
 }
 }
 
-static constexpr unsigned HARDWARE_VERSION = HW_SOLDER_STATION_V3;
+static constexpr HardwareType HARDWARE_VERSION = HW_SOLDER_STATION_V4;
 
-static uint32_t magicNumber = 0;
+__attribute__ ((section(".noinit")))
+static uint32_t magicNumber;
 
-__attribute__((used))
-#if defined(RELEASE_BUILD) && 0
-// Make bootloader information visible to linker
-// Triggers changes to memory map to suit bootloader
-__attribute__ ((section(".bootloader"))) extern
-#else
-// No bootloader used
-static
+#if defined(RELEASE_BUILD)
+// Triggers memory image relocation for bootloader
+extern BootInformation const bootloaderInformation;
 #endif
-BootInformation const bootInformation = {
-      &magicNumber,        // Pointer to magic number location to force ICP
+
+__attribute__ ((section(".bootloaderInformation")))
+__attribute__((used))
+const BootInformation bootloaderInformation = {
+      &magicNumber,        // Magic number to force ICP on reboot
       1,                   // Version of this software image
-      HARDWARE_VERSION,    // Identifies the hardware this image is intended for
-      0,                   // Filled in by bootloader
+      HARDWARE_VERSION,    // Hardware version for this image
 };
 
 /**
@@ -90,7 +94,7 @@ static void resetToBootloader() {
 #endif
 
    // Set ICP on reboot
-   *bootInformation.magicNumber = MAGIC_NUMBER;
+   magicNumber = MAGIC_NUMBER;
 
    // Request system reset
    SCB->AIRCR = SCB_AIRCR_VECTKEY(0x5FA) | SCB_AIRCR_SYSRESETREQ_Msk;
@@ -103,26 +107,20 @@ static void resetToBootloader() {
 
 int main() {
 
-//
-//   for(;;) {
-//      Ch2_VoltageSelect::write(VoltageSelect_12V);
-//      wait(10_s);
-//      Ch2_VoltageSelect::write(VoltageSelect_Off);
-//      wait(500_ms);
-//      Ch2_VoltageSelect::write(VoltageSelect_24V);
-//      wait(10_s);
-//      Ch2_VoltageSelect::write(VoltageSelect_Off);
-//      wait(500_ms);
-//   }
-//
-    console.writeln("Reset Source = ", Rcm::getResetSourceDescription());
+   console.writeln("Reset Source = ", Rcm::getResetSourceDescription());
+   if (Rcm::getResetSource() & RcmSource_Wdog) {
+      console.writeln("Watchdog reset - halting");
+      for(;;) {
+         __BKPT();
+      }
+   }
 
    // Power-on message
-//   StringFormatter_T<40> sf;
-//   sf.write("SW:V").writeln(bootInformation.softwareVersion)
-//     .write("HW:").writeln(getHardwareType<HARDWARE_VERSION>());
-//   display.showMessage("Starting", sf.toString());
-//   waitMS(5000);
+   StringFormatter_T<40> sf;
+   sf.write("SW:V").writeln(bootloaderInformation.softwareVersion)
+     .write("HW:").writeln(getHardwareType(HARDWARE_VERSION));
+   display.showMessage("Starting", sf.toString());
+   waitMS(2000);
 
 #if 0
    ch1Drive.setOutput();

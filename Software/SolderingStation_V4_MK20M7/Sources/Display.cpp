@@ -79,7 +79,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    oled.setPadding(Padding_LeadingSpaces).setWidth(3);
 
    oled.setFont(fontVeryLargeReduced);
-   if ((ch.getState() == ch_noTip) || (ch.getState() == ch_overload)) {
+   if ((ch.getState() == ChannelState_noTip) || (ch.getState() == ChannelState_overload)) {
       oled.moveXY(offset+6, 8).write("---");
    }
    else {
@@ -103,7 +103,7 @@ void Display::displayChannel(Channel &ch, bool selected, unsigned offset) {
    }
 
    oled.setFont(fontLarge);
-   if (ch.getState()==ch_setback) {
+   if (ch.getState()==ChannelState_setback) {
       // If in setback mode display target temperature instead of active preset
       oled.moveXY(offset,  35).write("SB :").setWidth(3).write(ch.getTargetTemperature());
    }

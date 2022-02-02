@@ -16,19 +16,28 @@ namespace MyConstants {
 
 using namespace USBDM;
 
+/**
+ * Control for channel voltage selection
+ */
 enum VoltageSelection {
-   VoltageSelect_Off = 0b00,
-   VoltageSelect_12V = 0b01,
-   VoltageSelect_24V = 0b10,
+   VoltageSelect_Off = 0b00, /**< Voltage Off */
+   VoltageSelect_12V = 0b01, /**< Voltage = 12V */
+   VoltageSelect_24V = 0b10, /**< Voltage = 24V */
 };
 
+/**
+ * Control of channel drive outputs
+ */
 enum DriveSelection {
-   DriveSelection_Off   = 0b00,
-   DriveSelection_Left  = 0b01,  // A sub-channel
-   DriveSelection_Right = 0b10,  // B sub-channel
-   DriveSelection_Both  = DriveSelection_Left|DriveSelection_Right,
+   DriveSelection_Off   = 0b00,                                     /**< Drive Off                        */
+   DriveSelection_Left  = 0b01,                                     /**< Left drive only (A sub-channel)  */
+   DriveSelection_Right = 0b10,                                     /**< Right drive only (B sub-channel) */
+   DriveSelection_Both  = DriveSelection_Left|DriveSelection_Right, /**< Left+Right (A+B sub-channels)    */
 };
 
+/**
+ * Used to OR together sub-channel outputs
+ */
 inline constexpr DriveSelection operator| (const DriveSelection &left, const DriveSelection &right) {
    return static_cast<DriveSelection>((unsigned)left|(unsigned)right);
 }
@@ -39,7 +48,7 @@ constexpr USBDM::AdcResolution ADC_RESOLUTION = USBDM::AdcResolution_16bit_se;
 /// Vcc used as reference in some places (volts)
 constexpr float VCC_REF_VOLTAGE = 3.30;
 
-/// External voltage reference for low-gain ADC - VrefH (volts)
+/// External voltage reference for ADC - VrefH (volts)
 constexpr float ADC_REF_VOLTAGE = 3.00;
 
 /// External voltage reference for CMP (Vdda)
@@ -219,8 +228,17 @@ static constexpr int      MAX_DUTY     = 100;
 /// Minimum duty cycle for tip drive 2% ~ 1.5W for 8 ohm element
 static constexpr int      MIN_DUTY     = 0;
 
-/// PID interval (1 cycle of the rectified mains)
+/**
+ * Sample interval (1 cycle of the rectified mains)
+ * Samples alternate between channels to reduce interaction
+ */
 static constexpr Seconds  SAMPLE_INTERVAL = 10.0_ms;
+
+/**
+ * Controller interval (2 cycles of the rectified mains)
+ * Controller us update on every second cycle
+ */
+static constexpr Seconds  CONTROL_INTERVAL = 20.0_ms;
 
 };
 

@@ -40,7 +40,7 @@ bool StepResponseDriver::run(unsigned maxDrive) {
 
    static constexpr unsigned MIN_DRIVE = 0;
 
-   channel.setState(ch_fixedPower);
+   channel.setState(ChannelState_fixedPower);
 
    enum {Step_Initial, Step_Driving, Step_Cooling, Step_Complete} state = Step_Initial;
 
@@ -105,7 +105,7 @@ bool StepResponseDriver::run(unsigned maxDrive) {
    }
 
    channel.setDutyCycle(0);
-   channel.setState(ch_off);
+   channel.setState(ChannelState_off);
 
    return success;
 }

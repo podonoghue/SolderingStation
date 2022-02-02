@@ -38,7 +38,7 @@ private:
          muxSelectAddSubChannel(ThermistorMF58Average::MEASUREMENT, SubChannelNum_B);
 
    /// Loop controller
-   PidController controller{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
+   PidController controller{CONTROL_INTERVAL, MIN_DUTY, MAX_DUTY};
 
 public:
    T12(Channel &ch) : Measurement(ch, 8.5, 24) {}
@@ -174,9 +174,9 @@ public:
 
       (void)initInfo;
       // Dummy values                                      Tt(C)    Vt(mV)
-      settings->setCalibrationPoint(CalibrationIndex_250,  221.77,  4.64); // 5.758
-      settings->setCalibrationPoint(CalibrationIndex_325,  296.06,  5.81); // 7.546
-      settings->setCalibrationPoint(CalibrationIndex_400,  369.61,  6.64); // 8.974
+      settings->setCalibrationPoint(CalibrationIndex_250,  215.0,   4.7); // T = 215.100, M = 4.726
+      settings->setCalibrationPoint(CalibrationIndex_325,  290.0,   6.1); // T = 289.700, M = 6.051
+      settings->setCalibrationPoint(CalibrationIndex_400,  363.0,   7.7); // T = 363.900, M = 7.713
 
       settings->setInitialPidControlValues(5.0,0.2,0.0,20.0);
    }

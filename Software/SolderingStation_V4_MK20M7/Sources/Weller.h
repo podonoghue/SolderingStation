@@ -5,8 +5,8 @@
  *      Author: peter
  */
 
-#ifndef SOURCES_WELLERWT50_H_
-#define SOURCES_WELLERWT50_H_
+#ifndef SOURCES_WELLER_H_
+#define SOURCES_WELLER_H_
 
 #include "stringFormatter.h"
 
@@ -17,7 +17,7 @@
 /**
  * Class representing information for a Weller WT-50 soldering tweezers
  */
-class Weller_WT50 : public Measurement {
+class Weller : public Measurement {
 
 private:
 
@@ -29,12 +29,12 @@ private:
          muxSelectAddSubChannel(WellerThermistorAverage::MEASUREMENT, SubChannelNum_B);
 
    /// Loop controller
-   PidController controller{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
+   PidController controller{CONTROL_INTERVAL, MIN_DUTY, MAX_DUTY};
 
 public:
-   Weller_WT50(Channel &ch) : Measurement(ch, 11.0, 24) {}
+   Weller(Channel &ch) : Measurement(ch, 11.0, 24) {}
 
-   virtual ~Weller_WT50() {}
+   virtual ~Weller() {}
 
    /**
     * Enable control loop
@@ -156,6 +156,10 @@ public:
          // Large tips - Kp=2.0,Ki=0.06,Kd=0.0,Ilimit=32.5@100%
          settings->setInitialPidControlValues(2.0,0.06,0.0,32.5);
       }
+      else if (strcmp(initInfo.name, "WSP80") == 0) {
+         // Standard iron - Kp=2.0,Ki=0.06,Kd=0.0,Ilimit=32.5@100%
+         settings->setInitialPidControlValues(0.5,0.05,0.0,20.0);
+      }
    }
 
    /**
@@ -234,4 +238,4 @@ public:
 
 };
 
-#endif /* SOURCES_WELLERWT50_H_ */
+#endif /* SOURCES_WELLER_H_ */

@@ -1,5 +1,5 @@
 /*
- * JBC.h
+ * AttenTweezers.h
  *
  *  Created on: 14 Jul. 2021
  *      Author: peter
@@ -35,11 +35,11 @@ private:
    ThermocoupleAveraging   rightThermocouple;
 
    /// Loop controller
-   PidController leftController{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
-   PidController rightController{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
+   PidController leftController{CONTROL_INTERVAL, MIN_DUTY, MAX_DUTY};
+   PidController rightController{CONTROL_INTERVAL, MIN_DUTY, MAX_DUTY};
 
-//   TakeBackHalfController leftController{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
-//   TakeBackHalfController rightController{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
+//   TakeBackHalfController leftController{CONTROL_INTERVAL, MIN_DUTY, MAX_DUTY};
+//   TakeBackHalfController rightController{CONTROL_INTERVAL, MIN_DUTY, MAX_DUTY};
 
 public:
    AttenTweezers(Channel &ch) : Measurement(ch, 3.3/2.0, 12) {}
@@ -145,7 +145,7 @@ public:
 
       console.writeln(calibrationIndex, " : TC = ", thermocoupleVoltage_mV);
 
-      if ((thermocoupleVoltage_mV < 0.5) || (thermocoupleVoltage_mV > 3)) {
+      if ((thermocoupleVoltage_mV < 4) || (thermocoupleVoltage_mV > 9)) {
          return false;
       }
 
@@ -195,9 +195,9 @@ public:
 
       (void)initInfo;
       // Dummy values                                      Tt(C)   Vt(mV)
-      settings->setCalibrationPoint(CalibrationIndex_250,  250.0,  4.3);
-      settings->setCalibrationPoint(CalibrationIndex_325,  325.0,  5.6);
-      settings->setCalibrationPoint(CalibrationIndex_400,  400.0,  6.85);
+      settings->setCalibrationPoint(CalibrationIndex_250,  250.0,  5.6);   // T = 250.000, M = 5.638
+      settings->setCalibrationPoint(CalibrationIndex_325,  325.0,  7.3);   // T = 325.000, M = 7.305
+      settings->setCalibrationPoint(CalibrationIndex_400,  400.0,  7.9);   // T = 400.000, M = 7.551??
 
       settings->setInitialPidControlValues(1.1,0.1,1.0,20.0);
    }

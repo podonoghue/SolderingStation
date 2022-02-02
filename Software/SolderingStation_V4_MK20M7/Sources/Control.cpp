@@ -125,7 +125,7 @@ void Control::initialise() {
    // Enable amplifier input clamp
    Clamp::setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
 
-#if 0
+#if 1
    /**
     * Watchdog handler
     * May also execute on power-off
@@ -140,12 +140,6 @@ void Control::initialise() {
       __asm__("bkpt");
    };
 
-   // Set up watchdog to monitor tool switching
-   // This ensures the iron isn't stuck on
-   Wdog::writeRefresh(0xA602, 0xB480);
-
-   // Timeout = twice the expected refresh period
-   Wdog::setTimeout(20_ms);
    Wdog::configure(
          WdogEnable_Enabled,
          WdogClock_Lpo,
@@ -154,6 +148,10 @@ void Control::initialise() {
          WdogEnableInDebug_Disabled,
          WdogEnableInStop_Enabled,
          WdogEnableInWait_Enabled);
+
+   // Timeout = twice the expected refresh period
+   Wdog::setTimeout(2*SAMPLE_INTERVAL);
+
    Wdog::lockRegisters();
    Wdog::setCallback(wdogCallback);
    Wdog::enableNvicInterrupts(NvicPriority_VeryHigh);
@@ -167,7 +165,7 @@ void Control::initialise() {
  */
 void Control::toggleEnable(unsigned chNum) {
    Channel &channel = channels[chNum];
-   if (channel.getState() == ch_off) {
+   if (channel.getState() == ChannelState_off) {
       enable(chNum);
    }
    else {
@@ -184,7 +182,7 @@ void Control::enable(unsigned chNum) {
 
    Channel &channel = channels[chNum];
 
-   channel.setState(ch_active);
+   channel.setState(ChannelState_active);
    fDoReportPidTitle = true;
    fReportCount      = 0;
 }
@@ -199,7 +197,7 @@ void Control::disable(unsigned chNum) {
 
    Channel &channel = channels[chNum];
 
-   channel.setState(ch_off);
+   channel.setState(ChannelState_off);
 }
 
 /**

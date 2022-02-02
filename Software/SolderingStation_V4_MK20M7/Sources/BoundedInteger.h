@@ -122,6 +122,10 @@ public:
    }
 };
 
+/**
+ * Class representing an integer restricted to a given range.
+ * The integer 'sticks' at either boundary.
+ */
 class BoundedInteger : public LimitedInteger {
 
 public:
@@ -159,6 +163,10 @@ private:
    }
 };
 
+/**
+ * Class representing an integer restricted to a given range.
+ * The integer 'rolls-over' at either boundary.
+ */
 class CircularInteger : public LimitedInteger {
 
 public:

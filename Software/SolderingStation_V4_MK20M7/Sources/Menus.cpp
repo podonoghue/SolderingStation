@@ -231,7 +231,7 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationI
 
    // Set up channel for this tip
    ch.setUserTemperature(controlledTemperature);
-   ch.setState(ch_active);
+   ch.setState(ChannelState_active);
 
    StringFormatter_T<16> title;
 
@@ -260,7 +260,7 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationI
 
          case ev_SelRelease:
          case ev_QuadRelease:
-            ch.setState(ch_off);
+            ch.setState(ChannelState_off);
 
             // Save calibration point values to tip-settings
             if (ch.measurement->saveCalibrationPoint(stage, tipsettings)) {
@@ -284,7 +284,7 @@ bool Menus::calibrateTipTemp(Channel &ch, TipSettings &tipsettings, CalibrationI
 
    tipsettings.report(console);
 
-   ch.setState(ch_off);
+   ch.setState(ChannelState_off);
    return loopControl == complete;
 }
 
@@ -858,7 +858,7 @@ EventType Menus::runHeater(const SettingsData &data) {
    enum {working, complete, fail} loopControl = working;
    Event event;
 
-   ch.setState(ch_fixedPower);
+   ch.setState(ChannelState_fixedPower);
    ch.setDutyCycle(dutyCycle);
 
    StringFormatter_T<100> sf;
@@ -897,7 +897,7 @@ EventType Menus::runHeater(const SettingsData &data) {
       }
    } while (loopControl == working);
 
-   ch.setState(ch_off);
+   ch.setState(ChannelState_off);
 
    return event.type;
 }

@@ -32,8 +32,8 @@ private:
          muxSelectAddSubChannel(ThermocoupleAveraging::MEASUREMENT, SubChannelNum_A);
 
    /// Loop controller
-   PidController controller{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
-//   TakeBackHalfController controller{2*SAMPLE_INTERVAL, MIN_DUTY, MAX_DUTY};
+   PidController controller{CONTROL_INTERVAL, MIN_DUTY, MAX_DUTY};
+//   TakeBackHalfController controller{CONTROL_INTERVAL, MIN_DUTY, MAX_DUTY};
 
 public:
    JBC_C210(Channel &ch) : Measurement(ch, 3.5, 12) {}

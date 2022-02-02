@@ -8,6 +8,7 @@
 #ifndef SOURCES_CHANNEL_H_
 #define SOURCES_CHANNEL_H_
 
+#include <Weller.h>
 #include "PidController.h"
 #include "hardware.h"
 #include "Averaging.h"
@@ -17,7 +18,6 @@
 #include "Controller.h"
 #include "Tips.h"
 #include "T12.h"
-#include "WellerWT50.h"
 #include "Jbc.h"
 #include "AttenTweezers.h"
 
@@ -39,13 +39,13 @@ public:
 
 /// States for the channel
 enum ChannelState {
-   ch_off,        ///< Channel is off
-   ch_noTip,      ///< No tip in iron
-   ch_noTool,     ///< No tool detected
-   ch_overload,   ///< Overload has been detected
-   ch_fixedPower, ///< Tip supplied with constant power (T not maintained)
-   ch_setback,    ///< Tip temperature has been lowered as idle for set-back period
-   ch_active,     ///< Tip is being controlled at user target temperature
+   ChannelState_off,        ///< Channel is off
+   ChannelState_noTip,      ///< No tip in iron
+   ChannelState_noTool,     ///< No tool detected
+   ChannelState_overload,   ///< Overload has been detected
+   ChannelState_fixedPower, ///< Tip supplied with constant power (T not maintained)
+   ChannelState_setback,    ///< Tip temperature has been lowered as idle for set-back period
+   ChannelState_active,     ///< Tip is being controlled at user target temperature
 };
 
 /**
@@ -59,13 +59,13 @@ private:
    // How long the tool has been idle in milliseconds
    unsigned          toolIdleTime        = 0;
 
-   // Measured temperature of tool
+   // Measured temperature of tool (Celsius)
    float             currentTemperature  = 0;
 
-   // State of channel ch_off/ch_standby/ch_backoff/ch_active
-   ChannelState      state               = ch_off;
+   // State of channel ChannelState_off/ChannelState_standby/ChannelState_backoff/ChannelState_active
+   ChannelState      state               = ChannelState_off;
 
-   // Desired temperature of tool
+   // Desired temperature of tool (Celsius)
    int               targetTemperature   = 0;
 
    // Currently selected preset for the channel
@@ -88,13 +88,14 @@ private:
 
    // Supported irons
    DummyMeasurement  dummyMeasurement{*this};
-   Weller_WT50       wellerMeasurement{*this};
+   Weller       wellerMeasurement{*this};
    T12               t12Measurement{*this};
    JBC_C210          jbcC210Measurement{*this};
    AttenTweezers     attenMeasurement{*this};
 
    int   stateChangedCountdown = 0;
    const TipSettings *selectedTip;
+   const TipSettings *lastSelectedTip = nullptr;
 
    /// Reference to non-volatile settings stored in Flash
    ChannelSettings  &nvSettings;
@@ -144,10 +145,11 @@ public:
       chDrive(chDrive),
       chVoltageSelect(voltageSelect),
       nvSettings(settings) {
-      setUserTemperature(settings.presets[preset]);
-      chDrive.write(0b00);
-      led.off();
+
+      chDrive.write(DriveSelection_Off);
       voltageOff();
+      setUserTemperature(settings.presets[preset]);
+      led.off();
 
       selectedTip  = nvSettings.selectedTip;
       stateChangedCountdown = 0;
@@ -178,7 +180,7 @@ public:
          }
          // Turn off on tool type change
          voltageOff();
-         setState(ch_off);
+         setState(ChannelState_off);
 
          USBDM::console.writeln("Tool changed to ", TipSettings::getIronTypeName(ironType));
 
@@ -203,12 +205,12 @@ public:
          checkTipSelected();
 
          if (ironType == IronType_Unknown) {
-            setState(ch_noTool);
+            setState(ChannelState_noTool);
          }
       }
    }
 
-    /**< Identify measurment = Channel Xa + Low gain amp + Bias */
+    /**< Identify measurement = Channel Xa + Low gain amp + Bias */
    static constexpr MuxSelect MuxSelect_Identify = MuxSelect_ChaLowGainBiased;
 
    /** Identify measurement ratio adcValue->Volts */
@@ -235,7 +237,7 @@ public:
          newSequence = identifySequence;
          identifyCounter = 0;
       }
-      else if (getState() == ch_noTool) {
+      else if (getState() == ChannelState_noTool) {
          // No tool present - no measurements
          return 0;
       }
@@ -338,8 +340,17 @@ public:
       }
       // Update tip selection if needed
       const TipSettings *ts = selectedTip;
-      if ((ts == nullptr)|| ts->isFree() || (ts->getIronType() != ironType)) {
-         setTip(tips.getAvailableTipForIron(ironType));
+      if ((ts == nullptr) || ts->isFree() || (ts->getIronType() != ironType)) {
+         // Try last selected tip
+         if (lastSelectedTip->getIronType() == ironType) {
+            setTip(lastSelectedTip);
+         }
+         else {
+            if ((ts != nullptr) && !ts->isFree()) {
+               lastSelectedTip = ts;
+            }
+            setTip(tips.getAvailableTipForIron(ironType));
+         }
       }
       refreshControllerParameters();
    }
@@ -469,10 +480,10 @@ public:
     */
    ChannelState getState() const {
       if (ironType == IronType_Unknown) {
-         return ch_noTool;
+         return ChannelState_noTool;
       }
       if (!isTipPresent()) {
-         return ch_noTip;
+         return ChannelState_noTip;
       }
       return state;
    }
@@ -502,7 +513,7 @@ public:
       measurement->enableControlLoop(isControlled());
       led.write(isRunning());
 
-      if (newState != ch_setback) {
+      if (newState != ChannelState_setback) {
          restartIdleTimer();
       }
       if (!isRunning()) {
@@ -524,7 +535,7 @@ public:
     * @param value
     */
    void setOverload() {
-      state = ch_overload;
+      state = ChannelState_overload;
 
       // Disable drive
       measurement->enableControlLoop(false);
@@ -541,7 +552,7 @@ public:
     * @return  true if active
     */
    bool isRunning(ChannelState state) const {
-      return (state == ch_active) || (state == ch_setback)|| (state == ch_fixedPower) ;
+      return (state == ChannelState_active) || (state == ChannelState_setback)|| (state == ChannelState_fixedPower) ;
    }
 
    /**
@@ -558,7 +569,7 @@ public:
     */
    bool isControlled() const {
       ChannelState state = getState();
-      return (state == ch_active) || (state == ch_setback) ;
+      return (state == ChannelState_active) || (state == ChannelState_setback) ;
    }
 
    /**
@@ -579,16 +590,16 @@ public:
     */
    int getTargetTemperature() const {
       switch(getState()) {
-         case ch_active:
+         case ChannelState_active:
             return targetTemperature;
 
-         case ch_setback:
+         case ChannelState_setback:
             return std::min((int)nvSettings.setbackTemperature, targetTemperature);
 
          default:
-         case ch_off:
-         case ch_noTip:
-         case ch_overload:
+         case ChannelState_off:
+         case ChannelState_noTip:
+         case ChannelState_overload:
             return 0;
       }
    }
@@ -693,8 +704,8 @@ public:
     * If in set-back state it will change to active state.
     */
    void restartIdleTimer() {
-      if (getState() == ch_setback) {
-         setState(ch_active);
+      if (getState() == ChannelState_setback) {
+         setState(ChannelState_active);
       }
       toolIdleTime = 0;
    }
@@ -712,26 +723,16 @@ public:
          toolIdleTime += milliseconds;
       }
 
-      if ((getState() == ch_active) && (nvSettings.setbackTime > 0) && (toolIdleTime >= nvSettings.setbackTime*1000)) {
+      if ((getState() == ChannelState_active) && (nvSettings.setbackTime > 0) && (toolIdleTime >= nvSettings.setbackTime*1000)) {
          // Idle for a short while while active
-         setState(ch_setback);
+         setState(ChannelState_setback);
       }
       if (isRunning() && (nvSettings.safetyOffTime > 0) && (toolIdleTime >= nvSettings.safetyOffTime*1000)) {
          // Idle for a long while running
-         setState(ch_off);
+         setState(ChannelState_off);
       }
    }
 
-//   /**
-//    * Indicates if the tool has been unused (off) for a while.
-//    *
-//    * @return True  - Unused
-//    * @return False - Used
-//    */
-//   bool isToolIdle() {
-//      return !isRunning();
-//   }
-//
    void report(bool doHeading = false) {
       measurement->report(doHeading);
    }
@@ -743,12 +744,12 @@ public:
     * @param dutyCycle Duty cycle to set
     */
    void setDutyCycle(unsigned dutyCycle) {
-      if (getState() != ch_fixedPower) {
+      if (getState() != ChannelState_fixedPower) {
          measurement->setDutyCycle(0);
          return;
       }
       // triggered in debug mode if tool changed etc
-//      usbdm_assert(getState() == ch_fixedPower, "Only available in Fixed power state");
+//      usbdm_assert(getState() == ChannelState_fixedPower, "Only available in Fixed power state");
       measurement->setDutyCycle(dutyCycle);
    }
 

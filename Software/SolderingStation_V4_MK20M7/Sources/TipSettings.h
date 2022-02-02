@@ -55,7 +55,7 @@ public:
       NO_TIP = 0,
 
       /// Total number of tips available for selection (excludes NO_TIP)
-      NUMBER_OF_VALID_TIPS   = 74,
+      NUMBER_OF_VALID_TIPS   = 75,
 
       /// Indicates unused entry in calibration table
       /// Corresponds to default flash value (0xFFFF)
