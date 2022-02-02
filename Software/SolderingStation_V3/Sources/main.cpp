@@ -138,7 +138,7 @@ int main() {
    }
 #endif
 #if defined(DEBUG_BUILD)
-   console.writeln(Rcm::getResetSourceDescription());
+//   console.writeln(Rcm::getResetSourceDescription());
    console.writeln("Starting\n");
 #endif
    initialise();

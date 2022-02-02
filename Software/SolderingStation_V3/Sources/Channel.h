@@ -29,7 +29,7 @@ enum ChannelState {
    ch_overload,   ///< Overload has been detected
    ch_fixedPower, ///< Tip supplied with constant power (T not maintained)
    ch_setback,    ///< Tip temperature has been lowered as idle for set-back period
-   ch_active,     ///< Tip is being heated to user target temperature
+   ch_active,     ///< Tip is being controlled at user target temperature
 };
 
 /**
@@ -41,7 +41,7 @@ class Channel {
 
 private:
    // How long the tool has been idle
-   int               toolIdleTime        = 0;
+   unsigned          toolIdleTime        = 0;
 
    // Measured temperature of tool
    float             currentTemperature  = 0;
@@ -627,9 +627,9 @@ public:
     *
     * @param milliseconds Amount to increment the idle time by
     */
-   void incrementIdleTime(int milliseconds) {
+   void incrementIdleTime(unsigned milliseconds) {
 
-      if (toolIdleTime<(INT_MAX-milliseconds)) {
+      if (toolIdleTime<(UINT_MAX-milliseconds)) {
          toolIdleTime += milliseconds;
       }
 

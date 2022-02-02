@@ -68,7 +68,7 @@ void Control::initialise() {
    ControlTimerChannel::enableNvicInterrupts(NvicPriority_Normal);
 
    // Configure comparator for mains zero-crossing detection
-   // Trigger is actually on the falling edge of rectified waveform near zero
+   // Trigger is actually on the falling edge of rectified waveform near zero crossing
    static CmpCallbackFunction zero_crossing_cb = [](CmpStatus){
       control.zeroCrossingHandler();
    };
@@ -122,7 +122,7 @@ void Control::initialise() {
 
    /**
     * Watchdog handler
-    * Will execute on power-off
+    * May also execute on power-off
     */
    static auto wdogCallback = []() {
       ch1Drive.write(0b00);
@@ -371,6 +371,7 @@ void Control::adcHandler(uint32_t result, int adcChannel) {
 
       // Allow new sequence
       holdOff = false;
+
       // Pat the watchdog
       Wdog::writeRefresh(0xA602, 0xB480);
 
@@ -596,7 +597,7 @@ void Control::wakeUpDisplay() {
 }
 
 /**
- * Checks is the display is in use
+ * Checks if the display is in use
  * Considered in use for 2 minutes after any activity or while either channel is on
  *
  * @return True  Display is needed

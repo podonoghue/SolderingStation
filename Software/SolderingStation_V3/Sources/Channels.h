@@ -35,6 +35,7 @@ public:
 
       ch1Drive.setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Fast);
       ch2Drive.setOutput(PinDriveStrength_Low, PinDriveMode_PushPull, PinSlewRate_Fast);
+
       ch1SelectedLed.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
       ch2SelectedLed.setOutput(PinDriveStrength_High, PinDriveMode_PushPull, PinSlewRate_Slow);
    }

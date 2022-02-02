@@ -15,15 +15,12 @@
 #include "derivative.h"
 #include "hardware.h"
 
-#include "Peripherals.h"
-
-/*********** $start(VectorsIncludeFiles) *** Do not edit after this comment ****************/
 #include "cmp.h"
 #include "gpio.h"
 #include "wdog.h"
 #include "pit.h"
 #include "adc.h"
-/*********** $end(VectorsIncludeFiles)   *** Do not edit above this comment ***************/
+
 
 /*
  * Vector table related
@@ -37,7 +34,7 @@ typedef void( *const intfunc )( void );
  * Most of the vector table is initialised to point at this handler.
  *
  * If you end up here it probably means:
- *   - Failed to enable the interrupt handler in the USBDM device configuration
+ *   - Failed to enable the interrupt handler in the USBDM configuration (Configure.usbdmProject)
  *   - You have accidently enabled an interrupt source in a peripheral
  *   - Enabled the wrong interrupt source
  *   - Failed to install or create a handler for an interrupt you intended using e.g. mis-spelled the name.
@@ -55,7 +52,6 @@ void Default_Handler(void) {
 #endif
 
    while (1) {
-      exit(-1);
       __asm__("bkpt");
    }
 }
@@ -141,7 +137,6 @@ void _HardFault_Handler(
 #endif
 
    while (1) {
-      exit(-1);
       // Stop here for debugger
       __asm__("bkpt");
    }
@@ -158,8 +153,7 @@ extern uint32_t __StackTop;
  * To install a handler, create a C linkage function with the name shown and it will override
  * the weak default.
  */
-/*********** $start(cVectorTable) *** Do not edit after this comment ****************/
-#ifdef __cplusplus
+ #ifdef __cplusplus
 extern "C" {
 #endif
 // Reset handler must have C linkage
@@ -290,6 +284,6 @@ VectorTable const __vector_table = {
    }
 };
 
-/*********** $end(cVectorTable)   *** Do not edit above this comment ***************/
+
 
 

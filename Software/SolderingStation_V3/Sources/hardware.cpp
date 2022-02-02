@@ -51,7 +51,7 @@ const GpioFieldTable_T<GpioCInfo, 4, 3, ActiveLow>           ch2Drive;          
  * @note Only the lower 16-bits of the PCR registers are initialised
  */
 void mapAllPins() {
-#if false
+#if true
 
 
 #endif

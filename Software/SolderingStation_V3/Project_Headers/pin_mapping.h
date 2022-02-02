@@ -2496,31 +2496,31 @@ public:
    #if defined(SIM_SOPT8_FTM0OCH0SRC)
    //! System Options Register 8
    static constexpr uint32_t sopt8 = 
-      SIM_SOPT8_FTM3OCH7SRC(Symbol 'sim_sopt8_ftm3och7src' not found) |   // FTM3 channel 7 output source
-      SIM_SOPT8_FTM3OCH6SRC(Symbol 'sim_sopt8_ftm3och6src' not found) |   // FTM3 channel 6 output source
-      SIM_SOPT8_FTM3OCH5SRC(Symbol 'sim_sopt8_ftm3och5src' not found) |   // FTM3 channel 5 output source
-      SIM_SOPT8_FTM3OCH4SRC(Symbol 'sim_sopt8_ftm3och4src' not found) |   // FTM3 channel 4 output source
-      SIM_SOPT8_FTM3OCH3SRC(Symbol 'sim_sopt8_ftm3och3src' not found) |   // FTM3 channel 3 output source
-      SIM_SOPT8_FTM3OCH2SRC(Symbol 'sim_sopt8_ftm3och2src' not found) |   // FTM3 channel 2 output source
-      SIM_SOPT8_FTM3OCH1SRC(Symbol 'sim_sopt8_ftm3och1src' not found) |   // FTM3 channel 1 output source
-      SIM_SOPT8_FTM3OCH0SRC(Symbol 'sim_sopt8_ftm3och0src' not found) |   // FTM3 channel 0 output source
-      SIM_SOPT8_FTM0OCH7SRC(Symbol 'sim_sopt8_ftm0och7src' not found) |   // FTM0 channel 7 output source
-      SIM_SOPT8_FTM0OCH6SRC(Symbol 'sim_sopt8_ftm0och6src' not found) |   // FTM0 channel 6 output source
-      SIM_SOPT8_FTM0OCH5SRC(Symbol 'sim_sopt8_ftm0och5src' not found) |   // FTM0 channel 5 output source
-      SIM_SOPT8_FTM0OCH4SRC(Symbol 'sim_sopt8_ftm0och4src' not found) |   // FTM0 channel 4 output source
-      SIM_SOPT8_FTM0OCH3SRC(Symbol 'sim_sopt8_ftm0och3src' not found) |   // FTM0 channel 3 output source
-      SIM_SOPT8_FTM0OCH2SRC(Symbol 'sim_sopt8_ftm0och2src' not found) |   // FTM0 channel 2 output source
-      SIM_SOPT8_FTM0OCH1SRC(Symbol 'sim_sopt8_ftm0och1src' not found) |   // FTM0 channel 1 output source
-      SIM_SOPT8_FTM0OCH0SRC(Symbol 'sim_sopt8_ftm0och0src' not found);    // FTM0 channel 0 output source
+      SIM_SOPT8_FTM3OCH7SRC(-1) |   // FTM3 channel 7 output source
+      SIM_SOPT8_FTM3OCH6SRC(-1) |   // FTM3 channel 6 output source
+      SIM_SOPT8_FTM3OCH5SRC(-1) |   // FTM3 channel 5 output source
+      SIM_SOPT8_FTM3OCH4SRC(-1) |   // FTM3 channel 4 output source
+      SIM_SOPT8_FTM3OCH3SRC(-1) |   // FTM3 channel 3 output source
+      SIM_SOPT8_FTM3OCH2SRC(-1) |   // FTM3 channel 2 output source
+      SIM_SOPT8_FTM3OCH1SRC(-1) |   // FTM3 channel 1 output source
+      SIM_SOPT8_FTM3OCH0SRC(-1) |   // FTM3 channel 0 output source
+      SIM_SOPT8_FTM0OCH7SRC(-1) |   // FTM0 channel 7 output source
+      SIM_SOPT8_FTM0OCH6SRC(-1) |   // FTM0 channel 6 output source
+      SIM_SOPT8_FTM0OCH5SRC(-1) |   // FTM0 channel 5 output source
+      SIM_SOPT8_FTM0OCH4SRC(-1) |   // FTM0 channel 4 output source
+      SIM_SOPT8_FTM0OCH3SRC(-1) |   // FTM0 channel 3 output source
+      SIM_SOPT8_FTM0OCH2SRC(-1) |   // FTM0 channel 2 output source
+      SIM_SOPT8_FTM0OCH1SRC(-1) |   // FTM0 channel 1 output source
+      SIM_SOPT8_FTM0OCH0SRC(-1);    // FTM0 channel 0 output source
    #endif
 
    #if defined(SIM_SOPT9_TPM1CH0SRC)
    //! System Options Register 9
    static constexpr uint32_t sopt9 = 
-      SIM_SOPT9_TPM2CLKSEL(Symbol 'sim_sopt9_tpm2clksel' not found)  |   // TPM2 External Clock Pin Select
-      SIM_SOPT9_TPM1CLKSEL(Symbol 'sim_sopt9_tpm1clksel' not found)  |   // TPM1 External Clock Pin Select
-      SIM_SOPT9_TPM2CH0SRC(Symbol 'sim_sopt9_tpm2ch0src' not found)  |   // TPM2 channel 0 input capture source select
-      SIM_SOPT9_TPM1CH0SRC(Symbol 'sim_sopt9_tpm1ch0src' not found);     // TPM1 channel 0 input capture source select
+      SIM_SOPT9_TPM2CLKSEL(-1)  |   // TPM2 External Clock Pin Select
+      SIM_SOPT9_TPM1CLKSEL(-1)  |   // TPM1 External Clock Pin Select
+      SIM_SOPT9_TPM2CH0SRC(-1)  |   // TPM2 channel 0 input capture source select
+      SIM_SOPT9_TPM1CH0SRC(-1);     // TPM1 channel 0 input capture source select
    #endif
 
    /**
@@ -3670,7 +3670,7 @@ public:
  */
 class FtflInfo {
 public:
-   // Template:ftfl_32k_flexrom
+   // Template:ftfl
 
    //! Hardware base address as uint32_t 
    static constexpr uint32_t baseAddress = FTFL_BasePtr;

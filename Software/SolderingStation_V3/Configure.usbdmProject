@@ -149,9 +149,10 @@
    <item key="/ADC0/irqHandlingMethod"                     value="$ClassMethod" />
    <item key="/CMP0/irqHandlingMethod"                     value="$ClassMethod" />
    <item key="/CMP1/irqHandlingMethod"                     value="$ClassMethod" />
-   <item key="/FTFL/peripheral_file"                       value="ftfl_32k_flexrom" />
    <item key="/GPIOB/irqHandlingMethod"                    value="$ClassMethod" />
    <item key="/HARDWARE/mapAllPins"                        value="true" />
+   <item key="/HARDWARE/useTypeSystemForTimers"            value="true" />
+   <item key="/HARDWARE/warnMultipleSignalsOnPin"          value="true" />
    <item key="/LLWU/device_list"                           value="LPTMR0;CMP0;CMP1;;TSI;RTC_Alarm;;RTC_Seconds" />
    <item key="/MCG/ClockConfig[0]"                         value="ClockConfig_PEE_48MHz" />
    <item key="/MCG/ClockConfig[1]"                         value="ClockConfig_BLPE_4MHz" />
@@ -169,9 +170,6 @@
    <item key="/PIT/irqHandlingMethod"                      value="$ClassMethod" />
    <item key="/RTC/configure_rtc"                          value="false" />
    <item key="/RTC/rtc_cr_osce"                            value="false" />
-   <item key="/SIM/ClockConfig[0]"                         value="" />
-   <item key="/SIM/ClockConfig[1]"                         value="" />
-   <item key="/SIM/ClockConfig[2]"                         value="" />
    <item key="/SIM/sim_clkdiv2_usb"                        value="2" />
    <item key="/SIM/sim_sopt2_pllfllsel[0]"                 value="1" />
    <item key="/SIM/system_bus_clock[1]"                    value="4000000" />

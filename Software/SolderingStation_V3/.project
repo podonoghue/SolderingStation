@@ -30,7 +30,13 @@
 		<link>
 			<name>Documentation.html</name>
 			<type>1</type>
-			<locationURI>PROJECT_LOC/Documentation/html/index.html</locationURI>
+			<locationURI>copy_PROJECT_LOC/Documentation/html/index.html</locationURI>
 		</link>
 	</linkedResources>
+	<variableList>
+		<variable>
+			<name>copy_PROJECT_LOC</name>
+			<value>$%7BPARENT-1-PROJECT_LOC%7D/SolderingStation_V3</value>
+		</variable>
+	</variableList>
 </projectDescription>
