@@ -84,8 +84,8 @@ void BootloaderDialogue::onCheckDevice(wxCommandEvent &event) {
             identity.bootSoftwareVersion,
             identity.flash1_start,
             identity.flash1_start+identity.flash1_size-1,
-            identity.flash2_start,
-            identity.flash2_start+identity.flash2_size-1,
+            (identity.flash2_size>0)?identity.flash2_start:0,
+            (identity.flash2_size>0)?(identity.flash2_start+identity.flash2_size-1):0,
             getHardwareType(identity.imageHardwareVersion),
             identity.imageSoftwareVersion
             );

@@ -25,7 +25,8 @@
 #include "delay.h"
 #include "console.h"
 
-// No header file inclusions found
+#include "gpio.h"
+
 
 namespace USBDM {
 
@@ -37,7 +38,13 @@ namespace USBDM {
  * @note Only the lower 16-bits of the PCR registers are initialised
  */
 extern void mapAllPins();
-// No user declarations found
+
+/// CH1_SEL
+typedef GpioTable_T<GpioCInfo, 0, ActiveHigh>                IcpDebugLed;                                  // PTC0(p43)
+
+/// SEL_BTN
+typedef GpioTable_T<GpioDInfo, 3, ActiveLow>                 IcpButton;                                    // PTD3(p60)
+
 } // End namespace USBDM
 
 #endif /* INCLUDE_USBDM_HARDWARE_H_ */

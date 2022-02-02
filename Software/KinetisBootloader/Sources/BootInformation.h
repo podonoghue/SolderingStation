@@ -32,7 +32,7 @@ struct BootInformation {
    const uint32_t softwareVersion;     ///< Version of this software image
    const uint32_t hardwareVersion;     ///< Identifies the hardware this image is intended for
    const uint32_t reserved[3]{0};      ///<
-   const uint32_t key;
+   const uint32_t key;                 ///< Key indicating valid Information
 
    bool isValid() const {
       return key == KEY_VALUE;
@@ -74,12 +74,12 @@ enum HardwareType : uint32_t {
 static inline const char *getHardwareType(HardwareType hardwareVersion) {
    static const char *names[] = {
          "Unknown",
-         "HW_LOGIC_BOARD_V2",
-         "HW_LOGIC_BOARD_V3",
-         "HW_LOGIC_BOARD_V4",
-         "HW_SOLDERING_STATION_V3",
-         "HW_LOGIC_BOARD_V4a",
-         "HW_SOLDERING_STATION_V4",
+         "LOGIC_BOARD_V2",
+         "LOGIC_BOARD_V3",
+         "LOGIC_BOARD_V4",
+         "SOLDER_STATION_V3",
+         "LOGIC_BOARD_V4a",
+         "SOLDER_STATION_V4",
    };
    const char *name = "Unknown";
    if (hardwareVersion < (sizeof(names)/sizeof(names[0]))) {
@@ -122,6 +122,29 @@ enum BootloaderVersion : uint32_t  {
    BOOTLOADER_V3      = 3,
    BOOTLOADER_V4      = 4,
 };
+
+template<int version>
+constexpr const char *getHardwareVersion() {
+   if constexpr(version == HW_LOGIC_BOARD_V2) {
+      return "Dig-Logic 2";
+   }
+   if constexpr(version == HW_LOGIC_BOARD_V3) {
+      return "Dig-Logic 3";
+   }
+   if constexpr(version == HW_LOGIC_BOARD_V4) {
+      return "Dig-Logic 4";
+   }
+   if constexpr(version == HW_LOGIC_BOARD_V4a) {
+      return "Dig-Logic 4a";
+   }
+   if constexpr(version == HW_SOLDER_STATION_V3) {
+      return "Soldering station V3";
+   }
+   if constexpr(version == HW_SOLDER_STATION_V4) {
+      return "Soldering station V4";
+   }
+   return "Unknown";
+}
 
 static constexpr uint32_t BOOTLOADER_ORIGIN = 0;
 static constexpr uint32_t BOOTLOADER_SIZE   = 0x4000;
