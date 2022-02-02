@@ -44,9 +44,9 @@ extern void setSysDividersStub(uint32_t simClkDiv1);
  * Clock configurations
  */
 enum ClockConfig : uint8_t {
-   ClockConfig_PEE_48MHz,
+   ClockConfig_PEE_60MHz,
    ClockConfig_BLPE_4MHz,
-   ClockConfig_FEE_40MHz,
+   ClockConfig_PEE_48MHz,
 
    ClockConfig_default = 0,
 };

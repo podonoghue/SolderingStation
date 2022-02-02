@@ -1,6 +1,6 @@
-/* ARMLtd_GCC-rom-mk-sramu.ld (180.ARM_Peripherals/Project_Settings/Linker_Files/)
+/* ARMLtd_GCC-rom-mk.ld (180.ARM_Peripherals/Project_Settings/Linker_Files/)
  *
- * Kinetis version with optional SRAM_U allocation and bitband
+ * Kinetis version with bitband
  *
  * Linker script based on example scripts provided with ARM Ltd GCC
  *
@@ -247,7 +247,36 @@ M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECT
       __StackTop = .;
    } > stack_ram
 
-   /* FlexRAM region for non-volatile variables */
+   /* 
+    * SRAM_U region
+    *
+    * This area is partitioned from the top of SRAM
+    *
+    * Each bit in this region maps to a word in the .bitband region (if present)
+    * This region is also accessible to BME (if present and supports RAM access) 
+    */
+   .bitband_ram (NOLOAD) :
+   {
+   __start_bitband = .;
+      *(.bitband_ram)
+   } > bitband_ram
+
+   /*
+    * Bitband region
+    *
+    * Each word in this region maps to a bit in the .sram_u region 
+    */
+   .bitband (NOLOAD) :
+   {
+      /* Allocate variables with an offset scaled from bitband_ram offset */
+      . = ORIGIN(bitband) + 32*(ABSOLUTE(__start_bitband) - ABSOLUTE(ORIGIN(bitband_ram)));
+      *(.bitband)
+   } > bitband
+    
+  PROVIDE(__stack = __StackTop);
+  PROVIDE(__cs3_stack = __StackTop);
+  
+     /* FlexRAM region for non-volatile variables */
    .flexRAM (NOLOAD) :
    {
       . = ALIGN(4);
@@ -266,34 +295,6 @@ M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECT
    } > flexNVM
 
 
-   /* 
-    * SRAM_U region
-    *
-    * This area is partitioned from the top of SRAM
-    *
-    * Each bit in this region maps to a word in the .bitband region (if present)
-    * This region is also accessible to BME (if present and supports RAM access) 
-    */
-   .sram_u (NOLOAD) :
-   {
-      *(.sram_u)
-   } > sram_u_ram
-
-   /*
-    * Bitband region
-    *
-    * Each word in this region maps to a bit in the .bitband_byte region 
-    */
-   .bitband (NOLOAD) :
-   {
-      /* Allocate variables from top of region */
-      . = ORIGIN(bitband) + ((ORIGIN(sram_u_ram) + LENGTH(sram_u_ram) - __sram_u_size) & 0xFFFFFF) * 32;
-      *(.bitband)
-   } > bitband
-    
-  PROVIDE(__stack = __StackTop);
-  PROVIDE(__cs3_stack = __StackTop);
-  
   /*
    * These are very 'weak' to ensure semi-hosting version 
    * will be used for rdimon.specs option
@@ -326,7 +327,7 @@ M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? (__VECTOR_TABLE_END - __VECT
   | Stack                |
   | (__stack_size__)     |                                   (size=0x100)
   +----------------------+ __StackTop                        0x200002ff
-  | Bitband/BME (sram_u) |
+  | Bitband/BME (sram_u) |                                   (if present)
   | (__sram_u_size)      |                                   (size=1)
   +----------------------+                                   0x20000300
   

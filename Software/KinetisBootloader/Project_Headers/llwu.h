@@ -114,7 +114,6 @@ enum LlwuPin : uint32_t {
 #endif
 
    // Mapped pins
-   LlwuPin_Pta4                                       = LlwuPin_3,    ///< Mapped pin PTA4(p21)
 
 };
 
@@ -135,6 +134,7 @@ enum LlwuPeripheral : uint32_t {
    LlwuPeripheral_Lptmr0                              = LlwuPeripheral_0, 
    LlwuPeripheral_Cmp0                                = LlwuPeripheral_1, 
    LlwuPeripheral_Cmp1                                = LlwuPeripheral_2, 
+   LlwuPeripheral_Cmp2                                = LlwuPeripheral_3, 
    LlwuPeripheral_Tsi                                 = LlwuPeripheral_4, 
    LlwuPeripheral_RtcAlarm                            = LlwuPeripheral_5, 
    LlwuPeripheral_RtcSeconds                          = LlwuPeripheral_7, 

@@ -120,7 +120,7 @@ inline void clearError() {
    errorCode = E_NO_ERROR;
 }
 
-#define USE_CONSOLE 0
+#define USE_CONSOLE 1
 
 #if USE_CONSOLE
 /**
@@ -128,7 +128,7 @@ inline void clearError() {
  *
  * @param msg Message to print
  */
-extern void log_error(const char *);
+extern void log_error(const char * msg);
 #else
 /**
  * Print simple log message to console\n

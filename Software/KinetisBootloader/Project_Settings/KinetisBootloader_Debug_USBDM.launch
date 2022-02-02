@@ -7,7 +7,8 @@
     <booleanAttribute key="net.sourceforge.usbdm.gdb.catchVLLSxEvents" value="false"/>
     <stringAttribute key="net.sourceforge.usbdm.gdb.clockTrimFrequency" value="0"/>
     <intAttribute key="net.sourceforge.usbdm.gdb.connectionTimeout" value="10"/>
-    <stringAttribute key="net.sourceforge.usbdm.gdb.deviceName" value="MK20DX128M5"/>
+    <stringAttribute key="net.sourceforge.usbdm.gdb.deviceName" value="MK20DX256M7"/>
+    <booleanAttribute key="net.sourceforge.usbdm.gdb.doHalt" value="true"/>
     <booleanAttribute key="net.sourceforge.usbdm.gdb.doReset" value="true"/>
     <booleanAttribute key="net.sourceforge.usbdm.gdb.doResume" value="true"/>
     <booleanAttribute key="net.sourceforge.usbdm.gdb.doStopAtMain" value="true"/>
@@ -42,6 +43,7 @@
     <intAttribute key="net.sourceforge.usbdm.gdb.ttyPort" value="4321"/>
     <booleanAttribute key="net.sourceforge.usbdm.gdb.useDebugVersion" value="false"/>
     <booleanAttribute key="net.sourceforge.usbdm.gdb.useExternalFile" value="false"/>
+    <booleanAttribute key="net.sourceforge.usbdm.gdb.useExternalSymbolFile" value="false"/>
     <booleanAttribute key="net.sourceforge.usbdm.gdb.usePstSignals" value="false"/>
     <booleanAttribute key="net.sourceforge.usbdm.gdb.useSemiHosting" value="false"/>
     <stringAttribute key="org.eclipse.cdt.dsf.gdb.DEBUG_NAME" value="${usbdm_armLtd_arm_path}/${usbdm_armLtd_arm_prefix}gdb"/>
@@ -56,6 +58,6 @@
     <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
         <listEntry value="4"/>
     </listAttribute>
-    <stringAttribute key="org.eclipse.dsf.launch.MEMORY_BLOCKS" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&lt;memoryBlockExpressionList context=&quot;reserved-for-future-use&quot;&gt;&lt;gdbmemoryBlockExpression address=&quot;16384&quot; label=&quot;0x4000&quot;/&gt;&lt;/memoryBlockExpressionList&gt;"/>
+    <stringAttribute key="org.eclipse.dsf.launch.MEMORY_BLOCKS" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&lt;memoryBlockExpressionList context=&quot;reserved-for-future-use&quot;&gt;&lt;gdbmemoryBlockExpression address=&quot;268435456&quot; label=&quot;0x10000000&quot;/&gt;&lt;/memoryBlockExpressionList&gt;"/>
     <stringAttribute key="process_factory_id" value="org.eclipse.cdt.dsf.gdb.GdbProcessFactory"/>
 </launchConfiguration>

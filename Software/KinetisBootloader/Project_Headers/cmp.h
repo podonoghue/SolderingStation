@@ -895,7 +895,7 @@ public:
       Input_6          = 6, //!< CMP0 input 6
       Input_7          = 7, //!< CMP0 input 7
       
-      Input_VrefOut             = Input_5, ///< Fixed pin  VREF_OUT(p13)
+      Input_VrefOut             = Input_5, ///< Fixed pin  VREF_OUT(p17)
       Input_Bandgap             = Input_6, ///< Fixed pin  BANDGAP(Internal)
       Input_CmpDac              = Input_7, ///< Fixed pin  CMP_DAC(Internal)
 
@@ -963,7 +963,8 @@ public:
       Input_6          = 6, //!< CMP1 input 6
       Input_7          = 7, //!< CMP1 input 7
       
-      Input_VrefOut             = Input_5, ///< Fixed pin  VREF_OUT(p13)
+      Input_Adc0Se23            = Input_3, ///< Fixed pin  ADC0_SE23(p18)
+      Input_VrefOut             = Input_5, ///< Fixed pin  VREF_OUT(p17)
       Input_Bandgap             = Input_6, ///< Fixed pin  BANDGAP(Internal)
       Input_CmpDac              = Input_7, ///< Fixed pin  CMP_DAC(Internal)
 
@@ -1032,7 +1033,9 @@ public:
       Input_6          = 6, //!< CMP2 input 6
       Input_7          = 7, //!< CMP2 input 7
       
-// None Found
+      Input_Bandgap             = Input_6, ///< Fixed pin  BANDGAP(Internal)
+      Input_CmpDac              = Input_7, ///< Fixed pin  CMP_DAC(Internal)
+
    };
 
    /**

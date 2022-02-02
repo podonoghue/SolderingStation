@@ -325,7 +325,7 @@ public:
             break;
          }
       }
-      setTimeout(prescaler, timerValue);
+      setTimeout(prescaler, (unsigned)timerValue);
       return E_NO_ERROR;
    }
 
@@ -363,6 +363,9 @@ public:
     * @param wdogRefresh2 2nd value to write (WdogRefresh2)
     */
    static void writeRefresh(uint16_t wdogRefresh1, uint16_t wdogRefresh2) {
+      // Protect sequence from interrupts
+      CriticalSection cs;
+      
       wdog->REFRESH = wdogRefresh1;
       wdog->REFRESH = wdogRefresh2;
    }
@@ -375,6 +378,9 @@ public:
     * @param wdogUnlock2 2nd value to write (WdogUnlock2)
     */
    static void writeUnlock(uint16_t wdogUnlock1, uint16_t wdogUnlock2) {
+      // Protect sequence from interrupts
+      CriticalSection cs;
+      
       wdog->UNLOCK = wdogUnlock1;
       wdog->UNLOCK = wdogUnlock2;
    }

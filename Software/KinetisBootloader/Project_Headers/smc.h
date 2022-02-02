@@ -321,7 +321,7 @@ public:
       smc->STOPCTRL = Info::stopctrl;
    }
    
-   /* smc_mk10d5.xml */
+   /* smc_mk10d7.xml */
    /**
     * Enable the given power modes.
     * A mode must be enabled before it can be entered.
@@ -342,18 +342,16 @@ public:
    }
 
 
-   /* smc_mk10d5.xml */
+   /* smc_mk10d7.xml */
    /**
     * Allows the detailed operation in STOP mode to be controlled.
     *
     * @param[in] smcLowLeakageStopMode  Controls which LLS/VLLS sub-mode to enter if STOPM=LLS/VLLS
-    * @param[in] smcPowerOnReset        Controls whether the POR detect circuit is enabled in VLLS0 mode
     */
    static void setStopOptions(
-         SmcLowLeakageStopMode   smcLowLeakageStopMode,
-         SmcPowerOnReset         smcPowerOnReset         = SmcPowerOnReset_Disabled ) {
+         SmcLowLeakageStopMode   smcLowLeakageStopMode) {
    
-      smc->STOPCTRL = smcPowerOnReset|smcLowLeakageStopMode;
+      smc->STOPCTRL = smcLowLeakageStopMode;
    }
 
 

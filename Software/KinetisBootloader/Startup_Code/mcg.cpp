@@ -44,12 +44,12 @@ namespace USBDM {
  * Table of clock settings
  */
 const McgInfo::ClockInfo Mcg::clockInfo[] = {
-      {  // ClockConfig_PEE_48MHz (ClockMode_PEE)
+      {  // ClockConfig_PEE_60MHz (ClockMode_PEE)
          
          //! SIM CLKDIV1 System Clock Divider Register 1
-         SIM_CLKDIV1_OUTDIV4(3)|  // Flash clock
+         SIM_CLKDIV1_OUTDIV4(5)|  // Flash clock
          SIM_CLKDIV1_OUTDIV3(0)|  // FlexBus clock
-         SIM_CLKDIV1_OUTDIV2(1)|  // Bus clock
+         SIM_CLKDIV1_OUTDIV2(3)|  // Bus clock
          SIM_CLKDIV1_OUTDIV1(1),  // Core/system clock
 
    #if defined(SIM_CLKDIV3_PLLFLLDIV)
@@ -87,7 +87,7 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          //! Control Register 6 - Excluding PLLS
          MCG_C6_LOLIE0(0) | // LOLIE0 Loss of Lock interrupt Enable
          MCG_C6_CME0(0)   | // CME0   Clock Monitor Enable
-         MCG_C6_VDIV0(0),   // VDIV0  PLL VCO Divider
+         MCG_C6_VDIV0(6),   // VDIV0  PLL VCO Divider
 
          //! Status and Control Register
          MCG_SC_FCRDIV(0), // FCRDIV Internal Clock Reference Divider
@@ -182,13 +182,13 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          MCG_C11_PLLCS(0), // PLLCS PLL Clock Select
    #endif
       },
-      {  // ClockConfig_FEE_40MHz (ClockMode_FEE)
+      {  // ClockConfig_PEE_48MHz (ClockMode_PEE)
          
          //! SIM CLKDIV1 System Clock Divider Register 1
-         SIM_CLKDIV1_OUTDIV4(3)|  // Flash clock
+         SIM_CLKDIV1_OUTDIV4(5)|  // Flash clock
          SIM_CLKDIV1_OUTDIV3(0)|  // FlexBus clock
-         SIM_CLKDIV1_OUTDIV2(1)|  // Bus clock
-         SIM_CLKDIV1_OUTDIV1(1),  // Core/system clock
+         SIM_CLKDIV1_OUTDIV2(2)|  // Bus clock
+         SIM_CLKDIV1_OUTDIV1(2),  // Core/system clock
 
    #if defined(SIM_CLKDIV3_PLLFLLDIV)
          //! SIM CLKDIV3 System Clock Divider Register 3
@@ -199,7 +199,7 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
          SIM_SOPT2_PLLFLLSEL(0),      // PLL/FLL clock select
 
          //! Clock Mode
-         McgInfo::ClockMode_FEE,
+         McgInfo::ClockMode_PEE,
 
          //! Control Register 1 - Excluding CLKS, IREFS
          MCG_C1_FRDIV(4)   | // FRDIV    FLL External Reference Divider
@@ -215,12 +215,12 @@ const McgInfo::ClockInfo Mcg::clockInfo[] = {
 
          //! Control Register 4
          MCG_C4_DMX32(0)     | // DMX32    DCO lock range
-         MCG_C4_DRST_DRS(3),   // DRST_DRS DCO Range Select
+         MCG_C4_DRST_DRS(0),   // DRST_DRS DCO Range Select
 
          //! Control Register 5
          MCG_C5_PLLCLKEN0(0)  | // PLLCLKEN0 PLL Clock Enable
          MCG_C5_PLLSTEN0(0)   | // PLLSTEN0  PLL Stop Enable
-         MCG_C5_PRDIV0(0),     // PRDIV0    PLL External Reference Divider
+         MCG_C5_PRDIV0(3),     // PRDIV0    PLL External Reference Divider
 
          //! Control Register 6 - Excluding PLLS
          MCG_C6_LOLIE0(0) | // LOLIE0 Loss of Lock interrupt Enable

@@ -11,13 +11,16 @@
 #include <stdint.h>
 #include "BootInformation.h"
 
+// USB messages are packed data in LE (native) format
+#pragma pack(push, 1)
+
 /**
  * Commands available
  */
 enum UsbCommand : uint32_t {
    UsbCommand_Nop,               ///< No operation
    UsbCommand_Identify,          ///< Identify boot-loader and hardware versions etc
-   UsbCommand_EraseFlash,   ///< Erase range of flash image
+   UsbCommand_EraseFlash,        ///< Erase range of flash image
    UsbCommand_ReadBlock,         ///< Read block from flash
    UsbCommand_ProgramBlock,      ///< Program block to flash
    UsbCommand_Reset,             ///< Reset device
@@ -58,10 +61,6 @@ static inline const char *getCommandName(UsbCommand command) {
    }
    return name;
 }
-
-// USB messages are packed data in LE (native) format
-#pragma pack(push, 1)
-
 /**
  * General USB command message
  */
