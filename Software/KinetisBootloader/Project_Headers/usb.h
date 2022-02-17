@@ -1457,7 +1457,7 @@ void UsbBase_T<Info, EP0_SIZE>::handleGetDescriptor() {
             // Generate Semi-unique Serial number
             uint32_t uid = SIM->UIDH^SIM->UIDMH^SIM->UIDML^SIM->UIDL;
             StringFormatter sf(utf8Buff, sizeof(utf8Buff));
-            sf.setPadding(Padding_LeadingZeroes).setWidth(6).write(SERIAL_NO).write(uid, Radix_16).write('\0');
+            sf.setPadding(Padding_LeadingZeroes).setWidth(6).write(SERIAL_NO, uid, Radix_16, '\0');
 
             // Use end-point internal buffer directly - may result in truncation
             dataPtr = fControlEndpoint.getTxBuffer();
